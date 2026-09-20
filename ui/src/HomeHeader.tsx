@@ -1,4 +1,4 @@
-import { Box, Typography } from '@mui/material'
+import { Box, Button, Typography } from '@mui/material'
 import CampingIllustration from './assets/CampingIllustration'
 
 type HomeHeaderProps = { name: string }
@@ -9,39 +9,58 @@ export default function HomeHeader({ name }: HomeHeaderProps) {
       component="header"
       sx={{
         color: 'primary.dark',
-        py: 1,
+        pt: { xs: 3, sm: 4 },
+        pb: 1,
         display: 'flex',
         alignItems: 'center',
         gap: 2,
-        flexDirection: { xs: 'column', sm: 'row' },
+        flexDirection: { xs: 'column', md: 'row' },
       }}
     >
-      <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-        <Typography
-          variant="overline"
-          sx={{
-            display: 'block',
-            mb: 2,
-            color: 'primary.main',
-            letterSpacing: 2,
-          }}
-        >
-          {name}
-        </Typography>
-        <Typography
-          component="h1"
-          variant="h4"
-          sx={{
-            fontWeight: 650,
-            mb: 1.5,
-            fontSize: { xs: '1.8rem', sm: '2.125rem' },
-            lineHeight: 1.2,
-          }}
-        >
-          Tu camping, de un vistazo
-        </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          flex: 1,
+          minWidth: 0,
+          width: '100%',
+        }}
+      >
+        <CampingIllustration />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="overline"
+            sx={{
+              display: 'block',
+              mb: 0,
+              lineHeight: 1.5,
+              color: 'primary.main',
+              letterSpacing: 2,
+            }}
+          >
+            {name}
+          </Typography>
+          <Typography
+            component="h1"
+            variant="h4"
+            sx={{
+              fontWeight: 650,
+              fontSize: { xs: '1.8rem', sm: '2.125rem' },
+              lineHeight: 1.2,
+            }}
+          >
+            Tu camping, de un vistazo
+          </Typography>
+        </Box>
       </Box>
-      <CampingIllustration />
+      <Button
+        type="button"
+        variant="contained"
+        sx={{ width: { xs: '100%', md: 'auto' }, flexShrink: 0, minHeight: 44 }}
+      >
+        + Registrar ingreso
+      </Button>
     </Box>
   )
 }

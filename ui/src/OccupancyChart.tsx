@@ -37,9 +37,9 @@ export default function OccupancyChart() {
         borderRadius: 2,
         gridColumn: '1 / -1',
         minWidth: 0,
-        bgcolor: 'primary.main',
-        color: 'primary.contrastText',
-        borderColor: 'primary.main',
+        bgcolor: 'secondary.light',
+        color: 'secondary.contrastText',
+        borderColor: 'divider',
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -67,7 +67,7 @@ export default function OccupancyChart() {
           >
             <CartesianGrid
               vertical={false}
-              stroke={theme.palette.primary.contrastText}
+              stroke={theme.palette.secondary.contrastText}
               strokeOpacity={0.2}
               strokeDasharray="3 3"
             />
@@ -75,7 +75,10 @@ export default function OccupancyChart() {
               dataKey="day"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: theme.palette.primary.contrastText, fontSize: 12 }}
+              tick={{
+                fill: theme.palette.secondary.contrastText,
+                fontSize: 12,
+              }}
               tickMargin={10}
               interval={0}
             />
@@ -83,27 +86,30 @@ export default function OccupancyChart() {
               allowDecimals={false}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: theme.palette.primary.contrastText, fontSize: 12 }}
+              tick={{
+                fill: theme.palette.secondary.contrastText,
+                fontSize: 12,
+              }}
               domain={[0, 12]}
               ticks={[0, 3, 6, 9, 12]}
             />
             <Tooltip
-              itemStyle={{ color: theme.palette.primary.contrastText }}
+              itemStyle={{ color: theme.palette.secondary.contrastText }}
               cursor={{
-                fill: theme.palette.primary.contrastText,
+                fill: theme.palette.secondary.contrastText,
                 fillOpacity: 0.08,
               }}
               contentStyle={{
-                backgroundColor: theme.palette.primary.dark,
-                borderColor: theme.palette.primary.light,
+                backgroundColor: theme.palette.secondary.light,
+                borderColor: theme.palette.secondary.dark,
                 borderRadius: theme.shape.borderRadius,
-                color: theme.palette.primary.contrastText,
+                color: theme.palette.secondary.contrastText,
               }}
             />
             <Bar
               dataKey="groups"
               name="Grupos alojados"
-              fill={theme.palette.accent.light}
+              fill={theme.palette.accent.main}
               radius={[6, 6, 0, 0]}
               maxBarSize={48}
               isAnimationActive={false}
@@ -111,7 +117,7 @@ export default function OccupancyChart() {
               <LabelList
                 dataKey="groups"
                 position="top"
-                fill={theme.palette.primary.contrastText}
+                fill={theme.palette.secondary.contrastText}
                 fontSize={13}
               />
             </Bar>

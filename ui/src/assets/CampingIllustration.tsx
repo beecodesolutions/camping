@@ -8,10 +8,9 @@ export default function CampingIllustration() {
       aria-hidden="true"
       focusable="false"
       sx={{
-        width: { xs: 200, sm: 240 },
+        width: { xs: 72, sm: 100 },
         height: 'auto',
         flexShrink: 0,
-        alignSelf: { xs: 'flex-end', sm: 'center' },
         color: 'primary.main',
       }}
     >
