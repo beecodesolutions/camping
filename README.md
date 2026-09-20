@@ -48,7 +48,13 @@ VITE_API_URL=http://localhost:3000/api
 
 Reiniciar Vite después de cambiar variables. La API deberá permitir el origen del frontend o configurarse un proxy. Solo existe el contrato mínimo de camping; los endpoints de negocio se agregarán con cada feature. No colocar secretos en variables `VITE_*`: llegan al navegador.
 
-MSW solo se inicia en desarrollo y con `VITE_ENABLE_MOCKS=true`. El build de producción requiere una API real; no sirve como demo con datos simulados. El archivo generado `mockServiceWorker.js` es público, pero no se registra en producción.
+MSW se inicia únicamente con `VITE_ENABLE_MOCKS=true`. Desarrollo lo habilita por defecto; los despliegues demo pueden habilitarlo explícitamente como variable de build. Sin esa variable, la aplicación consulta la API real. Los mocks y el archivo público `mockServiceWorker.js` solo contienen datos ficticios.
+
+## Despliegue demo en Vercel
+
+Proyecto con raíz `ui/`, preset Vite, Node 24.x, instalación `pnpm install --frozen-lockfile`, build `pnpm build` y salida `dist`. La rama de producción es `main`.
+
+Configurar `VITE_ENABLE_MOCKS=true` en Production y Preview mientras no exista API. La UI identifica los datos como ejemplos. Al conectar backend, quitar esa variable o ponerla en `false`, configurar `VITE_API_URL` y desplegar de nuevo.
 
 ## Comandos
 

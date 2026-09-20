@@ -7,7 +7,7 @@ import { createAppStore } from './app/store'
 import { theme } from './app/theme'
 
 async function startApp() {
-  if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCKS === 'true') {
+  if (import.meta.env.VITE_ENABLE_MOCKS === 'true') {
     const { worker } = await import('./mocks/browser')
     await worker.start({
       onUnhandledRequest(request, print) {
