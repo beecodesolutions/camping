@@ -44,6 +44,6 @@ it('conserva nombre del usuario y traduce saludo y acción', () => {
     </ThemeProvider>,
   )
   expect(markup).toContain('Buenos días, Lucía')
-  expect(markup).toContain('+ Registrar ingreso')
+  expect(markup).toContain('Registrar ingreso')
   expect(markup).toContain('Camping La Izuelina')
 })

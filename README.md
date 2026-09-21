@@ -1,6 +1,6 @@
 # Camping
 
-Base del frontend del SaaS para campings. Todavía no implementa estadías, tarifas, cobros, autenticación, API ni base de datos.
+Base del frontend del SaaS para campings. Incluye registro de ingreso simulado. Todavía no implementa persistencia de estadías, tarifas, cobros, autenticación, API ni base de datos.
 
 ## Desarrollo
 
@@ -36,7 +36,7 @@ React + Vite + TypeScript estricto, MUI con Emotion, RTK Query y MSW. Oxlint vie
 
 ## Formularios y traducciones
 
-React Hook Form, Zod y `@hookform/resolvers` están instalados para los próximos formularios. Todavía no hay formularios ni esquemas de validación implementados.
+Registro de ingreso usa React Hook Form + Zod + `@hookform/resolvers`. El botón de inicio abre un diálogo adaptable a móvil con responsable, fechas, integrantes y datos opcionales. Nacionalidad y país telefónico usan selectores con banderas y catálogo `libphonenumber-js`; el prefijo se sugiere desde nacionalidad hasta que se elige manualmente. Teléfono se envía como un único valor internacional E.164 (o vacío). Las validaciones usan claves i18n; errores de guardado conservan los valores para reintentar.
 
 i18next + react-i18next centralizan textos de interfaz en `ui/src/locales/es.ts`, con claves tipadas. Español es idioma base/fallback y `es-CL` conserva el formato regional actual. `main.tsx` espera inicialización antes de montar React; componentes usan `useTranslation()`. Fechas e importes usan el idioma activo; la moneda sigue viniendo del camping. Nombres propios y datos de API no se traducen.
 
@@ -45,6 +45,8 @@ Para agregar un idioma, crear su catálogo y registrarlo en `ui/src/app/i18n.ts`
 ## Requests simuladas
 
 La pantalla consulta `GET /api/camping` con RTK Query. MSW responde un camping ficticio tras 300 ms. El worker se inicia **antes** de montar React. Errores HTTP se muestran con opción de reintentar. Las requests `/api/` sin handler fallan en desarrollo para descubrir endpoints faltantes.
+
+El registro envía `POST /api/stays`. MSW valida y guarda ingresos en memoria de la página, actualiza ocupación mediante invalidación RTK Query y reinicia al recargar. Rangos demo: 0–3, 4–13 y 14+; configuración de rangos/tarifas queda pendiente. Registrar ingreso no genera cargos ni modifica el saldo demo; tarifas, anticipos y salida quedan para siguientes pasos.
 
 Los handlers son compartidos por navegador y pruebas Node. Los mocks no representan un backend, no tienen autenticación y no guardan datos persistentes.
 

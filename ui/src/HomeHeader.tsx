@@ -2,12 +2,20 @@ import { useTranslation } from 'react-i18next'
 import { Box, Button, Typography } from '@mui/material'
 import CampingIllustration from './assets/CampingIllustration'
 
-type HomeHeaderProps = { name: string; greeting: string; userName?: string }
+type HomeHeaderProps = {
+  name: string
+  greeting: string
+  userName?: string
+  onCheckIn?: () => void
+  checkInDisabled?: boolean
+}
 
 export default function HomeHeader({
   name,
   greeting,
   userName,
+  onCheckIn,
+  checkInDisabled,
 }: HomeHeaderProps) {
   const { t } = useTranslation()
   return (
@@ -65,6 +73,8 @@ export default function HomeHeader({
       </Box>
       <Button
         type="button"
+        onClick={onCheckIn}
+        disabled={checkInDisabled}
         variant="contained"
         sx={{ width: { xs: '100%', md: 'auto' }, flexShrink: 0, minHeight: 44 }}
       >

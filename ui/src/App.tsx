@@ -16,6 +16,7 @@ import {
 import { useCampingQuery } from './services/api'
 import OccupancyChart from './OccupancyChart'
 import HomeHeader from './HomeHeader'
+import CheckInDialog from './CheckInDialog'
 import OccupancyCard from './OccupancyCard'
 import PendingBalanceCard from './PendingBalanceCard'
 import { darkTheme, lightTheme } from './app/theme'
@@ -26,6 +27,8 @@ export default function App() {
   const { data, isFetching, isError, refetch } = useCampingQuery()
   const { mode: automaticMode, greeting } = useTimeOfDay()
   const [manualMode, setManualMode] = useState<'light' | 'dark' | null>(null)
+  const [checkInOpen, setCheckInOpen] = useState(false)
+  const [registeredName, setRegisteredName] = useState<string | null>(null)
   const mode = manualMode ?? automaticMode
   const themeLabel =
     mode === 'dark' ? t('common.lightTheme') : t('common.darkTheme')
@@ -36,6 +39,15 @@ export default function App() {
   return (
     <ThemeProvider theme={mode === 'dark' ? darkTheme : lightTheme}>
       <CssBaseline enableColorScheme />
+      {checkInOpen && (
+        <CheckInDialog
+          onClose={() => setCheckInOpen(false)}
+          onSuccess={(name) => {
+            setCheckInOpen(false)
+            setRegisteredName(name)
+          }}
+        />
+      )}
       <Container component="main" maxWidth="md" sx={{ pb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1 }}>
           <Tooltip title={themeLabel}>
@@ -67,7 +79,17 @@ export default function App() {
             name={data?.name ?? t('common.appName')}
             greeting={t(greeting)}
             userName={userName}
+            onCheckIn={() => {
+              setRegisteredName(null)
+              setCheckInOpen(true)
+            }}
+            checkInDisabled={!data || isError}
           />
+          {registeredName && (
+            <Alert severity="success" onClose={() => setRegisteredName(null)}>
+              {t('checkIn.success', { name: registeredName })}
+            </Alert>
+          )}
           <Box aria-busy={isFetching}>
             {isFetching && (
               <LinearProgress aria-label={t('home.loading')} sx={{ mb: 2 }} />

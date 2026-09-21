@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import type { CheckInRequest } from '../checkIn/schema'
 
 export type Camping = {
   id: string
@@ -15,12 +16,18 @@ export type CampingProfile = Camping & {
 
 export const api = createApi({
   reducerPath: 'api',
+  tagTypes: ['Camping'],
   baseQuery: fetchBaseQuery({
     baseUrl: import.meta.env.VITE_API_URL || '/api',
   }),
   endpoints: (builder) => ({
+    createStay: builder.mutation<void, CheckInRequest>({
+      query: (body) => ({ url: '/stays', method: 'POST', body }),
+      invalidatesTags: (_result, error) => (error ? [] : ['Camping']),
+    }),
     camping: builder.query<CampingProfile, void>({
       query: () => '/camping',
+      providesTags: ['Camping'],
       transformResponse: (response: unknown): CampingProfile => {
         if (
           typeof response !== 'object' ||
@@ -63,4 +70,4 @@ export const api = createApi({
   }),
 })
 
-export const { useCampingQuery } = api
+export const { useCampingQuery, useCreateStayMutation } = api
