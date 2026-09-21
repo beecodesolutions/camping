@@ -13,3 +13,12 @@ it('interpreta las unidades menores de una moneda con centavos', () => {
     }).format(4850),
   )
 })
+
+it('cambia formato regional sin cambiar moneda ni unidades menores', () => {
+  expect(formatMoney(485000, 'CLP', 'en-US')).toBe(
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'CLP',
+    }).format(485000),
+  )
+})

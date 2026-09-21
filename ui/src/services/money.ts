@@ -1,5 +1,9 @@
-export function formatMoney(amountMinor: number, currency: string): string {
-  const formatter = new Intl.NumberFormat('es-CL', {
+export function formatMoney(
+  amountMinor: number,
+  currency: string,
+  locale = 'es-CL',
+): string {
+  const formatter = new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
   })

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Alert,
   Box,
@@ -21,12 +22,13 @@ import { darkTheme, lightTheme } from './app/theme'
 import { useTimeOfDay } from './app/timeOfDay'
 
 export default function App() {
+  const { t } = useTranslation()
   const { data, isFetching, isError, refetch } = useCampingQuery()
   const { mode: automaticMode, greeting } = useTimeOfDay()
   const [manualMode, setManualMode] = useState<'light' | 'dark' | null>(null)
   const mode = manualMode ?? automaticMode
   const themeLabel =
-    mode === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'
+    mode === 'dark' ? t('common.lightTheme') : t('common.darkTheme')
   // Replace the demo identity with the session user when authentication is added.
   const userName =
     import.meta.env.VITE_ENABLE_MOCKS === 'true' ? 'Lucía' : undefined
@@ -62,13 +64,13 @@ export default function App() {
         </Box>
         <Stack spacing={2}>
           <HomeHeader
-            name={data?.name ?? 'Camping'}
-            greeting={greeting}
+            name={data?.name ?? t('common.appName')}
+            greeting={t(greeting)}
             userName={userName}
           />
           <Box aria-busy={isFetching}>
             {isFetching && (
-              <LinearProgress aria-label="Cargando resumen" sx={{ mb: 2 }} />
+              <LinearProgress aria-label={t('home.loading')} sx={{ mb: 2 }} />
             )}
             {isError ? (
               <Alert
@@ -79,11 +81,11 @@ export default function App() {
                     onClick={() => void refetch()}
                     disabled={isFetching}
                   >
-                    Reintentar
+                    {t('common.retry')}
                   </Button>
                 }
               >
-                No pudimos cargar el resumen del camping.
+                {t('home.loadError')}
               </Alert>
             ) : data ? (
               <Box

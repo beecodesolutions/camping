@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, SvgIcon, Typography } from '@mui/material'
 import type { CampingProfile } from './services/api'
 import { formatMoney } from './services/money'
@@ -11,6 +12,7 @@ export default function PendingBalanceCard({
   pendingAmountMinor,
   currency,
 }: PendingBalanceCardProps) {
+  const { t, i18n } = useTranslation()
   return (
     <Paper
       component="section"
@@ -30,7 +32,7 @@ export default function PendingBalanceCard({
             color="text.primary"
             sx={{ fontWeight: 700 }}
           >
-            Pendiente de cobro
+            {t('home.pendingBalance')}
           </Typography>
         </Stack>
         <Box>
@@ -44,7 +46,7 @@ export default function PendingBalanceCard({
               overflowWrap: 'anywhere',
             }}
           >
-            {formatMoney(pendingAmountMinor, currency)}{' '}
+            {formatMoney(pendingAmountMinor, currency, i18n.language)}{' '}
             <Typography
               component="span"
               variant="body2"
@@ -54,7 +56,9 @@ export default function PendingBalanceCard({
               {currency}
             </Typography>
           </Typography>
-          <Typography color="text.secondary">saldo acumulado</Typography>
+          <Typography color="text.secondary">
+            {t('home.accumulatedBalance')}
+          </Typography>
         </Box>
       </Stack>
     </Paper>

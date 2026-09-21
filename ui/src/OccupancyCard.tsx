@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, SvgIcon, Typography } from '@mui/material'
 import type { CampingProfile } from './services/api'
 
@@ -11,6 +12,7 @@ export default function OccupancyCard({
   activePeople,
   activeVehicles,
 }: OccupancyCardProps) {
+  const { t } = useTranslation()
   return (
     <Paper
       component="section"
@@ -30,7 +32,7 @@ export default function OccupancyCard({
             color="text.primary"
             sx={{ fontWeight: 700 }}
           >
-            Ocupación actual
+            {t('home.occupancy')}
           </Typography>
         </Stack>
         <Box
@@ -49,7 +51,9 @@ export default function OccupancyCard({
             >
               {activeGroups}
             </Typography>
-            <Typography color="text.secondary">grupos alojados</Typography>
+            <Typography color="text.secondary">
+              {t('home.groups', { count: activeGroups })}
+            </Typography>
           </Box>
           <Box
             sx={{
@@ -70,11 +74,15 @@ export default function OccupancyCard({
             }}
           >
             <Typography className="occupancy-count">{activePeople}</Typography>
-            <Typography color="text.secondary">personas</Typography>
+            <Typography color="text.secondary">
+              {t('home.people', { count: activePeople })}
+            </Typography>
             <Typography className="occupancy-count">
               {activeVehicles}
             </Typography>
-            <Typography color="text.secondary">vehículos</Typography>
+            <Typography color="text.secondary">
+              {t('home.vehicles', { count: activeVehicles })}
+            </Typography>
           </Box>
         </Box>
       </Stack>

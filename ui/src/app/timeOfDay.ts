@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 
 export function timeOfDay(hour: number) {
   if (hour >= 6 && hour < 12)
-    return { mode: 'light', greeting: 'Buenos días' } as const
+    return { mode: 'light', greeting: 'home.morning' } as const
   if (hour >= 12 && hour < 19)
-    return { mode: 'light', greeting: 'Buenas tardes' } as const
-  return { mode: 'dark', greeting: 'Buenas noches' } as const
+    return { mode: 'light', greeting: 'home.afternoon' } as const
+  return { mode: 'dark', greeting: 'home.evening' } as const
 }
 
 export function useTimeOfDay() {

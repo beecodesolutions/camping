@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Box, Button, Typography } from '@mui/material'
 import CampingIllustration from './assets/CampingIllustration'
 
@@ -8,6 +9,7 @@ export default function HomeHeader({
   greeting,
   userName,
 }: HomeHeaderProps) {
+  const { t } = useTranslation()
   return (
     <Box
       component="header"
@@ -55,8 +57,9 @@ export default function HomeHeader({
               overflowWrap: 'anywhere',
             }}
           >
-            {greeting}
-            {userName?.trim() ? `, ${userName.trim()}` : ''}
+            {userName?.trim()
+              ? t('home.greetingWithName', { greeting, name: userName.trim() })
+              : greeting}
           </Typography>
         </Box>
       </Box>
@@ -65,7 +68,7 @@ export default function HomeHeader({
         variant="contained"
         sx={{ width: { xs: '100%', md: 'auto' }, flexShrink: 0, minHeight: 44 }}
       >
-        + Registrar ingreso
+        {t('checkIn.register')}
       </Button>
     </Box>
   )

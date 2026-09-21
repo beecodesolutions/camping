@@ -19,7 +19,8 @@ Abrir la URL local que imprime Vite. No necesita credenciales ni copiar archivos
 ```text
 ui/
   src/
-    app/           # Store RTK y tema MUI
+    app/           # Store RTK, tema MUI e inicialización i18n
+    locales/       # Catálogo de textos por idioma
     services/      # Contratos y endpoints RTK Query
     mocks/         # Respuestas MSW para desarrollo y pruebas
     App.tsx        # Pantalla mínima
@@ -32,6 +33,14 @@ Un workspace y un lockfile. Agregar `api/` al workspace cuando comience backend;
 ## Stack
 
 React + Vite + TypeScript estricto, MUI con Emotion, RTK Query y MSW. Oxlint viene de la plantilla oficial de Vite; Prettier mantiene formato. Vitest comprueba integración HTTP simulada.
+
+## Formularios y traducciones
+
+React Hook Form, Zod y `@hookform/resolvers` están instalados para los próximos formularios. Todavía no hay formularios ni esquemas de validación implementados.
+
+i18next + react-i18next centralizan textos de interfaz en `ui/src/locales/es.ts`, con claves tipadas. Español es idioma base/fallback y `es-CL` conserva el formato regional actual. `main.tsx` espera inicialización antes de montar React; componentes usan `useTranslation()`. Fechas e importes usan el idioma activo; la moneda sigue viniendo del camping. Nombres propios y datos de API no se traducen.
+
+Para agregar un idioma, crear su catálogo y registrarlo en `ui/src/app/i18n.ts`. No hay selector, detector automático ni carga remota de traducciones.
 
 ## Requests simuladas
 

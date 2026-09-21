@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, SvgIcon, Typography, useTheme } from '@mui/material'
 import {
   Bar,
@@ -13,13 +14,14 @@ import {
 const exampleGroups = [4, 6, 5, 9, 12, 10, 8]
 
 export default function OccupancyChart() {
+  const { t, i18n } = useTranslation()
   const theme = useTheme()
   const today = new Date()
   const data = exampleGroups.map((groups, index) => {
     const date = new Date(today)
     date.setDate(today.getDate() - (6 - index))
     return {
-      day: date.toLocaleDateString('es-CL', {
+      day: date.toLocaleDateString(i18n.language, {
         day: 'numeric',
         month: 'numeric',
       }),
@@ -52,11 +54,11 @@ export default function OccupancyChart() {
           variant="subtitle1"
           sx={{ fontWeight: 700 }}
         >
-          Ocupación · últimos 7 días
+          {t('home.historyTitle')}
         </Typography>
       </Stack>
       <Typography variant="body2" color="inherit" sx={{ mt: 0.5, mb: 3 }}>
-        Grupos alojados por día
+        {t('home.historyDescription')}
       </Typography>
       <Box sx={{ height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -108,7 +110,7 @@ export default function OccupancyChart() {
             />
             <Bar
               dataKey="groups"
-              name="Grupos alojados"
+              name={t('home.historySeries')}
               fill={theme.palette.accent.main}
               radius={[6, 6, 0, 0]}
               maxBarSize={48}
