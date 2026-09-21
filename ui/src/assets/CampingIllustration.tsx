@@ -42,12 +42,16 @@ export default function CampingIllustration() {
         opacity="0.22"
       />
       <path d="m67 67 18-25 19 26-20-7Z" fill="currentColor" opacity="0.6" />
-      <g fill="currentColor">
-        <path d="m44 72-23 40h12l-21 32h64l-22-32h13Z" />
-        <path d="m231 79-19 34h10l-18 30h54l-18-30h10Z" />
-      </g>
       <path
-        d="M44 141v17m187-18v18M15 160h250"
+        d="M48 158Q29 155 20 133Q42 141 48 158ZM48 158Q29 136 32 116Q47 133 48 158ZM48 158Q41 129 51 113Q55 137 48 158ZM48 158Q52 132 68 122Q66 145 48 158ZM48 158Q62 141 79 141Q68 156 48 158Z"
+        fill="currentColor"
+      />
+      <path
+        d="M240 158Q223 155 216 137Q235 143 240 158ZM240 158Q224 139 227 122Q239 137 240 158ZM240 158Q234 133 243 119Q246 140 240 158ZM240 158Q244 136 258 127Q256 147 240 158ZM240 158Q252 143 267 143Q257 156 240 158Z"
+        fill="currentColor"
+      />
+      <path
+        d="M15 160h250"
         fill="none"
         stroke="currentColor"
         strokeWidth="3"
