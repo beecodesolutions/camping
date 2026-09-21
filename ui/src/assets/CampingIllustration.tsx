@@ -1,6 +1,8 @@
-import { Box } from '@mui/material'
+import { Box, useTheme } from '@mui/material'
 
 export default function CampingIllustration() {
+  const theme = useTheme()
+  const isNight = theme.palette.mode === 'dark'
   return (
     <Box
       component="svg"
@@ -14,13 +16,26 @@ export default function CampingIllustration() {
         color: 'primary.main',
       }}
     >
-      <Box
-        component="circle"
-        cx="220"
-        cy="35"
-        r="18"
-        sx={(theme) => ({ fill: theme.palette.secondary.light })}
-      />
+      {isNight ? (
+        <g fill={theme.palette.secondary.main}>
+          <path d="M228 17a18 18 0 1 0 11 29 17 17 0 0 1-11-29Z" />
+          <path d="m155 15 2 5 5 2-5 2-2 5-2-5-5-2 5-2Zm35 26 2 4 4 2-4 2-2 4-2-4-4-2 4-2ZM48 24l2 4 4 2-4 2-2 4-2-4-4-2 4-2Z" />
+          <circle cx="119" cy="21" r="2" />
+          <circle cx="259" cy="63" r="2" />
+        </g>
+      ) : (
+        <Box
+          component="circle"
+          cx="220"
+          cy="35"
+          r="18"
+          sx={(theme) => ({
+            fill: theme.palette.secondary.main,
+            stroke: theme.palette.secondary.dark,
+            strokeWidth: 3,
+          })}
+        />
+      )}
       <path
         d="M12 145 85 42l59 80 35-49 88 72Z"
         fill="currentColor"
@@ -48,11 +63,21 @@ export default function CampingIllustration() {
         d="m84 155 49-77 49 77Z"
         sx={(theme) => ({ fill: theme.palette.secondary.light })}
       />
-      <Box
-        component="path"
-        d="m112 155 21-44 22 44Z"
-        sx={(theme) => ({ fill: theme.palette.primary.dark })}
-      />
+      {isNight ? (
+        <path
+          d="M133 81v73m-4-8h8"
+          fill="none"
+          stroke={theme.palette.secondary.main}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      ) : (
+        <Box
+          component="path"
+          d="m112 155 21-44 22 44Z"
+          sx={(theme) => ({ fill: theme.palette.primary.dark })}
+        />
+      )}
       <path
         d="m133 78 49 77m-49-77-49 77"
         fill="none"

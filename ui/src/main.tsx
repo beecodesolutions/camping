@@ -1,10 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
-import { CssBaseline, ThemeProvider } from '@mui/material'
 import App from './App'
 import { createAppStore } from './app/store'
-import { theme } from './app/theme'
 
 async function startApp() {
   if (import.meta.env.VITE_ENABLE_MOCKS === 'true') {
@@ -22,10 +20,7 @@ async function startApp() {
   createRoot(root).render(
     <StrictMode>
       <Provider store={createAppStore()}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <App />
-        </ThemeProvider>
+        <App />
       </Provider>
     </StrictMode>,
   )

@@ -1,15 +1,19 @@
 import { Box, Button, Typography } from '@mui/material'
 import CampingIllustration from './assets/CampingIllustration'
 
-type HomeHeaderProps = { name: string }
+type HomeHeaderProps = { name: string; greeting: string; userName?: string }
 
-export default function HomeHeader({ name }: HomeHeaderProps) {
+export default function HomeHeader({
+  name,
+  greeting,
+  userName,
+}: HomeHeaderProps) {
   return (
     <Box
       component="header"
       sx={{
-        color: 'primary.dark',
-        pt: { xs: 3, sm: 4 },
+        color: 'text.primary',
+        pt: 0,
         pb: 1,
         display: 'flex',
         alignItems: 'center',
@@ -48,9 +52,11 @@ export default function HomeHeader({ name }: HomeHeaderProps) {
               fontWeight: 650,
               fontSize: { xs: '1.8rem', sm: '2.125rem' },
               lineHeight: 1.2,
+              overflowWrap: 'anywhere',
             }}
           >
-            Tu camping, de un vistazo
+            {greeting}
+            {userName?.trim() ? `, ${userName.trim()}` : ''}
           </Typography>
         </Box>
       </Box>
