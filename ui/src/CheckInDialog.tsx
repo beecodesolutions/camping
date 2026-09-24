@@ -1,4 +1,5 @@
 import { Controller, useForm, useWatch } from 'react-hook-form'
+import type { AgeRanges } from '@camping/contracts'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import {
@@ -21,8 +22,8 @@ import CountrySelect from './checkIn/CountrySelect'
 import { useCreateStayMutation } from './services/api'
 import {
   checkInDefaults,
-  checkInSchema,
-  todayLocal,
+  checkInSchemaForTimezone,
+  todayInTimezone,
   type CheckInValues,
   type CheckInRequest,
 } from './checkIn/schema'
@@ -30,11 +31,15 @@ import {
 type CheckInDialogProps = {
   onClose: () => void
   onSuccess: (name: string) => void
+  timezone?: string
+  ageRanges?: AgeRanges
 }
 
 export default function CheckInDialog({
   onClose,
   onSuccess,
+  timezone = 'America/Santiago',
+  ageRanges,
 }: CheckInDialogProps) {
   const { t } = useTranslation()
   const theme = useTheme()
@@ -48,8 +53,8 @@ export default function CheckInDialog({
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<CheckInValues, undefined, CheckInRequest>({
-    resolver: zodResolver(checkInSchema),
-    defaultValues: checkInDefaults(),
+    resolver: zodResolver(checkInSchemaForTimezone(timezone)),
+    defaultValues: checkInDefaults(timezone),
   })
   const hasVehicle = useWatch({ control, name: 'hasVehicle' })
   const arrivalDate = useWatch({ control, name: 'arrivalDate' })
@@ -213,7 +218,7 @@ export default function CheckInDialog({
                         inputLabel: { shrink: true },
                         htmlInput: {
                           ...register('arrivalDate'),
-                          max: todayLocal(),
+                          max: todayInTimezone(timezone),
                         },
                       }}
                     />
@@ -247,7 +252,7 @@ export default function CheckInDialog({
                         (name) => (
                           <TextField
                             key={name}
-                            label={t(`checkIn.${name}`)}
+                            label={`${t(`checkIn.${name}`)}${ageRanges ? ` (${ageRanges[name].max === null ? `${ageRanges[name].min}+` : `${ageRanges[name].min}–${ageRanges[name].max}`})` : ''}`}
                             type="number"
                             required
                             fullWidth

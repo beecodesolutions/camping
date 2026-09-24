@@ -8,6 +8,7 @@ type HomeHeaderProps = {
   userName?: string
   onCheckIn?: () => void
   checkInDisabled?: boolean
+  showCheckIn?: boolean
 }
 
 export default function HomeHeader({
@@ -16,6 +17,7 @@ export default function HomeHeader({
   userName,
   onCheckIn,
   checkInDisabled,
+  showCheckIn = true,
 }: HomeHeaderProps) {
   const { t } = useTranslation()
   return (
@@ -71,15 +73,21 @@ export default function HomeHeader({
           </Typography>
         </Box>
       </Box>
-      <Button
-        type="button"
-        onClick={onCheckIn}
-        disabled={checkInDisabled}
-        variant="contained"
-        sx={{ width: { xs: '100%', md: 'auto' }, flexShrink: 0, minHeight: 44 }}
-      >
-        {t('checkIn.register')}
-      </Button>
+      {showCheckIn && (
+        <Button
+          type="button"
+          onClick={onCheckIn}
+          disabled={checkInDisabled}
+          variant="contained"
+          sx={{
+            width: { xs: '100%', md: 'auto' },
+            flexShrink: 0,
+            minHeight: 44,
+          }}
+        >
+          {t('checkIn.register')}
+        </Button>
+      )}
     </Box>
   )
 }

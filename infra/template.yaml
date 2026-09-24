@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Camping pilot API. PostgreSQL is external (Supabase). No deployment is performed by local scripts.
+Parameters:
+  AllowedOrigin:
+    Type: String
+    Description: Exact HTTPS frontend origin, same site as API (no trailing slash)
+    AllowedPattern: 'https://[^/]+(?:\:[0-9]+)?'
+  DatabaseSecretArn:
+    Type: String
+    Description: Existing Secrets Manager secret containing JSON key DATABASE_URL (runtime role, transaction pooler, TLS)
+    AllowedPattern: 'arn:aws:secretsmanager:.*'
+  ReservedConcurrency:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: 0 leaves concurrency unreserved. Set a small limit if account quota permits.
+Conditions:
+  HasReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
+Resources:
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      CorsConfiguration:
+        AllowOrigins: [!Ref AllowedOrigin]
+        AllowCredentials: true
+        AllowMethods: [GET, POST, PATCH, DELETE, OPTIONS]
+        AllowHeaders: [Content-Type]
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+  Api:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../.artifacts/lambda/
+      Handler: dist/lambda.handler
+      Runtime: nodejs24.x
+      Architectures: [x86_64]
+      MemorySize: 512
+      Timeout: 15
+      ReservedConcurrentExecutions:
+        !If [
+          HasReservedConcurrency,
+          !Ref ReservedConcurrency,
+          !Ref AWS::NoValue,
+        ]
+      Environment:
+        Variables:
+          NODE_ENV: production
+          REQUIRE_ORIGIN: 'true'
+          ALLOWED_ORIGIN: !Ref AllowedOrigin
+          DATABASE_URL: !Sub '{{resolve:secretsmanager:${DatabaseSecretArn}:SecretString:DATABASE_URL}}'
+          DATABASE_SSL: 'true'
+          DB_POOL_MAX: '2'
+      Events:
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /
+            Method: ANY
+            PayloadFormatVersion: '2.0'
+        Proxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /{proxy+}
+            Method: ANY
+            PayloadFormatVersion: '2.0'
+  ApiLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${Api}'
+      RetentionInDays: 7
+Outputs:
+  ApiUrl:
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/api'

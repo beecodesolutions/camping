@@ -1,0 +1,19 @@
+name: camping
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: camping
+      POSTGRES_USER: camping
+      POSTGRES_PASSWORD: camping-local-only
+    ports:
+      - '127.0.0.1:${CAMPING_DB_PORT:-5434}:5432'
+    volumes:
+      - camping_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U camping -d camping']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+volumes:
+  camping_data:

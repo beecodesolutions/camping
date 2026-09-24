@@ -7,14 +7,24 @@
     "pnpm": "10.x"
   },
   "scripts": {
-    "dev": "pnpm --filter @camping/ui dev",
+    "dev": "pnpm --filter @camping/contracts build && pnpm --parallel --filter @camping/api --filter @camping/ui dev",
     "build": "pnpm --filter @camping/ui build",
     "preview": "pnpm --filter @camping/ui preview",
-    "lint": "pnpm --filter @camping/ui lint",
-    "typecheck": "pnpm --filter @camping/ui typecheck",
-    "test": "pnpm --filter @camping/ui test",
+    "lint": "pnpm --filter @camping/api --filter @camping/ui lint",
+    "typecheck": "pnpm contracts:build && pnpm --filter @camping/api --filter @camping/ui typecheck",
+    "test": "pnpm contracts:build && pnpm --filter @camping/contracts --filter @camping/api --filter @camping/ui test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "dev:mock": "pnpm --filter @camping/contracts build && VITE_ENABLE_MOCKS=true pnpm --filter @camping/ui dev",
+    "contracts:build": "pnpm --filter @camping/contracts build",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm contracts:build && pnpm --filter @camping/api migration:run",
+    "db:seed": "pnpm contracts:build && pnpm --filter @camping/api seed",
+    "user": "pnpm --filter @camping/api user",
+    "package:lambda": "bash scripts/package-lambda.sh",
+    "runtime:provision": "pnpm --filter @camping/api runtime:provision",
+    "db:seed:demo": "pnpm contracts:build && pnpm --filter @camping/api seed:demo"
   },
   "devDependencies": {
     "prettier": "^3.9.8"

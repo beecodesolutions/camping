@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "pnpm --filter @camping/contracts build && tsc -b && vite build",
     "lint": "oxlint --deny-warnings",
     "preview": "vite preview",
     "typecheck": "tsc -b",
@@ -25,7 +25,8 @@
     "react-i18next": "^17.0.14",
     "react-redux": "^9.3.0",
     "recharts": "^3.10.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.5",
+    "@camping/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

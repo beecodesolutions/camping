@@ -1,12 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, SvgIcon, Typography } from '@mui/material'
-import type { CampingProfile } from './services/api'
 import { formatMoney } from './services/money'
 
-type PendingBalanceCardProps = Pick<
-  CampingProfile,
-  'pendingAmountMinor' | 'currency'
->
+type PendingBalanceCardProps = { pendingAmountMinor: number; currency: string }
 
 export default function PendingBalanceCard({
   pendingAmountMinor,

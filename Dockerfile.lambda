@@ -1,0 +1,14 @@
+FROM node:24-bookworm-slim AS build
+WORKDIR /workspace
+RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY contracts/package.json contracts/package.json
+COPY api/package.json api/package.json
+COPY ui/package.json ui/package.json
+RUN pnpm install --frozen-lockfile --filter @camping/api... --filter @camping/contracts
+COPY contracts contracts
+COPY api api
+RUN pnpm --filter @camping/contracts build && pnpm --filter @camping/api build
+RUN pnpm --filter @camping/api deploy --legacy --prod /out
+FROM scratch AS artifact
+COPY --from=build /out /

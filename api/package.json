@@ -1,0 +1,45 @@
+{
+  "name": "@camping/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "commonjs",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "dev": "tsc -p tsconfig.json && node scripts/dev.cjs",
+    "start:dev": "pnpm dev",
+    "migration:run": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/migrate.js",
+    "migration:revert": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/revert.js",
+    "seed": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed.js",
+    "user": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/create-user.js",
+    "user:create": "pnpm user",
+    "lint": "oxlint src",
+    "test": "tsc -p tsconfig.json && node --test dist/common/date.spec.js test/*.test.cjs",
+    "runtime:provision": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/provision-runtime-role.js",
+    "seed:demo": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-demo.js"
+  },
+  "dependencies": {
+    "@camping/contracts": "workspace:*",
+    "@codegenie/serverless-express": "^4.17.0",
+    "@nestjs/common": "^11.1.9",
+    "@nestjs/core": "^11.1.9",
+    "@nestjs/platform-express": "^11.1.9",
+    "argon2": "^0.44.0",
+    "pg": "^8.16.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^0.3.27",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.156",
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.13.3",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2"
+  }
+}

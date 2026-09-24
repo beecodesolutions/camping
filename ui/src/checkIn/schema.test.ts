@@ -1,5 +1,5 @@
 import { expect, it, vi, afterEach } from 'vitest'
-import { checkInDefaults, checkInSchema, todayLocal } from './schema'
+import { checkInDefaults, checkInSchema, todayInTimezone } from './schema'
 
 afterEach(() => vi.useRealTimers())
 
@@ -12,7 +12,7 @@ it('acepta ingreso mínimo y salida el mismo día; limpia nombre y patente sin v
       hasVehicle: false,
       vehicleDescription: 'Toyota blanco',
       licensePlate: 'ABC123',
-      estimatedDeparture: todayLocal(),
+      estimatedDeparture: todayInTimezone('America/Santiago'),
     }),
   ).toMatchObject({
     responsibleName: 'Ana Pérez',
@@ -41,9 +41,9 @@ it.each([
 it('no permite registrar ingresos futuros y usa fecha local', () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 8, 20, 23, 30))
-  expect(todayLocal()).toBe('2026-09-20')
+  expect(todayInTimezone('America/Santiago')).toBe('2026-09-21')
   expect(
-    checkInSchema.safeParse({ ...valid(), arrivalDate: '2026-09-21' }).success,
+    checkInSchema.safeParse({ ...valid(), arrivalDate: '2026-09-22' }).success,
   ).toBe(false)
 })
 
