@@ -43,16 +43,6 @@ export default function CountrySelect({
   return (
     <Autocomplete
       fullWidth
-      sx={
-        callingCode
-          ? {
-              width: 66,
-              '& .MuiAutocomplete-inputRoot': { pr: '0 !important' },
-              '& .MuiAutocomplete-input': { minWidth: '0 !important' },
-            }
-          : undefined
-      }
-      forcePopupIcon={callingCode ? false : 'auto'}
       openOnFocus={callingCode}
       disableClearable={callingCode}
       slotProps={
@@ -88,14 +78,9 @@ export default function CountrySelect({
         <TextField
           {...params}
           inputRef={inputRef}
-          variant={callingCode ? 'standard' : 'outlined'}
-          label={callingCode ? undefined : label}
+          label={label}
           slotProps={{
             ...params.slotProps,
-            input: {
-              ...params.slotProps.input,
-              ...(callingCode ? { disableUnderline: true } : {}),
-            },
             htmlInput: { ...params.slotProps.htmlInput, 'aria-label': label },
           }}
           error={!!error}

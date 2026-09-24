@@ -1,7 +1,13 @@
 import { z } from 'zod'
 import { getCountries, parsePhoneNumberFromString } from 'libphonenumber-js/min'
+import {
+  checkInRequestSchema as sharedCheckInRequestSchema,
+  todayInTimezone,
+} from '@camping/contracts'
 
 export const countries = getCountries()
+export { todayInTimezone }
+
 export function todayLocal() {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -31,10 +37,7 @@ const checkInFields = z.object({
         value === '' || (/^[0-9 ()-]+$/.test(value) && /[0-9]/.test(value)),
       'validation.phone',
     ),
-  arrivalDate: date.refine(
-    (value) => value <= todayLocal(),
-    'validation.futureArrival',
-  ),
+  arrivalDate: date,
   estimatedDeparture: z.union([z.literal(''), date]),
   adults: count,
   children: count,
@@ -45,68 +48,54 @@ const checkInFields = z.object({
   location: z.string().trim(),
 })
 
-export const checkInRequestSchema = checkInFields
-  .omit({ phoneCountry: true })
-  .extend({
-    phone: z.union([
-      z.literal(''),
-      z.string().regex(/^\+[1-9]\d{1,14}$/, 'validation.phone'),
-    ]),
-  })
-  .refine((values) => values.adults + values.children + values.infants > 0, {
-    path: ['adults'],
-    error: 'validation.peopleRequired',
-  })
-  .refine(
-    (values) =>
-      !values.estimatedDeparture ||
-      values.estimatedDeparture >= values.arrivalDate,
-    {
-      path: ['estimatedDeparture'],
-      error: 'validation.departureBeforeArrival',
-    },
-  )
+export function checkInSchemaForTimezone(timezone: string) {
+  return checkInFields
+    .refine((values) => values.arrivalDate <= todayInTimezone(timezone), {
+      path: ['arrivalDate'],
+      error: 'validation.futureArrival',
+    })
+    .refine((values) => values.phone === '' || !!values.phoneCountry, {
+      path: ['phoneCountry'],
+      error: 'validation.phoneCountryCode',
+    })
+    .refine(
+      (values) =>
+        !values.phone ||
+        !values.phoneCountry ||
+        !!parsePhoneNumberFromString(
+          values.phone,
+          values.phoneCountry,
+        )?.isPossible(),
+      { path: ['phone'], error: 'validation.phone' },
+    )
+    .transform(({ phoneCountry, ...values }) => ({
+      ...values,
+      phone:
+        values.phone && phoneCountry
+          ? (parsePhoneNumberFromString(values.phone, phoneCountry)?.number ??
+            '')
+          : '',
+      vehicleDescription: values.hasVehicle ? values.vehicleDescription : '',
+      licensePlate: values.hasVehicle ? values.licensePlate : '',
+    }))
+    .pipe(sharedCheckInRequestSchema)
+}
 
-export const checkInSchema = checkInFields
-  .refine((values) => !values.phone || !!values.phoneCountry, {
-    path: ['phoneCountry'],
-    error: 'validation.phoneCountryCode',
-  })
-  .refine(
-    (values) =>
-      !values.phone ||
-      !values.phoneCountry ||
-      !!parsePhoneNumberFromString(
-        values.phone,
-        values.phoneCountry,
-      )?.isPossible(),
-    {
-      path: ['phone'],
-      error: 'validation.phone',
-    },
-  )
-  .transform(({ phoneCountry, ...values }) => ({
-    ...values,
-    phone:
-      values.phone && phoneCountry
-        ? (parsePhoneNumberFromString(values.phone, phoneCountry)?.number ?? '')
-        : '',
-    vehicleDescription: values.hasVehicle ? values.vehicleDescription : '',
-    licensePlate: values.hasVehicle ? values.licensePlate : '',
-  }))
-  .pipe(checkInRequestSchema)
+export const checkInSchema = checkInSchemaForTimezone('America/Santiago')
+export const checkInRequestSchema = sharedCheckInRequestSchema
+export type CheckInValues = z.input<ReturnType<typeof checkInSchemaForTimezone>>
+export type CheckInRequest = z.output<
+  ReturnType<typeof checkInSchemaForTimezone>
+>
 
-export type CheckInValues = z.input<typeof checkInSchema>
-export type CheckInRequest = z.output<typeof checkInSchema>
-
-export function checkInDefaults(): CheckInValues {
+export function checkInDefaults(timezone = 'America/Santiago'): CheckInValues {
   return {
     responsibleName: '',
     document: '',
     nationality: '',
     phoneCountry: '',
     phone: '',
-    arrivalDate: todayLocal(),
+    arrivalDate: todayInTimezone(timezone),
     estimatedDeparture: '',
     adults: 1,
     children: 0,

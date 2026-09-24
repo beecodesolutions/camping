@@ -12,3 +12,13 @@ coverage/
 .vercel/
 .vercel
 .env*
+
+# Track documented templates, never local credentials.
+!.env.example
+!**/.env.example
+!**/.env.development
+.aws-sam/
+.artifacts/
+
+# Supabase CLI local project metadata.
+supabase/.temp/

@@ -1,2 +1,8 @@
 packages:
   - ui
+  - api
+  - contracts
+onlyBuiltDependencies:
+  - argon2
+  - '@nestjs/core'
+  - esbuild

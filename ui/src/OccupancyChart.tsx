@@ -58,7 +58,7 @@ export default function OccupancyChart() {
         </Typography>
       </Stack>
       <Typography variant="body2" color="inherit" sx={{ mt: 0.5, mb: 3 }}>
-        {t('home.historyDescription')}
+        {t('home.historyDescription')} · {t('home.historySample')}
       </Typography>
       <Box sx={{ height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -82,7 +82,8 @@ export default function OccupancyChart() {
                 fontSize: 12,
               }}
               tickMargin={10}
-              interval={0}
+              interval="preserveStartEnd"
+              minTickGap={12}
             />
             <YAxis
               allowDecimals={false}
