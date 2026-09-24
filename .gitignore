@@ -19,3 +19,6 @@ coverage/
 !**/.env.development
 .aws-sam/
 .artifacts/
+
+# Supabase CLI local project metadata.
+supabase/.temp/

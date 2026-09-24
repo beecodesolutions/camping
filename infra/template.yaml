@@ -33,7 +33,7 @@ Resources:
   Api:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../.artifacts/lambda/
+      CodeUri: ../.artifacts/lambda.zip
       Handler: dist/lambda.handler
       Runtime: nodejs24.x
       Architectures: [x86_64]
@@ -52,6 +52,7 @@ Resources:
           ALLOWED_ORIGIN: !Ref AllowedOrigin
           DATABASE_URL: !Sub '{{resolve:secretsmanager:${DatabaseSecretArn}:SecretString:DATABASE_URL}}'
           DATABASE_SSL: 'true'
+          NODE_EXTRA_CA_CERTS: /var/task/certs/supabase-ca.crt
           DB_POOL_MAX: '2'
       Events:
         Root:

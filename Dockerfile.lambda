@@ -10,5 +10,8 @@ COPY contracts contracts
 COPY api api
 RUN pnpm --filter @camping/contracts build && pnpm --filter @camping/api build
 RUN pnpm --filter @camping/api deploy --legacy --prod /out
+# pnpm legacy deploy leaves an unused self-link pointing to the build workspace.
+RUN rm /out/node_modules/.pnpm/node_modules/@camping/api
+RUN mkdir -p /out/certs && cp api/certs/supabase-ca.crt /out/certs/supabase-ca.crt
 FROM scratch AS artifact
 COPY --from=build /out /

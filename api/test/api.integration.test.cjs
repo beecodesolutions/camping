@@ -1,6 +1,8 @@
 const assert = require('node:assert/strict')
 const { createHash, randomUUID } = require('node:crypto')
 const { after, before, test } = require('node:test')
+const { spawnSync } = require('node:child_process')
+const path = require('node:path')
 const argon2 = require('argon2')
 const { Client } = require('pg')
 
@@ -1315,6 +1317,187 @@ test('PostgreSQL API integration', async (t) => {
         assert.equal(persisted.value.extras.length, 1)
         assert.equal(persisted.value.extras[0].description, 'Racing extra')
         assert.deepEqual(persisted.value.payments, [])
+      }
+    },
+  )
+
+  await t.test(
+    'seed:test bootstraps and reruns without crossing tenant boundaries',
+    async () => {
+      const seedCli = path.join(__dirname, '../dist/cli/seed-test.js')
+      const seedEnv = {
+        ...process.env,
+        DATABASE_ADMIN_URL: '',
+      }
+      const runSeed = (args = []) =>
+        spawnSync(process.execPath, [seedCli, ...args], {
+          cwd: path.join(__dirname, '..'),
+          env: seedEnv,
+          encoding: 'utf8',
+          timeout: 30000,
+        })
+      const counts = async (stableKey) => {
+        const [row] = await setupDataSource.query(
+          `SELECT
+       COUNT(DISTINCT stays.id)::int AS stays,
+       COUNT(DISTINCT payments.id)::int AS payments,
+       COUNT(DISTINCT applied_extras.id)::int AS extras
+     FROM camping_private.campings
+     LEFT JOIN camping_private.stays
+       ON stays.camping_id = campings.id
+     LEFT JOIN camping_private.payments
+       ON payments.camping_id = campings.id
+     LEFT JOIN camping_private.applied_extras
+       ON applied_extras.stay_id = stays.id
+     WHERE campings.stable_key = $1`,
+          [stableKey],
+        )
+        return row
+      }
+
+      const existingBefore = await counts('test-a')
+      const configOnly = runSeed(['--config-only'])
+      assert.equal(configOnly.status, 0, configOnly.stderr)
+      const [camping] = await setupDataSource.query(
+        `SELECT id FROM camping_private.campings WHERE stable_key = 'valle-escondido'`,
+      )
+      assert.ok(camping)
+      const templateRows = await setupDataSource.query(
+        `SELECT seed_key
+   FROM camping_private.extra_templates
+   WHERE camping_id = $1
+   ORDER BY seed_key`,
+        [camping.id],
+      )
+      assert.deepEqual(
+        templateRows.map((row) => row.seed_key),
+        ['bicicleta', 'desayuno-campestre', 'lena-fogon'],
+      )
+      const userId = randomUUID()
+      const username = `seed-regression-${userId.slice(0, 8)}`
+      const passwordHash = await argon2.hash(PASSWORD, {
+        type: argon2.argon2id,
+      })
+      await setupDataSource.query(
+        `INSERT INTO camping_private.users
+     (id, camping_id, username, name, password_hash, enabled, password_changed_at)
+   VALUES ($1, $2, $3, 'Seed regression operator', $4, true, CURRENT_TIMESTAMP)`,
+        [userId, camping.id, username, passwordHash],
+      )
+
+      try {
+        const firstRun = runSeed()
+        assert.equal(firstRun.status, 0, firstRun.stderr)
+        assert.match(
+          firstRun.stdout,
+          /6 stays added; 0 existing stays preserved/,
+        )
+        assert.deepEqual(await counts('valle-escondido'), {
+          stays: 6,
+          payments: 6,
+          extras: 7,
+        })
+        assert.deepEqual(await counts('test-a'), existingBefore)
+        const [statusCounts] = await setupDataSource.query(
+          `SELECT
+       COUNT(*) FILTER (WHERE closed_at IS NULL)::int AS active,
+       COUNT(*) FILTER (WHERE closed_at IS NOT NULL)::int AS historical,
+       COUNT(*) FILTER (WHERE responsible_name ILIKE '%demo%')::int AS demo_names
+     FROM camping_private.stays
+     WHERE camping_id = $1`,
+          [camping.id],
+        )
+        assert.deepEqual(statusCounts, {
+          active: 3,
+          historical: 3,
+          demo_names: 0,
+        })
+
+        const [editedStay] = await setupDataSource.query(
+          `SELECT id
+     FROM camping_private.stays
+     WHERE camping_id = $1
+     ORDER BY created_at, id
+     LIMIT 1`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `UPDATE camping_private.stays
+     SET responsible_name = 'Operador editó esta estadía'
+     WHERE id = $1`,
+          [editedStay.id],
+        )
+        await setupDataSource.query(
+          `UPDATE camping_private.campings
+     SET rates = $2
+     WHERE id = $1`,
+          [camping.id, { adults: 19999, children: 9999, infants: 0 }],
+        )
+
+        const secondRun = runSeed()
+        assert.equal(secondRun.status, 0, secondRun.stderr)
+        assert.match(
+          secondRun.stdout,
+          /0 stays added; 6 existing stays preserved/,
+        )
+        assert.deepEqual(await counts('valle-escondido'), {
+          stays: 6,
+          payments: 6,
+          extras: 7,
+        })
+        const [preservedStay] = await setupDataSource.query(
+          `SELECT responsible_name
+     FROM camping_private.stays
+     WHERE id = $1`,
+          [editedStay.id],
+        )
+        assert.equal(
+          preservedStay.responsible_name,
+          'Operador editó esta estadía',
+        )
+        const [preservedCamping] = await setupDataSource.query(
+          `SELECT rates
+     FROM camping_private.campings
+     WHERE id = $1`,
+          [camping.id],
+        )
+        assert.deepEqual(preservedCamping.rates, {
+          adults: 19999,
+          children: 9999,
+          infants: 0,
+        })
+        assert.deepEqual(await counts('test-a'), existingBefore)
+      } finally {
+        await setupDataSource.query(
+          `DELETE FROM camping_private.payments WHERE camping_id = $1`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `DELETE FROM camping_private.applied_extras
+     WHERE stay_id IN (SELECT id FROM camping_private.stays WHERE camping_id = $1)`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `DELETE FROM camping_private.stays WHERE camping_id = $1`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `DELETE FROM camping_private.sessions
+     WHERE user_id IN (SELECT id FROM camping_private.users WHERE camping_id = $1)`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `DELETE FROM camping_private.users WHERE camping_id = $1`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `DELETE FROM camping_private.extra_templates WHERE camping_id = $1`,
+          [camping.id],
+        )
+        await setupDataSource.query(
+          `DELETE FROM camping_private.campings WHERE id = $1`,
+          [camping.id],
+        )
       }
     },
   )

@@ -13,7 +13,7 @@ import {
 } from './common'
 
 const HELP = `Usage:
-  pnpm user -- create --username=USER --name="Display name" [--camping-key=la-izuelina] [--password-stdin]
+  pnpm user -- create --username=USER --name="Display name" [--camping-key=la-izuelina|valle-escondido] [--password-stdin]
   pnpm user -- change-password --username=USER [--password-stdin]
   pnpm user -- disable --username=USER
 

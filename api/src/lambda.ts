@@ -1,7 +1,6 @@
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
-  Callback,
   Context,
   Handler,
 } from 'aws-lambda'
@@ -14,7 +13,6 @@ let cachedHandler: ProxyHandler | undefined
 export async function handler(
   event: APIGatewayProxyEventV2,
   context: Context,
-  callback?: Callback<APIGatewayProxyResultV2>,
 ): Promise<APIGatewayProxyResultV2 | void> {
   if (!cachedHandler) {
     const app = await createNestApp()
@@ -23,5 +21,5 @@ export async function handler(
       app: app.getHttpAdapter().getInstance(),
     }) as ProxyHandler
   }
-  return cachedHandler(event, context, callback ?? (() => undefined))
+  return cachedHandler(event, context, () => undefined)
 }

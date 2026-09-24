@@ -64,7 +64,7 @@ No se exponen huéspedes públicamente. Cada operación resuelve camping desde u
 - `ui/`: frontend, formularios, RTK Query y MSW.
 - `contracts/`: esquemas y tipos compartidos; datos confirmados de seed, sin fallback de configuración en UI real.
 - `api/`: Nest, entidades, migraciones, CLI, pruebas y handler Lambda. [Contrato HTTP](docs/api.md) y [operación](api/README.md).
-- `infra/template.yaml`: plantilla AWS SAM, preparada pero no desplegada.
+- `infra/template.yaml`: plantilla AWS SAM del piloto. [Despliegue y operación](docs/deployment.md).
 
 ```sh
 pnpm typecheck
@@ -76,11 +76,11 @@ pnpm package:lambda
 
 Pruebas backend usan PostgreSQL real en base separada `camping_test`, nunca base del piloto. Crear una vez con `docker compose exec database createdb -U camping camping_test`. Por defecto usan `camping_test` en el mismo servidor local; para otra conexión, pasar `DATABASE_URL` con esa base. Pruebas deben fallar si apuntan a base no identificada como test.
 
-## AWS + Supabase (preparado, sin desplegar)
+## AWS + Supabase
 
 Arquitectura: frontend → API Gateway HTTP API → Lambda Node 24 → PostgreSQL Supabase. No se usan Supabase Auth, Data API ni SDK desde frontend.
 
-`pnpm package:lambda` empaqueta dentro de Linux, conserva metadata de Nest y comprueba carga del handler y Argon2 en imagen del runtime Lambda. Resultado en `.artifacts/lambda/`. No ejecuta deploy.
+`pnpm package:lambda` empaqueta dentro de Linux, conserva metadata de Nest y comprueba carga del handler y Argon2 en imagen del runtime Lambda. Resultado en `.artifacts/lambda.zip`, con enlaces pnpm preservados y verificación del ZIP extraído. No ejecuta deploy.
 
 Antes de desplegar:
 
@@ -104,7 +104,7 @@ Supabase Free puede pausar proyectos de baja actividad y no incluye backups auto
 
 AWS Free Tier y créditos no garantizan factura cero permanente. Revisar [AWS Free Tier](https://aws.amazon.com/free/free-tier-faqs/), [HTTP API](https://aws.amazon.com/api-gateway/pricing/) y [Supabase](https://supabase.com/pricing/) al abrir cuenta. Alertas de presupuesto avisan, no constituyen límite duro de gasto.
 
-Conectividad real AWS–Supabase, latencia, cold starts, dominio y costos quedan pendientes hasta despliegue autorizado. Validación local no equivale a operación cloud verificada.
+El piloto usa Vercel, Lambda y Supabase; consultar [despliegue y operación](docs/deployment.md) para recursos, verificaciones y rollback. Los costos y créditos requieren seguimiento; validación local no equivale a operación cloud verificada.
 
 ### Actualizar base local para pagos
 

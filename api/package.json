@@ -20,7 +20,8 @@
     "lint": "oxlint src",
     "test": "tsc -p tsconfig.json && node --test dist/common/date.spec.js test/*.test.cjs",
     "runtime:provision": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/provision-runtime-role.js",
-    "seed:demo": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-demo.js"
+    "seed:demo": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-demo.js",
+    "seed:test": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-test.js"
   },
   "dependencies": {
     "@camping/contracts": "workspace:*",
