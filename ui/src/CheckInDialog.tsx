@@ -10,7 +10,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  InputAdornment,
   Divider,
   Stack,
   TextField,
@@ -148,49 +147,39 @@ export default function CheckInDialog({
                       slotProps={{ htmlInput: register('document') }}
                     />
                   </Stack>
-                  <TextField
-                    label={t('checkIn.phone')}
-                    type="tel"
-                    autoComplete="tel-national"
-                    fullWidth
-                    error={!!errors.phone || !!errors.phoneCountry}
-                    helperText={errorText(
-                      errors.phone?.message ?? errors.phoneCountry?.message,
-                    )}
-                    slotProps={{
-                      htmlInput: register('phone'),
-                      input: {
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Controller
-                              name="phoneCountry"
-                              control={control}
-                              render={({ field }) => (
-                                <CountrySelect
-                                  label={t('checkIn.phoneCountryCode')}
-                                  value={field.value}
-                                  inputRef={field.ref}
-                                  onBlur={field.onBlur}
-                                  onChange={field.onChange}
-                                  disabled={isSubmitting}
-                                  callingCode
-                                />
-                              )}
-                            />
-                            <Divider
-                              orientation="vertical"
-                              sx={{
-                                height: 28,
-                                ml: 0.5,
-                                borderColor: 'text.secondary',
-                                flexShrink: 0,
-                              }}
-                            />
-                          </InputAdornment>
-                        ),
-                      },
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(140px, 2fr) minmax(0, 3fr)',
+                      gap: 1,
                     }}
-                  />
+                  >
+                    <Controller
+                      name="phoneCountry"
+                      control={control}
+                      render={({ field }) => (
+                        <CountrySelect
+                          label={t('checkIn.phoneCountryCode')}
+                          value={field.value}
+                          inputRef={field.ref}
+                          onBlur={field.onBlur}
+                          onChange={field.onChange}
+                          disabled={isSubmitting}
+                          error={errorText(errors.phoneCountry?.message)}
+                          callingCode
+                        />
+                      )}
+                    />
+                    <TextField
+                      label={t('checkIn.phone')}
+                      type="tel"
+                      autoComplete="tel-national"
+                      fullWidth
+                      error={!!errors.phone}
+                      helperText={errorText(errors.phone?.message)}
+                      slotProps={{ htmlInput: register('phone') }}
+                    />
+                  </Box>
                 </Stack>
                 <Divider />
                 <Stack
