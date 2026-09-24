@@ -82,7 +82,8 @@ export default function OccupancyChart() {
                 fontSize: 12,
               }}
               tickMargin={10}
-              interval={0}
+              interval="preserveStartEnd"
+              minTickGap={12}
             />
             <YAxis
               allowDecimals={false}

@@ -42,7 +42,7 @@ export default function StayList({ items, timezone, onSelect }: Props) {
           divider
           sx={{
             alignItems: 'stretch',
-            flexDirection: { xs: 'column', sm: 'row' },
+            flexDirection: { xs: 'column', md: 'row' },
           }}
         >
           <ListItemButton
@@ -53,7 +53,7 @@ export default function StayList({ items, timezone, onSelect }: Props) {
               primary={stay.responsibleName}
               secondary={`${relativeDay(stay.arrivalDate, today, i18n.language)} · ${t('stay.peopleCount', { count: stay.adults + stay.children + stay.infants })}`}
               slotProps={{
-                primary: { sx: { fontWeight: 600 } },
+                primary: { sx: { fontWeight: 600, overflowWrap: 'anywhere' } },
                 secondary: { sx: { overflowWrap: 'anywhere' } },
               }}
             />
@@ -71,15 +71,17 @@ export default function StayList({ items, timezone, onSelect }: Props) {
             sx={{
               display: 'grid',
               gridTemplateColumns: {
-                xs: 'minmax(0, 1fr) minmax(0, 1.3fr) 44px',
-                sm: '128px 132px 44px',
+                xs: 'minmax(0, 1fr) 44px',
+                sm: 'minmax(0, 1fr) minmax(0, 1.3fr) 44px',
+                md: '128px 132px 44px',
               },
-              columnGap: { xs: 1, sm: 6 },
-              width: { xs: '100%', sm: 'auto' },
+              columnGap: { xs: 1, md: 6 },
+              rowGap: 1,
+              width: { xs: '100%', md: 'auto' },
               alignItems: 'center',
               pr: 1,
-              pl: { xs: 2, sm: 0 },
-              pb: { xs: 1, sm: 0 },
+              pl: { xs: 2, md: 0 },
+              pb: { xs: 1, md: 0 },
               justifyContent: 'flex-end',
               flexShrink: 0,
             }}
@@ -89,7 +91,8 @@ export default function StayList({ items, timezone, onSelect }: Props) {
               spacing={0.5}
               sx={{
                 alignItems: 'center',
-                justifyContent: 'flex-end',
+                justifyContent: { xs: 'flex-start', sm: 'flex-end' },
+                gridColumn: { xs: '1 / -1', sm: 'auto' },
                 minWidth: 0,
               }}
             >
@@ -103,7 +106,12 @@ export default function StayList({ items, timezone, onSelect }: Props) {
                   <IconButton
                     aria-label={t('stay.addExtraAction')}
                     onClick={() => onSelect({ id: stay.id, action: 'extras' })}
-                    sx={{ width: 44, height: 44, color: 'accent.main' }}
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      color: 'accent.main',
+                    }}
                   >
                     <SvgIcon>
                       <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
@@ -127,6 +135,8 @@ export default function StayList({ items, timezone, onSelect }: Props) {
                   aria-label={`${t(stay.account.balanceMinor < 0 ? 'stay.credit' : 'stay.balance')}: ${formatMoney(Math.abs(stay.account.balanceMinor), stay.currency, i18n.language)}`}
                   sx={{
                     fontWeight: 700,
+                    overflowWrap: 'anywhere',
+                    minWidth: 0,
                     fontVariantNumeric: 'tabular-nums',
                     color:
                       stay.account.balanceMinor < 0
@@ -146,7 +156,12 @@ export default function StayList({ items, timezone, onSelect }: Props) {
                   <IconButton
                     aria-label={t('stay.recordPayment')}
                     onClick={() => onSelect({ id: stay.id, action: 'payment' })}
-                    sx={{ width: 44, height: 44, color: 'accent.main' }}
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      color: 'accent.main',
+                    }}
                   >
                     <SvgIcon>
                       <g

@@ -14,7 +14,7 @@ export default function PendingBalanceCard({
       component="section"
       aria-labelledby="balance-title"
       variant="outlined"
-      sx={{ p: 2, borderRadius: 2 }}
+      sx={{ p: 2, borderRadius: 2, height: '100%' }}
     >
       <Stack spacing={2}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>

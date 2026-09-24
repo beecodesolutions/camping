@@ -58,6 +58,13 @@ import { useTimeOfDay } from './app/timeOfDay'
 
 type WorkspaceProps = { user: SessionUser; themeControl: ReactNode }
 const pageSize = 8
+const formGridSx = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
+  gap: 2,
+  alignItems: 'start',
+  '& > .MuiTextField-root': { width: '100%', minWidth: 0 },
+}
 
 function countPeople(stay: Stay) {
   return stay.adults + stay.children + stay.infants
@@ -157,18 +164,18 @@ export default function CampingWorkspace({
           (profile ? (
             <>
               <Stack
-                direction={{ xs: 'column', sm: 'row' }}
+                direction={{ xs: 'column', md: 'row' }}
                 spacing={2}
                 sx={{ mt: 2 }}
               >
-                <Box sx={{ flex: 1 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <OccupancyCard
                     activeGroups={profile.activeGroups}
                     activePeople={profile.activePeople}
                     activeVehicles={profile.activeVehicles}
                   />
                 </Box>
-                <Box sx={{ flex: 1 }}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <PendingBalanceCard
                     pendingAmountMinor={profile.pendingAmountMinor}
                     currency={profile.currency}
@@ -543,7 +550,7 @@ function StayDetail({
   }
   const closePanel =
     stay && editable ? (
-      <Box>
+      <Stack spacing={2}>
         <Divider />
         <Typography variant="h6">{t('stay.closeTitle')}</Typography>
         <Stack
@@ -633,11 +640,24 @@ function StayDetail({
             </Stack>
           </Paper>
         )}
-      </Box>
+      </Stack>
     ) : null
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="md"
+      slotProps={{
+        paper: {
+          sx: {
+            m: { xs: 1, sm: 4 },
+            width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' },
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{ overflowWrap: 'anywhere' }}>
         {action === 'payment'
           ? `${t('stay.recordPayment')} · `
           : action === 'extras'
@@ -679,11 +699,7 @@ function StayDetail({
                     <Typography variant="h6">
                       {t('stay.closedSummary')}
                     </Typography>
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={2}
-                      sx={{ mt: 1 }}
-                    >
+                    <Box sx={{ ...formGridSx, mt: 1 }}>
                       <Info
                         label={t('stay.departureDate')}
                         value={formatDate(
@@ -726,7 +742,7 @@ function StayDetail({
                           i18n.language,
                         )}
                       />
-                    </Stack>
+                    </Box>
                     <Typography
                       variant="body2"
                       color="text.secondary"
@@ -823,7 +839,7 @@ function StayDetail({
                       </Stack>
                     ))}
                   <Stack spacing={1} sx={{ mt: 2 }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Box sx={formGridSx}>
                       <TextField
                         type="number"
                         label={t('stay.paymentAmount')}
@@ -863,7 +879,6 @@ function StayDetail({
                           stay.closure !== null &&
                           stay.account.balanceMinor <= 0
                         }
-                        sx={{ minWidth: 150 }}
                       >
                         <MenuItem value="cash">
                           {t('stay.paymentMethods.cash')}
@@ -892,7 +907,7 @@ function StayDetail({
                           stay.account.balanceMinor <= 0
                         }
                       />
-                    </Stack>
+                    </Box>
                     <TextField
                       label={t('stay.paymentNote')}
                       value={paymentNote}
@@ -952,17 +967,12 @@ function StayDetail({
                   />
                 ))}
                 {editable && (
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    sx={{ alignItems: 'stretch', flexWrap: 'wrap' }}
-                  >
+                  <Box sx={formGridSx}>
                     <TextField
                       select
                       label={t('stay.template')}
                       value={selectedTemplate}
                       onChange={(e) => setSelectedTemplate(e.target.value)}
-                      sx={{ minWidth: 180 }}
                     >
                       <MenuItem value="">{t('stay.freeExtra')}</MenuItem>
                       {(templates.data ?? [])
@@ -986,7 +996,6 @@ function StayDetail({
                           onChange={(e) => setCategory(e.target.value)}
                         />
                         <TextField
-                          size="small"
                           label={t('stay.description')}
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
@@ -1008,7 +1017,6 @@ function StayDetail({
                       onChange={(e) =>
                         setQuantity(Math.max(1, Number(e.target.value)))
                       }
-                      sx={{ width: 110 }}
                     />
                     <Button
                       variant="outlined"
@@ -1017,7 +1025,7 @@ function StayDetail({
                     >
                       {t('stay.addExtra')}
                     </Button>
-                  </Stack>
+                  </Box>
                 )}
               </>
             )}
@@ -1104,11 +1112,7 @@ function ExtraRow({
     }
   }
   return (
-    <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={1}
-      sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}
-    >
+    <Box sx={formGridSx}>
       <TextField
         size="small"
         label={t('stay.category')}
@@ -1130,7 +1134,6 @@ function ExtraRow({
         value={price}
         disabled={!editable || saving}
         onChange={(e) => setPrice(Number(e.target.value))}
-        sx={{ width: 150 }}
       />
       <TextField
         size="small"
@@ -1139,27 +1142,37 @@ function ExtraRow({
         value={quantity}
         disabled={!editable || saving}
         onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-        sx={{ width: 110 }}
       />
-      <Typography sx={{ minWidth: 110 }}>
-        {formatMoney(price * quantity, stay.currency, i18n.language)}
-      </Typography>
-      {error && <Typography color="error">{t('stay.extraError')}</Typography>}
-      {editable && (
-        <>
-          <Button size="small" onClick={() => void save()} disabled={saving}>
-            {t('common.save')}
-          </Button>
-          <IconButton
-            aria-label={t('common.delete')}
-            onClick={() => void remove()}
-            disabled={saving}
-          >
-            ×
-          </IconButton>
-        </>
-      )}
-    </Stack>
+      <Stack
+        direction="row"
+        useFlexGap
+        sx={{
+          gridColumn: '1 / -1',
+          gap: 1,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+        }}
+      >
+        <Typography sx={{ mr: 'auto', overflowWrap: 'anywhere' }}>
+          {formatMoney(price * quantity, stay.currency, i18n.language)}
+        </Typography>
+        {error && <Typography color="error">{t('stay.extraError')}</Typography>}
+        {editable && (
+          <>
+            <Button size="small" onClick={() => void save()} disabled={saving}>
+              {t('common.save')}
+            </Button>
+            <IconButton
+              aria-label={t('common.delete')}
+              onClick={() => void remove()}
+              disabled={saving}
+            >
+              ×
+            </IconButton>
+          </>
+        )}
+      </Stack>
+    </Box>
   )
 }
 
@@ -1207,7 +1220,7 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t('settings.ratesHelp')}
         </Typography>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Box sx={formGridSx}>
           {(['adults', 'children', 'infants'] as const).map((category) => (
             <TextField
               key={category}
@@ -1229,11 +1242,11 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
           >
             {t('common.save')}
           </Button>
-        </Stack>
+        </Box>
       </Paper>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6">{t('settings.templates')}</Typography>
-        <Stack spacing={1} sx={{ mt: 2 }}>
+        <Stack spacing={3} divider={<Divider />} sx={{ mt: 2 }}>
           {templates.isError && (
             <Alert severity="error">{t('settings.loadError')}</Alert>
           )}
@@ -1247,14 +1260,13 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
           ))}
         </Stack>
         <Divider sx={{ my: 2 }} />
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+        <Box sx={formGridSx}>
           <TextField
             label={t('stay.category')}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           />
           <TextField
-            size="small"
             label={t('stay.description')}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -1272,7 +1284,7 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
           >
             {t('settings.createTemplate')}
           </Button>
-        </Stack>
+        </Box>
       </Paper>
     </Stack>
   )
@@ -1309,11 +1321,7 @@ function TemplateRow({
     }
   }
   return (
-    <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      spacing={1}
-      sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}
-    >
+    <Box sx={formGridSx}>
       <TextField
         size="small"
         value={category}
@@ -1334,32 +1342,42 @@ function TemplateRow({
         label={t('stay.unitPrice')}
         value={price}
         onChange={(e) => setPrice(Number(e.target.value))}
-        sx={{ width: 140 }}
         disabled={saving}
       />
-      <Typography sx={{ minWidth: 100 }}>
-        {formatMoney(price, currency, i18n.language)}
-      </Typography>
-      {error && (
-        <Typography color="error">{t('settings.saveError')}</Typography>
-      )}
-      <Button
-        size="small"
-        onClick={() =>
-          void save({ category, description, unitPriceMinor: price })
-        }
-        disabled={saving}
+      <Stack
+        direction="row"
+        useFlexGap
+        sx={{
+          gridColumn: '1 / -1',
+          gap: 1,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+        }}
       >
-        {t('common.save')}
-      </Button>
-      <Button
-        size="small"
-        onClick={() => void save({ enabled: !template.enabled })}
-        disabled={saving}
-      >
-        {template.enabled ? t('settings.deactivate') : t('settings.activate')}
-      </Button>
-    </Stack>
+        <Typography sx={{ mr: 'auto', overflowWrap: 'anywhere' }}>
+          {formatMoney(price, currency, i18n.language)}
+        </Typography>
+        {error && (
+          <Typography color="error">{t('settings.saveError')}</Typography>
+        )}
+        <Button
+          size="small"
+          onClick={() =>
+            void save({ category, description, unitPriceMinor: price })
+          }
+          disabled={saving}
+        >
+          {t('common.save')}
+        </Button>
+        <Button
+          size="small"
+          onClick={() => void save({ enabled: !template.enabled })}
+          disabled={saving}
+        >
+          {template.enabled ? t('settings.deactivate') : t('settings.activate')}
+        </Button>
+      </Stack>
+    </Box>
   )
 }
 function formatDate(value: string, locale: string) {
