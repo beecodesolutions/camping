@@ -182,7 +182,7 @@ async function main(): Promise<void> {
         `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.stays TO ${roleIdentifier}`,
       )
       await manager.query(
-        `GRANT UPDATE (version, closed_at, closed_by_id, closure) ON TABLE ${schemaIdentifier}.stays TO ${roleIdentifier}`,
+        `GRANT UPDATE (version, closed_at, closed_by_id, closure, reservation_id) ON TABLE ${schemaIdentifier}.stays TO ${roleIdentifier}`,
       )
       await manager.query(
         `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.extra_templates TO ${roleIdentifier}`,
@@ -198,6 +198,30 @@ async function main(): Promise<void> {
       )
       await manager.query(
         `GRANT UPDATE (category, description, quantity, unit_price_minor) ON TABLE ${schemaIdentifier}.applied_extras TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.accommodation_types TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT UPDATE (name, inventory_mode, max_occupancy, base_nightly_price_minor, enabled, updated_at) ON TABLE ${schemaIdentifier}.accommodation_types TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.accommodation_units TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT UPDATE (name, enabled, updated_at) ON TABLE ${schemaIdentifier}.accommodation_units TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.accommodation_blocks TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT SELECT, INSERT, UPDATE ON TABLE ${schemaIdentifier}.reservations TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT SELECT, INSERT, UPDATE ON TABLE ${schemaIdentifier}.outbox_events TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.audit_logs TO ${roleIdentifier}`,
       )
       await manager.query(
         `ALTER ROLE ${roleIdentifier} SET search_path TO ${schemaIdentifier}, public`,

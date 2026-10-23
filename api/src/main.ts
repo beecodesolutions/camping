@@ -1,8 +1,17 @@
 import 'reflect-metadata'
 import type { Request, Response, NextFunction } from 'express'
 import { NestFactory } from '@nestjs/core'
+import { SwaggerModule } from '@nestjs/swagger'
 import { SafeExceptionFilter } from './common/exception.filter'
 import { AppModule } from './app.module'
+import { createOpenApiDocument } from './openapi/document'
+
+export function openApiEnabled(): boolean {
+  return (
+    process.env.NODE_ENV !== 'production' ||
+    process.env.OPENAPI_ENABLED === 'true'
+  )
+}
 
 export async function createNestApp() {
   const app = await NestFactory.create(AppModule, { bodyParser: true })
@@ -35,6 +44,13 @@ export async function createNestApp() {
   })
   app.useGlobalFilters(new SafeExceptionFilter())
   app.enableShutdownHooks()
+  if (openApiEnabled()) {
+    const document = createOpenApiDocument(app)
+    SwaggerModule.setup('api/docs', app, document, {
+      jsonDocumentUrl: 'api/openapi.json',
+      customSiteTitle: 'Maytu API documentation',
+    })
+  }
   return app
 }
 

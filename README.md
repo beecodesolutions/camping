@@ -64,6 +64,7 @@ No se exponen huéspedes públicamente. Cada operación resuelve camping desde u
 - `ui/`: frontend, formularios, RTK Query y MSW.
 - `contracts/`: esquemas y tipos compartidos; datos confirmados de seed, sin fallback de configuración en UI real.
 - `api/`: Nest, entidades, migraciones, CLI, pruebas y handler Lambda. [Contrato HTTP](docs/api.md) y [operación](api/README.md).
+- OpenAPI del piloto: [documentación y exportación estática](docs/openapi.md). [Modelos de reservas de fase 1](docs/reservations.md) solo agregan componentes de contrato; no anuncian endpoints futuros.
 - `infra/template.yaml`: plantilla AWS SAM del piloto. [Despliegue y operación](docs/deployment.md).
 
 ```sh

@@ -18,10 +18,11 @@
     "user": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/create-user.js",
     "user:create": "pnpm user",
     "lint": "oxlint src",
-    "test": "tsc -p tsconfig.json && node --test dist/common/date.spec.js test/*.test.cjs",
+    "test": "tsc -p tsconfig.json && node --test --test-concurrency=1 dist/common/date.spec.js test/*.test.cjs",
     "runtime:provision": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/provision-runtime-role.js",
     "seed:demo": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-demo.js",
-    "seed:test": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-test.js"
+    "seed:test": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-test.js",
+    "openapi:export": "tsc -p tsconfig.json && node dist/cli/export-openapi.js"
   },
   "dependencies": {
     "@camping/contracts": "workspace:*",
@@ -29,6 +30,7 @@
     "@nestjs/common": "^11.1.9",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
+    "@nestjs/swagger": "^11.4.7",
     "argon2": "^0.44.0",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
