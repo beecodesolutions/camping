@@ -110,6 +110,14 @@ export class ReservationEntity {
   idempotencyKey!: string
 
   @Column({
+    name: 'create_request_hash',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  createRequestHash!: string | null
+
+  @Column({
     name: 'created_at',
     type: 'timestamptz',
     default: () => 'CURRENT_TIMESTAMP',

@@ -20,6 +20,9 @@ const {
 const {
   AccommodationPersistence1760000002000,
 } = require('../dist/database/migrations/1760000002000-AccommodationPersistence')
+const {
+  ReservationCreationHash1760000003000,
+} = require('../dist/database/migrations/1760000003000-ReservationCreationHash')
 const { CampingEntity } = require('../dist/database/entities/camping.entity')
 const {
   AccommodationTypeEntity,
@@ -146,6 +149,7 @@ before(async () => {
     [ids.payment, ids.campingA, ids.stay, ids.userA, randomUUID()],
   )
   await new AccommodationPersistence1760000002000().up(runner)
+  await new ReservationCreationHash1760000003000().up(runner)
   await execute(`
     CREATE TABLE camping_private.camping_migrations (
       id SERIAL PRIMARY KEY,
@@ -155,11 +159,12 @@ before(async () => {
   `)
   await execute(
     `INSERT INTO camping_private.camping_migrations (timestamp, name)
-     VALUES (1760000000000, $1), (1760000001000, $2), (1760000002000, $3)`,
+     VALUES (1760000000000, $1), (1760000001000, $2), (1760000002000, $3), (1760000003000, $4)`,
     [
       'InitialSchema1760000000000',
       'AddPayments1760000001000',
       'AccommodationPersistence1760000002000',
+      'ReservationCreationHash1760000003000',
     ],
   )
   await runner.commitTransaction()

@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   addExtraSchema,
   appliedExtraSchema,
+  availabilityOpenApiSchemas,
   campingProfileSchema,
   checkInRequestSchema,
   closeRequestSchema,
@@ -102,5 +103,15 @@ export const openApiSchemas: Record<string, SchemaObject> = {
 }
 
 for (const [name, schema] of Object.entries(reservationOpenApiSchemas)) {
-  openApiSchemas[componentName(name)] = zodOpenApiSchema(schema, 'output')
+  openApiSchemas[componentName(name)] = zodOpenApiSchema(
+    schema,
+    name === 'reservationListQuery' ? 'input' : 'output',
+  )
+}
+
+for (const [name, schema] of Object.entries(availabilityOpenApiSchemas)) {
+  openApiSchemas[componentName(name)] = zodOpenApiSchema(
+    schema,
+    name === 'availabilityQuery' ? 'input' : 'output',
+  )
 }

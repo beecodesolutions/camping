@@ -16,6 +16,7 @@ import { AccommodationBlockEntity } from './entities/accommodation-block.entity'
 import { ReservationEntity } from './entities/reservation.entity'
 import { OutboxEventEntity } from './entities/outbox-event.entity'
 import { AuditLogEntity } from './entities/audit-log.entity'
+import { ReservationCreationHash1760000003000 } from './migrations/1760000003000-ReservationCreationHash'
 
 export const entities = [
   CampingEntity,
@@ -68,6 +69,7 @@ export function createDataSource() {
       InitialSchema1760000000000,
       AddPayments1760000001000,
       AccommodationPersistence1760000002000,
+      ReservationCreationHash1760000003000,
     ],
     synchronize: false,
     migrationsRun: false,

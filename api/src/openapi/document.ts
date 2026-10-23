@@ -16,6 +16,14 @@ import { ExtraService } from '../extras/extra.service'
 import { StayController } from '../stays/stay.controller'
 import { StayService } from '../stays/stay.service'
 import { openApiSchemas } from './schemas'
+import { AccommodationsController } from '../accommodations/accommodations.controller'
+import { AccommodationsService } from '../accommodations/accommodations.service'
+import { AvailabilityController } from '../accommodations/availability.controller'
+import { AvailabilityService } from '../accommodations/availability.service'
+import { ReservationController } from '../reservations/reservation.controller'
+import { ReservationPaymentsController } from '../reservations/reservation-payments.controller'
+import { ReservationService } from '../reservations/reservation.service'
+import { ReservationPaymentsService } from '../reservations/reservation-payments.service'
 
 const documentationDataSource = {}
 
@@ -30,6 +38,10 @@ const documentationDataSource = {}
     CampingController,
     StayController,
     ExtraController,
+    AccommodationsController,
+    AvailabilityController,
+    ReservationController,
+    ReservationPaymentsController,
   ],
   providers: [
     { provide: DataSource, useValue: documentationDataSource },
@@ -38,6 +50,10 @@ const documentationDataSource = {}
     CampingService,
     StayService,
     ExtraService,
+    AccommodationsService,
+    AvailabilityService,
+    ReservationService,
+    ReservationPaymentsService,
   ],
 })
 export class OpenApiModule {}

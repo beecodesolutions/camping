@@ -27,7 +27,12 @@ erDiagram
 
 Todas las entidades nuevas se aíslan por camping. Las claves compuestas validan pertenencia además de los controles de autorización de servicios futuros. No existe un catálogo de huéspedes compartido entre campings.
 
-Una reserva guarda responsable y contacto, fechas locales, ocupantes, origen neutral, notas, estado y snapshot del precio acordado. El tipo define modalidad, ocupación máxima y tarifa base; la unidad identifica el espacio físico. Los bloqueos describen unidad, rango y motivo, sin huésped ni cobros.
+Una reserva guarda responsable y contacto, fechas locales, ocupantes, canal de
+reserva (`source`), notas, estado y snapshot del precio acordado. `source` es
+un texto de canal para la reserva y se normaliza a `manual` cuando se omite;
+no representa el origen técnico de una mutación. El tipo define modalidad,
+ocupación máxima y tarifa base; la unidad identifica el espacio físico. Los
+bloqueos describen unidad, rango y motivo, sin huésped ni cobros.
 
 ## Ciclo de vida y disponibilidad
 
@@ -39,17 +44,124 @@ Fechas PostgreSQL `date`, formato ISO, intervalo `[checkInDate, checkOutDate)` c
 
 Cada escritura que afecte inventario bloqueará la fila del camping dentro de una transacción. Luego validará unidades, reservas y bloqueos, y persistirá el cambio, la auditoría y el outbox juntos. Todas las rutas de escritura deben respetar ese protocolo. Las ediciones validarán el reemplazo excluyendo la reserva anterior dentro de la misma transacción. La consulta mensual leerá rangos y agregará por noche, sin N consultas por fecha. Además de cupos nocturnos, devolverá unidades disponibles para todo el rango.
 
+### Consulta de disponibilidad
+
+`GET /api/availability` exige `checkInDate` y `checkOutDate` como fechas ISO de
+calendario, con salida exclusiva posterior a la entrada. El rango operativo
+máximo es de 366 noches; es un límite de la consulta y no una restricción de
+capacidad. El cálculo usa fechas de calendario, sin convertirlas a horas ni
+dejar que un cambio horario altere el número de noches.
+
+La respuesta separa los tipos por `inventoryMode`:
+
+- `individual` representa unidades identificadas. Cada noche incluye
+  `totalUnits`, `reservedUnits`, `blockedUnits` y `availableUnits`, además de
+  `availableUnitIds`, que contiene las unidades disponibles durante todo el
+  rango solicitado. La misma modalidad sirve para cabañas, habitaciones y
+  parcelas identificadas como `A1`, `A2`, etc.; no existe una validación
+  especial limitada a un tipo de alojamiento.
+- `unlimited` representa camping libre sin cupo cuantificado. Cada noche
+  incluye la cantidad de `reservations` y los conteos de `adults`, `children` e
+  `infants`; no devuelve conteos de capacidad ni unidades.
+
+La consulta incluye tipos habilitados y deshabilitados. Un tipo deshabilitado
+queda con `inventoryMode` y sus datos existentes, pero no se puede usar para
+nuevas operaciones de inventario. Las reservas `pending`, `confirmed` y
+`checked_in` consumen inventario en su intervalo; `checked_out`, `cancelled` y
+`no_show` son estados terminales y no lo consumen. Bloqueos se agregan por
+unidad y rango. `availableUnits` se calcula como la unión de unidades
+ocupadas por reservas y bloqueos, para no contar dos veces conflictos
+históricos entre ambas categorías.
+
+Las mutaciones de tipos, unidades y bloqueos se serializan por camping con la
+sesión autenticada como ámbito. La escritura de la entidad, su auditoría y el
+outbox se confirma en la misma transacción; los cambios de tarifa emiten
+`RateChanged` y los cambios de inventario emiten `InventoryChanged`.
+
 Una estadía abierta que supera su salida prevista requiere resolución: no impide guardar reservas futuras, pero sí ingresar otro grupo a su unidad. Extender la reserva vuelve a validar disponibilidad; nunca desplaza silenciosamente otra reserva.
 
 ## Precios, pagos y transición
 
 Espacios cerrados: tarifa por unidad/noche y total acordado editable explícitamente. Camping libre: tarifa por persona/noche conservando rangos infantiles del piloto. El snapshot guarda la base de cálculo y el importe acordado; cambiar configuración no altera reservas existentes. Modificaciones de fechas o alojamiento requieren aceptar un nuevo presupuesto.
 
-Cada reserva admite múltiples pagos en efectivo, transferencia o tarjeta. El pago recibido es un único registro: al ingresar se vincula también a su estadía, sin copiarlo. Los pagos históricos conservan su `stay_id`. Los saldos se derivan del precio y pagos no anulados; no son campos editables.
+Cada reserva admite múltiples pagos en efectivo, transferencia o tarjeta. En la
+etapa 3 el pago queda vinculado a la reserva y no a una estadía; la asociación
+con una estadía pertenece a la etapa 4 y debe conservar el mismo registro, sin
+copiarlo. Los pagos históricos conservan su `stay_id` cuando exista. Los
+saldos se derivan del precio y pagos no anulados; no son campos editables.
 
 Anular un anticipo erróneo conserva motivo, actor y fecha y lo excluye del saldo. Cancelar una reserva no anula sus pagos. Las devoluciones quedan fuera de alcance; un anticipo retenido sigue visible y pendiente de resolución fuera del sistema.
 
 El piloto anterior no tiene usuarios activos: no se exige compatibilidad con sus contratos ni una activación gradual por camping. Se reutiliza la lógica útil de estadías, extras y pagos, pero puede adaptarse al modelo nuevo sin capas de compatibilidad. No inferir unidades desde ubicaciones libres ni fabricar cobros. Los ingresos directos a unidades cerradas también deberán validar inventario. Cualquier reinicio de datos se hará de forma explícita; esta implementación no borra bases del piloto.
+
+## API de reservas de la etapa 3
+
+La API publica once operaciones con `operationId` estable: `reservationQuoteCreate`,
+`reservationCreate`, `reservationList`, `reservationRead`,
+`reservationQuoteUpdate`, `reservationUpdate`, `reservationConfirm`,
+`reservationCancel`, `reservationNoShow`, `reservationPaymentRecord` y
+`reservationPaymentVoid`. Todas resuelven el camping desde la sesión. La
+consulta de lista acepta `status`, `typeId`, un rango completo de fechas y
+`page`/`pageSize`; los valores de paginación se convierten desde query string,
+con página por defecto 1, tamaño por defecto 25 y máximo 100. Un rango de
+consulta no puede exceder 366 noches. `page` no puede superar el entero
+positivo máximo de PostgreSQL (`2147483647`).
+
+`POST /api/reservations/quote` recibe únicamente tipo, unidad opcional, fechas,
+ocupantes y, si hace falta, el par `agreedTotalMinor`/`priceAdjustmentReason`.
+Devuelve `priceSnapshot` y valida inventario sin crear una retención. `POST
+/api/reservations` agrega contacto, notas, `idempotencyKey` y el
+`acceptedTotalMinor` obligatorio. El servicio vuelve a cotizar dentro de la
+transacción y devuelve `409 PRICE_CHANGED` cuando el importe aceptado no
+coincide. Nunca se acepta `clientPriceSnapshot`.
+
+El precio individual es por unidad y noche. Camping libre es por persona y
+noche, usando `camping.rates` y `ageRanges`. El snapshot conserva moneda,
+tarifas o rangos y la base de cálculo, además del total y del ajuste final.
+Un total manual exige motivo no vacío de hasta 500 caracteres; el par solo
+puede aparecer completo. Si se conserva el tipo de alojamiento, una edición
+reutiliza la tarifa base, unidad, moneda y ajuste guardados aunque cambie la
+configuración del camping. Cambiar de tipo usa la configuración actual. La
+edición de contacto, notas o canal no cambia el precio. Toda edición que cambie
+fechas, personas, tipo, unidad o ajuste debe enviar `acceptedTotalMinor`, incluso si
+el total resultante no cambia. Las operaciones de dinero son enteros seguros;
+no hay flotantes ni recálculo silencioso.
+
+El origen técnico de las mutaciones locales queda fijo como `origin: manual`.
+El outbox conserva el canal de reserva por separado en `bookingSource`, tomado
+de `source`; no se acepta un campo público para cambiar el origen técnico. La
+auditoría registra el usuario de la sesión, estado anterior y posterior, y los
+cambios de precio o pago dentro de la misma transacción que la entidad y el
+outbox.
+
+`POST /api/reservations/:id/quote` recibe los campos de edición y `version`,
+pero no acepta `acceptedTotalMinor`; devuelve `reservationId`, `version` y el
+snapshot previsto. `PATCH /api/reservations/:id` aplica los mismos campos más
+el total aceptado opcional, que el servicio exige solo cuando el precio
+afecta el reemplazo. No existe un PATCH de estado. Los comandos de confirmar,
+cancelar y no-show reciben exclusivamente `version`. Confirmar solo opera en
+pendientes; cancelar y no-show operan en pendientes o confirmadas. No-show no
+puede marcarse antes de `checkInDate` en la zona local. Una repetición que ya
+alcanzó el estado pedido devuelve la representación actual sin otro evento;
+las demás versiones obsoletas responden 409. Las versiones aumentan en toda
+mutación. Repetir una creación con la misma `idempotencyKey` y payload
+normalizado devuelve la reserva existente sin nueva auditoría ni evento;
+cambiar cualquier dato del payload responde 409. El mismo principio aplica a
+un pago: repetir su clave con importe, método, fecha, nota y reserva iguales
+devuelve el estado actual sin otro pago, incremento de versión o evento.
+
+La respuesta de reserva incluye todos los pagos, incluso los anulados, y una
+cuenta congelada con `totalMinor`, `paidMinor` y `balanceMinor`. No incluye
+`asOfDate`: el total es el precio acordado completo. Se permiten pagos en
+`cash`, `transfer` y `card`, múltiples pagos y crédito por sobrepago. Los
+pagos nuevos solo se registran en pendientes o confirmadas. Cancelar conserva
+pagos y cargos. Anular se permite en pendientes, confirmadas, canceladas y
+no-show; mantiene motivo, actor y fecha y no inicia devoluciones bancarias.
+Los pagos vinculados a estadía o check-in/check-out quedan fuera de esta
+etapa. Repetir la misma clave con el payload exacto es idempotente incluso
+después de anular o cancelar; cambiar el payload da 409. Anular otra vez con
+el mismo motivo devuelve el estado actual sin otra mutación, auditoría o
+evento; con motivo distinto da 409.
 
 ## Etapas y validación
 

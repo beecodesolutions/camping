@@ -18,6 +18,7 @@ const reservation = {
   source: 'website',
   notes: 'Late arrival',
   idempotencyKey: 'c7e8d719-f9e7-4a5c-899e-2b5004568d1f',
+  acceptedTotalMinor: 36000,
 }
 
 test('reservation create accepts one accommodation and rejects caller scope', () => {
@@ -67,6 +68,128 @@ test('reservation patch validates complete date pairs when supplied', () => {
       children: 0,
       infants: 0,
     }).success,
+    false,
+  )
+})
+
+test('reservation creation and patch require a complete manual price override', () => {
+  assert.equal(
+    c.reservationCreateSchema.safeParse({
+      ...reservation,
+      agreedTotalMinor: 35000,
+      priceAdjustmentReason: 'Owner discount',
+    }).success,
+    true,
+  )
+  for (const incomplete of [
+    { agreedTotalMinor: 35000 },
+    { priceAdjustmentReason: 'Owner discount' },
+    { agreedTotalMinor: 35000, priceAdjustmentReason: '   ' },
+  ]) {
+    assert.equal(
+      c.reservationCreateSchema.safeParse({ ...reservation, ...incomplete })
+        .success,
+      false,
+    )
+    assert.equal(
+      c.reservationPatchSchema.safeParse({ version: 1, ...incomplete }).success,
+      false,
+    )
+  }
+  assert.equal(
+    c.reservationPatchSchema.safeParse({
+      version: 1,
+      agreedTotalMinor: 35000,
+      priceAdjustmentReason: 'Owner discount',
+    }).success,
+    true,
+  )
+  assert.equal(
+    c.reservationQuoteUpdateSchema.safeParse({
+      version: 1,
+      acceptedTotalMinor: 35000,
+    }).success,
+    false,
+  )
+})
+
+test('reservation creation quote omits contact and idempotency fields', () => {
+  const quote = {
+    accommodationTypeId: typeId,
+    unitId,
+    checkInDate: '2026-10-01',
+    checkOutDate: '2026-10-04',
+    adults: 2,
+    children: 1,
+    infants: 0,
+  }
+  assert.equal(c.reservationQuoteCreateSchema.safeParse(quote).success, true)
+  assert.equal(
+    c.reservationQuoteCreateSchema.safeParse({
+      ...quote,
+      responsibleName: 'Ana Pérez',
+      idempotencyKey: reservation.idempotencyKey,
+    }).success,
+    false,
+  )
+  assert.equal(
+    c.reservationQuoteSchema.safeParse({
+      priceSnapshot: {
+        basis: 'per_unit',
+        currency: 'CLP',
+        baseNightlyPriceMinor: 12000,
+        nights: 3,
+        totalMinor: 36000,
+      },
+    }).success,
+    true,
+  )
+  assert.equal(
+    c.reservationUpdateQuoteSchema.safeParse({
+      reservationId: reservation.idempotencyKey,
+      version: 1,
+      priceSnapshot: {
+        basis: 'per_unit',
+        currency: 'CLP',
+        baseNightlyPriceMinor: 12000,
+        nights: 3,
+        totalMinor: 36000,
+      },
+    }).success,
+    true,
+  )
+})
+
+test('reservation list query applies pagination and bounded date filters', () => {
+  assert.deepEqual(c.reservationListQuerySchema.parse({}), {
+    page: 1,
+    pageSize: 25,
+  })
+  assert.deepEqual(
+    c.reservationListQuerySchema.parse({ page: '2', pageSize: '50' }),
+    { page: 2, pageSize: 50 },
+  )
+  assert.equal(
+    c.reservationListQuerySchema.safeParse({ page: '2147483647' }).success,
+    true,
+  )
+  for (const invalid of [
+    { page: '0' },
+    { page: '2147483648' },
+    { pageSize: '101' },
+    { checkInDate: '2026-10-01' },
+    { checkOutDate: '2026-10-04' },
+    { checkInDate: '2026-10-04', checkOutDate: '2026-10-01' },
+    { checkInDate: '2026-01-01', checkOutDate: '2027-01-03' },
+  ]) {
+    assert.equal(c.reservationListQuerySchema.safeParse(invalid).success, false)
+  }
+  assert.equal(
+    c.reservationStatusCommandSchema.safeParse({ version: 1 }).success,
+    true,
+  )
+  assert.equal(
+    c.reservationStatusCommandSchema.safeParse({ version: 0 }).success,
     false,
   )
 })

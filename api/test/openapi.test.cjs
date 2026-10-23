@@ -22,6 +22,31 @@ const expectedRoutes = [
   'POST /api/stays/{id}/extras',
   'PATCH /api/stays/{id}/extras/{extraId}',
   'DELETE /api/stays/{id}/extras/{extraId}',
+  'GET /api/accommodations/types',
+  'POST /api/accommodations/types',
+  'GET /api/accommodations/types/{id}',
+  'PATCH /api/accommodations/types/{id}',
+  'GET /api/accommodations/units',
+  'POST /api/accommodations/units',
+  'GET /api/accommodations/units/{id}',
+  'PATCH /api/accommodations/units/{id}',
+  'GET /api/accommodations/blocks',
+  'POST /api/accommodations/blocks',
+  'GET /api/accommodations/blocks/{id}',
+  'PATCH /api/accommodations/blocks/{id}',
+  'DELETE /api/accommodations/blocks/{id}',
+  'GET /api/availability',
+  'POST /api/reservations/quote',
+  'POST /api/reservations',
+  'GET /api/reservations',
+  'GET /api/reservations/{id}',
+  'POST /api/reservations/{id}/quote',
+  'PATCH /api/reservations/{id}',
+  'POST /api/reservations/{id}/confirm',
+  'POST /api/reservations/{id}/cancel',
+  'POST /api/reservations/{id}/no-show',
+  'POST /api/reservations/{id}/payments',
+  'POST /api/reservations/{id}/payments/{paymentId}/void',
 ]
 
 function operations(document) {
@@ -35,7 +60,7 @@ function operations(document) {
   )
 }
 
-test('offline OpenAPI document describes only implemented pilot routes', async () => {
+test('offline OpenAPI document describes implemented pilot and inventory routes', async () => {
   const previousDatabaseUrl = process.env.DATABASE_URL
   delete process.env.DATABASE_URL
   try {
@@ -89,6 +114,45 @@ test('offline OpenAPI document describes only implemented pilot routes', async (
     )
     assert.ok(document.components.schemas.Reservation)
     assert.ok(document.components.schemas.ReservationPayment)
+    assert.ok(document.components.schemas.ReservationQuote)
+    assert.ok(document.components.schemas.ReservationQuoteCreate)
+    assert.ok(document.components.schemas.ReservationQuoteUpdate)
+    assert.ok(document.components.schemas.ReservationUpdateQuote)
+    assert.ok(document.components.schemas.ReservationStatusCommand)
+    assert.ok(document.components.schemas.ReservationListQuery)
+    assert.ok(document.components.schemas.ReservationPage)
+    assert.ok(document.components.schemas.ReservationAccount)
+    assert.ok(document.components.schemas.AvailabilityQuery)
+    assert.ok(document.components.schemas.AvailabilityResponse)
+
+    const reservationList = document.paths['/api/reservations'].get
+    assert.equal(
+      reservationList.responses[200].content['application/json'].schema.$ref,
+      '#/components/schemas/ReservationPage',
+    )
+    assert.deepEqual(
+      reservationList.parameters.map((parameter) => parameter.name).sort(),
+      ['checkInDate', 'checkOutDate', 'page', 'pageSize', 'status', 'typeId'],
+    )
+    assert.deepEqual(
+      [
+        'reservationQuoteCreate',
+        'reservationCreate',
+        'reservationList',
+        'reservationRead',
+        'reservationQuoteUpdate',
+        'reservationUpdate',
+        'reservationConfirm',
+        'reservationCancel',
+        'reservationNoShow',
+        'reservationPaymentRecord',
+        'reservationPaymentVoid',
+      ].sort(),
+      ops
+        .filter(({ key }) => key.includes('/api/reservations'))
+        .map(({ operation }) => operation.operationId)
+        .sort(),
+    )
   } finally {
     if (previousDatabaseUrl === undefined) delete process.env.DATABASE_URL
     else process.env.DATABASE_URL = previousDatabaseUrl

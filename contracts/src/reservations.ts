@@ -58,6 +58,32 @@ const reservationPhoneSchema = z
   )
 const reservationNationalitySchema = z.union([z.literal(''), z.enum(countries)])
 
+const reservationPriceOverrideFields = {
+  /** A negotiated total in the camping currency, in minor units. */
+  agreedTotalMinor: moneySchema.optional(),
+  priceAdjustmentReason: nonBlankText(500).optional(),
+}
+
+const priceOverrideIsComplete = (value: {
+  agreedTotalMinor?: number
+  priceAdjustmentReason?: string
+}) =>
+  (value.agreedTotalMinor === undefined &&
+    value.priceAdjustmentReason === undefined) ||
+  (value.agreedTotalMinor !== undefined &&
+    value.priceAdjustmentReason !== undefined)
+
+const priceOverrideMessage =
+  'agreedTotalMinor and priceAdjustmentReason must be supplied together'
+
+const reservationGuestCountIsPositive = (value: {
+  adults: number
+  children: number
+  infants: number
+}) =>
+  Number.isSafeInteger(value.adults + value.children + value.infants) &&
+  value.adults + value.children + value.infants > 0
+
 export const inventoryModeSchema = z.enum(['individual', 'unlimited'])
 export type InventoryMode = z.infer<typeof inventoryModeSchema>
 
@@ -272,59 +298,142 @@ const reservationValuesSchema = z
     source: reservationSourceSchema.optional(),
     notes: optionalText(500).optional(),
     idempotencyKey: idSchema,
+    acceptedTotalMinor: moneySchema,
+    ...reservationPriceOverrideFields,
   })
   .refine((value) => value.checkOutDate > value.checkInDate, {
     path: ['checkOutDate'],
     message: dateRangeMessage,
   })
-  .refine(
-    (value) =>
-      Number.isSafeInteger(value.adults + value.children + value.infants) &&
-      value.adults + value.children + value.infants > 0,
-    {
-      path: ['adults'],
-      message: 'at least one guest is required',
-    },
-  )
+  .refine(reservationGuestCountIsPositive, {
+    path: ['adults'],
+    message: 'at least one guest is required',
+  })
+  .refine(priceOverrideIsComplete, {
+    path: ['priceAdjustmentReason'],
+    message: priceOverrideMessage,
+  })
 
 export const reservationCreateSchema = reservationValuesSchema
 export type ReservationCreate = z.infer<typeof reservationCreateSchema>
 
-export const reservationPatchSchema = z
+/**
+ * Inputs for a creation preview. Contact and idempotency fields are omitted
+ * because a quote does not create a reservation or consume a key.
+ */
+export const reservationQuoteCreateSchema = z
   .strictObject({
-    accommodationTypeId: idSchema.optional(),
-    unitId: idSchema.nullable().optional(),
-    ...optionalDateRangeSchema.shape,
-    responsibleName: nonBlankText(200).optional(),
-    email: z.email().max(254).nullable().optional(),
-    phone: reservationPhoneSchema.nullable().optional(),
-    document: optionalText(100).nullable().optional(),
-    nationality: reservationNationalitySchema.nullable().optional(),
-    adults: reservationCount.optional(),
-    children: reservationCount.optional(),
-    infants: reservationCount.optional(),
-    source: reservationSourceSchema.optional(),
-    notes: optionalText(500).nullable().optional(),
-    version: reservationVersion,
+    accommodationTypeId: idSchema,
+    unitId: idSchema.optional(),
+    ...dateRange,
+    adults: reservationCount,
+    children: reservationCount,
+    infants: reservationCount,
+    ...reservationPriceOverrideFields,
   })
-  .refine(
-    (value) =>
-      value.checkInDate === undefined ||
-      value.checkOutDate === undefined ||
-      value.checkOutDate > value.checkInDate,
-    { path: ['checkOutDate'], message: dateRangeMessage },
+  .refine((value) => value.checkOutDate > value.checkInDate, {
+    path: ['checkOutDate'],
+    message: dateRangeMessage,
+  })
+  .refine(reservationGuestCountIsPositive, {
+    path: ['adults'],
+    message: 'at least one guest is required',
+  })
+  .refine(priceOverrideIsComplete, {
+    path: ['priceAdjustmentReason'],
+    message: priceOverrideMessage,
+  })
+export type ReservationQuoteCreate = z.infer<
+  typeof reservationQuoteCreateSchema
+>
+
+const reservationPatchFields = {
+  accommodationTypeId: idSchema.optional(),
+  unitId: idSchema.nullable().optional(),
+  ...optionalDateRangeSchema.shape,
+  responsibleName: nonBlankText(200).optional(),
+  email: z.email().max(254).nullable().optional(),
+  phone: reservationPhoneSchema.nullable().optional(),
+  document: optionalText(100).nullable().optional(),
+  nationality: reservationNationalitySchema.nullable().optional(),
+  adults: reservationCount.optional(),
+  children: reservationCount.optional(),
+  infants: reservationCount.optional(),
+  source: reservationSourceSchema.optional(),
+  notes: optionalText(500).nullable().optional(),
+  version: reservationVersion,
+  acceptedTotalMinor: moneySchema.optional(),
+  ...reservationPriceOverrideFields,
+}
+
+const {
+  acceptedTotalMinor: _acceptedTotalMinor,
+  ...reservationQuoteUpdateFields
+} = reservationPatchFields
+
+const reservationPatchGuestCountIsValid = (value: {
+  adults?: number
+  children?: number
+  infants?: number
+}) =>
+  !(
+    value.adults !== undefined &&
+    value.children !== undefined &&
+    value.infants !== undefined &&
+    value.adults + value.children + value.infants === 0
   )
-  .refine(
-    (value) =>
-      !(
-        value.adults !== undefined &&
-        value.children !== undefined &&
-        value.infants !== undefined &&
-        value.adults + value.children + value.infants === 0
-      ),
-    { path: ['adults'], message: 'at least one guest is required' },
-  )
+
+const reservationPatchDateRangeIsValid = (value: {
+  checkInDate?: string
+  checkOutDate?: string
+}) =>
+  value.checkInDate === undefined ||
+  value.checkOutDate === undefined ||
+  value.checkOutDate > value.checkInDate
+
+const reservationPatchSchemaFromFields = z
+  .strictObject(reservationPatchFields)
+  .refine(reservationPatchDateRangeIsValid, {
+    path: ['checkOutDate'],
+    message: dateRangeMessage,
+  })
+  .refine(reservationPatchGuestCountIsValid, {
+    path: ['adults'],
+    message: 'at least one guest is required',
+  })
+  .refine(priceOverrideIsComplete, {
+    path: ['priceAdjustmentReason'],
+    message: priceOverrideMessage,
+  })
+
+export const reservationPatchSchema = reservationPatchSchemaFromFields
 export type ReservationPatch = z.infer<typeof reservationPatchSchema>
+
+/** Same editable fields as PATCH, excluding the accepted price. */
+export const reservationQuoteUpdateSchema = z
+  .strictObject(reservationQuoteUpdateFields)
+  .refine(reservationPatchDateRangeIsValid, {
+    path: ['checkOutDate'],
+    message: dateRangeMessage,
+  })
+  .refine(reservationPatchGuestCountIsValid, {
+    path: ['adults'],
+    message: 'at least one guest is required',
+  })
+  .refine(priceOverrideIsComplete, {
+    path: ['priceAdjustmentReason'],
+    message: priceOverrideMessage,
+  })
+export type ReservationQuoteUpdate = z.infer<
+  typeof reservationQuoteUpdateSchema
+>
+
+export const reservationAccountSchema = z.strictObject({
+  totalMinor: moneySchema,
+  paidMinor: moneySchema,
+  balanceMinor: safeSignedAmountSchema,
+})
+export type ReservationAccount = z.infer<typeof reservationAccountSchema>
 
 export const reservationResponseSchema = z.strictObject({
   id: idSchema,
@@ -346,12 +455,92 @@ export const reservationResponseSchema = z.strictObject({
   notes: optionalText(500),
   priceSnapshot: reservationPriceSnapshotSchema,
   payments: z.array(z.lazy(() => reservationPaymentSchema)),
+  account: reservationAccountSchema,
   version: reservationVersion,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 })
 export type ReservationResponse = z.infer<typeof reservationResponseSchema>
 export type Reservation = ReservationResponse
+
+/** Price returned by either creation or edit previews. */
+export const reservationQuoteSchema = z.strictObject({
+  priceSnapshot: reservationPriceSnapshotSchema,
+})
+export type ReservationQuote = z.infer<typeof reservationQuoteSchema>
+
+/** Price returned by an edit preview, with the current reservation version. */
+export const reservationUpdateQuoteSchema = z.strictObject({
+  reservationId: idSchema,
+  version: reservationVersion,
+  priceSnapshot: reservationPriceSnapshotSchema,
+})
+export type ReservationUpdateQuote = z.infer<
+  typeof reservationUpdateQuoteSchema
+>
+
+export const reservationStatusCommandSchema = z.strictObject({
+  version: reservationVersion,
+})
+export type ReservationStatusCommand = z.infer<
+  typeof reservationStatusCommandSchema
+>
+
+const reservationListDateRange = {
+  checkInDate: z.iso.date().optional(),
+  checkOutDate: z.iso.date().optional(),
+}
+
+const calendarDayNumber = (value: string): number => {
+  const [year, month, day] = value.split('-').map(Number)
+  return Date.UTC(year, month - 1, day) / 86_400_000
+}
+
+export const reservationListQuerySchema = z
+  .strictObject({
+    status: reservationStatusSchema.optional(),
+    typeId: idSchema.optional(),
+    ...reservationListDateRange,
+    page: z.coerce.number().int().min(1).max(postgresIntMax).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  })
+  .refine(
+    (value) =>
+      (value.checkInDate === undefined) === (value.checkOutDate === undefined),
+    {
+      path: ['checkOutDate'],
+      message: 'checkInDate and checkOutDate must be supplied together',
+    },
+  )
+  .refine(
+    (value) =>
+      value.checkInDate === undefined ||
+      value.checkOutDate === undefined ||
+      calendarDayNumber(value.checkOutDate) >
+        calendarDayNumber(value.checkInDate),
+    { path: ['checkOutDate'], message: dateRangeMessage },
+  )
+  .refine(
+    (value) =>
+      value.checkInDate === undefined ||
+      value.checkOutDate === undefined ||
+      calendarDayNumber(value.checkOutDate) -
+        calendarDayNumber(value.checkInDate) <=
+        366,
+    {
+      path: ['checkOutDate'],
+      message: 'date range cannot exceed 366 nights',
+    },
+  )
+export type ReservationListQuery = z.infer<typeof reservationListQuerySchema>
+
+export const reservationPageSchema = z.strictObject({
+  items: z.array(reservationResponseSchema),
+  total: safeCount,
+  page: reservationVersion,
+  pageSize: reservationCount.min(1).max(100),
+})
+export type ReservationPage = z.infer<typeof reservationPageSchema>
 
 export const reservationPaymentMethodSchema = paymentMethodSchema
 export type ReservationPaymentMethod = z.infer<
@@ -424,9 +613,17 @@ export const reservationOpenApiSchemas = {
   reservationPriceSnapshot: reservationPriceSnapshotSchema,
   perUnitPriceSnapshot: perUnitPriceSnapshotSchema,
   perPersonPriceSnapshot: perPersonPriceSnapshotSchema,
+  reservationQuote: reservationQuoteSchema,
+  reservationQuoteCreate: reservationQuoteCreateSchema,
+  reservationQuoteUpdate: reservationQuoteUpdateSchema,
+  reservationUpdateQuote: reservationUpdateQuoteSchema,
+  reservationAccount: reservationAccountSchema,
   reservation: reservationResponseSchema,
+  reservationPage: reservationPageSchema,
+  reservationListQuery: reservationListQuerySchema,
   reservationCreate: reservationCreateSchema,
   reservationPatch: reservationPatchSchema,
+  reservationStatusCommand: reservationStatusCommandSchema,
   reservationPayment: reservationPaymentSchema,
   reservationPaymentInput: reservationPaymentInputSchema,
   reservationPaymentVoid: reservationPaymentVoidSchema,

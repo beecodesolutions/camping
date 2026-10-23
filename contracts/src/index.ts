@@ -234,4 +234,5 @@ export const stayPageSchema = z.object({
 export type StayPage = z.infer<typeof stayPageSchema>
 
 export { pilotCamping, pilotExtras } from './pilot'
+export * from './availability'
 export * from './reservations'

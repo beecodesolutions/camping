@@ -55,7 +55,11 @@ Solo admite PostgreSQL local y rechaza `NODE_ENV=production`. No crea usuarios, 
 - Extras libres no crean plantillas. Cantidad × precio unitario, cargo único; presentación forma parte de descripción (dos paquetes de seis empanadas son doce empanadas).
 - Seed incluye 22 plantillas del menú proporcionado por propietario, precios de primera columna CLP. Repetir seed no duplica ni sobrescribe ediciones de plantillas.
 - Cierre calcula alojamiento + extras y congela resultado; exige saldo exactamente cero. Puede registrar pago final de forma atómica. Repetir mismo cierre no duplica cargos ni pagos.
-- Pagos parciales y anticipos en efectivo, transferencia o tarjeta: importe, fecha y nota. Saldo = costo calculado menos pagos registrados. Anticipo excedente se muestra como saldo a favor; no compensa deuda de otros grupos. Sin procesador de pagos, devoluciones, anulación de pagos, reservas futuras, descuentos, impuestos adicionales ni reapertura.
+- Reservas futuras se cotizan antes de crear o editar; la creación exige `acceptedTotalMinor` y rechaza `PRICE_CHANGED` si el precio se modificó. El snapshot congela moneda, tarifa o rangos, unidad base y ajustes.
+- Reservas pendientes consumen inventario; confirmar, cancelar y no-show requieren versión. No-show solo procede desde la fecha de entrada local. Los cambios que afectan el precio requieren aceptar un nuevo total.
+- Reservas admiten pagos múltiples en efectivo, transferencia o tarjeta. Se muestran pagos anulados y crédito por sobrepago; las anulaciones conservan motivo y no hacen devoluciones bancarias.
+- `source` identifica el canal de reserva y por defecto es `manual`; los eventos locales mantienen `origin: manual` y exponen el canal como `bookingSource`. Repetir un payload idempotente no crea otra versión, auditoría ni evento.
+- En estadías, los pagos parciales y anticipos son en efectivo, transferencia o tarjeta: importe, fecha y nota. Saldo = costo calculado menos pagos registrados. Anticipo excedente se muestra como saldo a favor; no compensa deuda de otros grupos. No hay procesador bancario, devoluciones, descuentos, impuestos adicionales ni reapertura.
 
 No se exponen huéspedes públicamente. Cada operación resuelve camping desde usuario autenticado. Todos los usuarios aprovisionados del camping tienen mismas capacidades en este piloto.
 
@@ -64,7 +68,7 @@ No se exponen huéspedes públicamente. Cada operación resuelve camping desde u
 - `ui/`: frontend, formularios, RTK Query y MSW.
 - `contracts/`: esquemas y tipos compartidos; datos confirmados de seed, sin fallback de configuración en UI real.
 - `api/`: Nest, entidades, migraciones, CLI, pruebas y handler Lambda. [Contrato HTTP](docs/api.md) y [operación](api/README.md).
-- OpenAPI del piloto: [documentación y exportación estática](docs/openapi.md). [Modelos de reservas de fase 1](docs/reservations.md) solo agregan componentes de contrato; no anuncian endpoints futuros.
+- OpenAPI del piloto: [documentación y exportación estática](docs/openapi.md). [Reservas, inventario y disponibilidad](docs/reservations.md) documentan las rutas publicadas por cada etapa; la etapa 3 publica cotización, reservas, ciclo de vida, pagos y anulaciones. El cliente RTK Query se generará después.
 - `infra/template.yaml`: plantilla AWS SAM del piloto. [Despliegue y operación](docs/deployment.md).
 
 ```sh

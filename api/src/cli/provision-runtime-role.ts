@@ -194,6 +194,9 @@ async function main(): Promise<void> {
         `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.payments TO ${roleIdentifier}`,
       )
       await manager.query(
+        `GRANT UPDATE (voided_at, voided_by_id, void_reason) ON TABLE ${schemaIdentifier}.payments TO ${roleIdentifier}`,
+      )
+      await manager.query(
         `GRANT SELECT, INSERT, DELETE ON TABLE ${schemaIdentifier}.applied_extras TO ${roleIdentifier}`,
       )
       await manager.query(
@@ -209,10 +212,10 @@ async function main(): Promise<void> {
         `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.accommodation_units TO ${roleIdentifier}`,
       )
       await manager.query(
-        `GRANT UPDATE (name, enabled, updated_at) ON TABLE ${schemaIdentifier}.accommodation_units TO ${roleIdentifier}`,
+        `GRANT UPDATE (accommodation_type_id, name, enabled, updated_at) ON TABLE ${schemaIdentifier}.accommodation_units TO ${roleIdentifier}`,
       )
       await manager.query(
-        `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.accommodation_blocks TO ${roleIdentifier}`,
+        `GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE ${schemaIdentifier}.accommodation_blocks TO ${roleIdentifier}`,
       )
       await manager.query(
         `GRANT SELECT, INSERT, UPDATE ON TABLE ${schemaIdentifier}.reservations TO ${roleIdentifier}`,

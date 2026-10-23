@@ -32,6 +32,13 @@ pnpm api:openapi -- --out /tmp/camping-openapi.json
 The default output is `docs/openapi.json`. The document describes the routes
 implemented by the current controllers, including validation, authentication,
 origin, not-found, conflict, payload-size, and internal-error responses where
-they apply. Phase 1 also includes the `Reservation` model component for
-contract consumers. Reservation, accommodation, or availability endpoints are
-not advertised until their services and controllers are implemented.
+they apply. It includes the reservation model, quote, lifecycle, account,
+payment, and pagination components together with the stage 2 accommodation
+and availability components. Reservation list query input is derived from the
+canonical Zod contract, including numeric query coercion and its documented
+defaults; date-range and cross-field rules remain enforced by the service. The
+reservation response account contains the frozen agreed total, paid total,
+and signed balance, without an accrued-date field. The future RTK Query client
+is not generated in this stage. The reservation `source` field documents the
+booking channel; the technical mutation origin is an event concern and is
+published as `origin: manual` with the channel in `bookingSource`.

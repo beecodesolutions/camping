@@ -2,25 +2,66 @@
 
 Base `/api`. JSON; cookie de sesión `camping_session`. Todos los endpoints de negocio requieren sesión. Mutaciones verifican `Origin`; producción exige origen HTTPS configurado. No se acepta `camping_id` ni `campingId` en cuerpos: ámbito viene del usuario autenticado.
 
-| Método | Ruta                                      | Resultado                                                                |
-| ------ | ----------------------------------------- | ------------------------------------------------------------------------ |
-| POST   | `/auth/login`                             | Usuario y cookie de 12 horas                                             |
-| GET    | `/auth/session`                           | Usuario autenticado                                                      |
-| POST   | `/auth/logout`                            | Revoca sesión y elimina cookie                                           |
-| GET    | `/camping`                                | Configuración persistida y ocupación activa                              |
-| PATCH  | `/camping/rates`                          | Tarifas para futuros ingresos                                            |
-| POST   | `/stays`                                  | Registra ingreso; devuelve `{ id }`                                      |
-| GET    | `/stays?status=active&page=1&pageSize=25` | Página de estadías; `status=closed` para cerradas, máximo 100 por página |
-| GET    | `/stays/:id`                              | Detalle, extras aplicados y cierre si existe                             |
-| POST   | `/stays/:id/quote`                        | Presupuesto con `{ departureDate }`; devuelve versión                    |
-| POST   | `/stays/:id/payments`                     | Registra pago parcial o anticipo idempotente                             |
-| POST   | `/stays/:id/close`                        | Cierra con `{ departureDate, version, payment? }`; saldo final cero      |
-| GET    | `/extra-templates`                        | Plantillas del camping, incluidas desactivadas                           |
-| POST   | `/extra-templates`                        | Crea plantilla                                                           |
-| PATCH  | `/extra-templates/:id`                    | Edita o desactiva plantilla                                              |
-| POST   | `/stays/:id/extras`                       | Aplica plantilla o extra libre                                           |
-| PATCH  | `/stays/:id/extras/:extraId`              | Edita copia aplicada                                                     |
-| DELETE | `/stays/:id/extras/:extraId`              | Elimina copia aplicada de estadía abierta                                |
+| Método | Ruta                                         | Resultado                                                                |
+| ------ | -------------------------------------------- | ------------------------------------------------------------------------ |
+| POST   | `/auth/login`                                | Usuario y cookie de 12 horas                                             |
+| GET    | `/auth/session`                              | Usuario autenticado                                                      |
+| POST   | `/auth/logout`                               | Revoca sesión y elimina cookie                                           |
+| GET    | `/camping`                                   | Configuración persistida y ocupación activa                              |
+| PATCH  | `/camping/rates`                             | Tarifas para futuros ingresos                                            |
+| POST   | `/stays`                                     | Registra ingreso; devuelve `{ id }`                                      |
+| GET    | `/stays?status=active&page=1&pageSize=25`    | Página de estadías; `status=closed` para cerradas, máximo 100 por página |
+| GET    | `/stays/:id`                                 | Detalle, extras aplicados y cierre si existe                             |
+| POST   | `/stays/:id/quote`                           | Presupuesto con `{ departureDate }`; devuelve versión                    |
+| POST   | `/stays/:id/payments`                        | Registra pago parcial o anticipo idempotente                             |
+| POST   | `/stays/:id/close`                           | Cierra con `{ departureDate, version, payment? }`; saldo final cero      |
+| POST   | `/reservations/quote`                        | Cotiza una reserva sin crearla ni consumir inventario                    |
+| POST   | `/reservations`                              | Crea una reserva pendiente con total aceptado                            |
+| GET    | `/reservations`                              | Lista reservas por estado, tipo y rango, con paginación                  |
+| GET    | `/reservations/:id`                          | Consulta una reserva, sus pagos y cuenta                                 |
+| POST   | `/reservations/:id/quote`                    | Cotiza una edición con la versión actual                                 |
+| PATCH  | `/reservations/:id`                          | Edita una reserva pendiente o confirmada                                 |
+| POST   | `/reservations/:id/confirm`                  | Confirma una reserva pendiente                                           |
+| POST   | `/reservations/:id/cancel`                   | Cancela una reserva pendiente o confirmada                               |
+| POST   | `/reservations/:id/no-show`                  | Marca no presentado desde la fecha de entrada                            |
+| POST   | `/reservations/:id/payments`                 | Registra un pago manual idempotente                                      |
+| POST   | `/reservations/:id/payments/:paymentId/void` | Anula un pago con motivo, sin devolución bancaria                        |
+| GET    | `/extra-templates`                           | Plantillas del camping, incluidas desactivadas                           |
+| POST   | `/extra-templates`                           | Crea plantilla                                                           |
+| PATCH  | `/extra-templates/:id`                       | Edita o desactiva plantilla                                              |
+| POST   | `/stays/:id/extras`                          | Aplica plantilla o extra libre                                           |
+| PATCH  | `/stays/:id/extras/:extraId`                 | Edita copia aplicada                                                     |
+| DELETE | `/stays/:id/extras/:extraId`                 | Elimina copia aplicada de estadía abierta                                |
+| GET    | `/accommodations/types`                      | Lista tipos habilitados y deshabilitados                                 |
+| POST   | `/accommodations/types`                      | Crea un tipo de alojamiento                                              |
+| GET    | `/accommodations/types/:id`                  | Consulta un tipo de alojamiento                                          |
+| PATCH  | `/accommodations/types/:id`                  | Edita un tipo de alojamiento                                             |
+| GET    | `/accommodations/units`                      | Lista unidades, opcionalmente filtradas por tipo                         |
+| POST   | `/accommodations/units`                      | Crea una unidad identificada                                             |
+| GET    | `/accommodations/units/:id`                  | Consulta una unidad                                                      |
+| PATCH  | `/accommodations/units/:id`                  | Edita una unidad                                                         |
+| GET    | `/accommodations/blocks`                     | Lista bloqueos por tipo, unidad o rango                                  |
+| POST   | `/accommodations/blocks`                     | Crea un bloqueo                                                          |
+| GET    | `/accommodations/blocks/:id`                 | Consulta un bloqueo                                                      |
+| PATCH  | `/accommodations/blocks/:id`                 | Edita un bloqueo                                                         |
+| DELETE | `/accommodations/blocks/:id`                 | Libera un bloqueo                                                        |
+| GET    | `/availability`                              | Disponibilidad nocturna por tipo y unidades                              |
+
+Disponibilidad recibe `checkInDate` y `checkOutDate` como fechas ISO de
+calendario, con intervalo `[checkInDate, checkOutDate)` y máximo de 366
+noches. El cálculo es de calendario puro y no cambia por horario de verano.
+`typeId` es opcional. Devuelve tipos habilitados y deshabilitados. Para
+`individual`, las noches incluyen totales, reservas, bloqueos y disponibilidad,
+y `availableUnitIds` contiene las unidades libres durante todo el intervalo.
+Para `unlimited`, las noches incluyen reservas y personas por rango etario, sin
+conteos de capacidad. Reservas `pending`, `confirmed` y `checked_in` consumen
+inventario; estados terminales no lo hacen. Reservas y bloqueos se combinan por
+unión de unidades para evitar doble conteo de conflictos históricos.
+
+Las listas de tipos no aceptan filtros y siempre devuelven ambos estados. La
+lista de unidades acepta `typeId`. La lista de bloqueos acepta `typeId`,
+`unitId` y un par completo `checkInDate`/`checkOutDate`; si se envía una fecha
+debe enviarse la otra, y la salida debe ser posterior.
 
 Pagos: `POST /stays/:id/payments` registra un pago parcial o anticipo y devuelve estadía actualizada. Cuerpo: `{ amountMinor, method, paidOn, note?, idempotencyKey }`. Importe entero positivo en moneda de la estadía; medios `cash`, `transfer`, `card`; fecha calendario no futura según zona horaria del camping. `idempotencyKey` UUID identifica el intento lógico: reenviar mismos datos conserva un único pago; reutilizar clave para otros datos o estadía responde 409.
 
@@ -39,3 +80,49 @@ Aplicación desde plantilla: `{ templateId, quantity }`. Extra libre: `{ descrip
 Presupuesto devuelve `nights`, `accommodationMinor`, `extrasMinor`, `totalMinor` y `version`. Cierre requiere esa versión: si cambió un extra o se registró un pago, responde `409 STALE_STAY`; pedir nuevo presupuesto y confirmar de nuevo. Repetir cierre con igual fecha devuelve cierre original; distinta fecha responde 409. Cierre, pagos y modificaciones de extras bloquean la misma fila para evitar costos inconsistentes.
 
 Validación devuelve 400; falta de sesión 401; origen rechazado 403; recurso inexistente o de otro camping 404; conflicto 409. Respuestas no se cachean. No reintentar automáticamente ingresos/extras tras error de red ambiguo: consultar antes para evitar duplicados. Cierre y registro de pagos soportan repetición idempotente. Si el cierre incluye pago, conservar también su clave y datos al reintentar.
+
+Las reservas se cotizan antes de crear o editar. La cotización valida que el
+tipo y, cuando corresponde, la unidad existan y estén disponibles, pero no
+crea una retención. La creación recibe los mismos datos de alojamiento y
+ocupación junto con contacto, `idempotencyKey` y `acceptedTotalMinor`; el
+servicio vuelve a calcular el precio y responde `409 PRICE_CHANGED` si el
+total aceptado ya no coincide. El campo `source` es el canal de reserva y se
+normaliza a `manual` si se omite; en eventos de outbox aparece como
+`bookingSource`. El origen técnico de las mutaciones locales es siempre
+`origin: manual`. La respuesta incluye el snapshot completo, todos los pagos
+(también los anulados) y `account` con `totalMinor`, `paidMinor` y
+`balanceMinor`.
+
+El precio se calcula por unidad y noche para alojamientos individuales. Para
+camping libre se calcula por persona y noche con los rangos de edad y tarifas
+congelados en el snapshot. Un total manual (`agreedTotalMinor`) exige
+`priceAdjustmentReason`; ambos campos deben aparecer juntos. No se aceptan
+flotantes ni se recalculan importes de dinero silenciosamente. Cambiar fechas,
+personas, tipo o unidad exige aceptar un nuevo total, incluso si el importe
+resultara igual. El contacto y las notas pueden cambiar sin cambiar el
+precio. Si una edición conserva el tipo, usa las tarifas, unidad base,
+moneda y ajuste guardados; cambiar la configuración no recalcula la reserva.
+Cambiar de tipo usa la configuración vigente del nuevo tipo. La auditoría y
+el outbox se escriben junto con cada mutación exitosa y registran al usuario de
+la sesión; los reintentos idempotentes no crean una segunda mutación.
+
+Una reserva pendiente consume inventario desde su creación. Solo las
+pendientes se confirman; pendientes y confirmadas pueden cancelarse. El
+no-show puede marcarse desde la fecha de entrada en la zona horaria del
+camping. Las transiciones y ediciones llevan `version` positiva y aumentan la
+versión en cada mutación. Repetir una transición que ya alcanzó su estado
+objetivo devuelve la última representación sin crear otro evento; una versión
+obsoleta responde 409. Repetir una creación con la misma clave y payload
+normalizado devuelve la reserva existente; cambiar el payload responde 409.
+
+Cada reserva admite pagos nuevos mientras está pendiente o confirmada. Los
+medios son `cash`, `transfer` y `card`; se permiten varios pagos y un excedente
+se muestra como crédito. Cancelar conserva sus pagos y sus cargos. Un pago
+puede anularse mientras la reserva esté pendiente, confirmada, cancelada o
+marcada no-show; la anulación conserva actor, fecha y motivo y no ejecuta una
+devolución bancaria. Las operaciones de estadía, check-in y check-out quedan
+fuera de esta etapa. Repetir la misma clave de idempotencia con el payload
+inmutable devuelve la reserva con el pago existente, incluso después de
+anularlo, sin incrementar versión ni crear auditoría/outbox; cambiar el
+payload responde 409. Repetir una anulación con el mismo motivo devuelve el
+estado actual sin nueva mutación y cambiarlo responde 409.
