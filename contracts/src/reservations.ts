@@ -6,7 +6,24 @@ import {
   paymentMethodSchema,
   ratesSchema,
   safeCount,
-} from './index'
+  safeSignedAmountSchema,
+} from './contract-primitives'
+import {
+  currencyCodeSchema,
+  perPersonPriceSnapshotSchema,
+  perUnitPriceSnapshotSchema,
+  reservationPriceSnapshotSchema,
+} from './reservation-pricing'
+export {
+  currencyCodeSchema,
+  perPersonPriceSnapshotSchema,
+  perUnitPriceSnapshotSchema,
+  reservationPriceSnapshotSchema,
+} from './reservation-pricing'
+export type {
+  CurrencyCode,
+  ReservationPriceSnapshot,
+} from './reservation-pricing'
 
 /**
  * Reservation dates are calendar dates. The end date is exclusive, so a
@@ -101,67 +118,7 @@ export type ReservationStatus = z.infer<typeof reservationStatusSchema>
 export const reservationSourceSchema = nonBlankText(100)
 export type ReservationSource = z.infer<typeof reservationSourceSchema>
 
-export const currencyCodeSchema = z.string().regex(/^[A-Z]{3}$/)
-export type CurrencyCode = z.infer<typeof currencyCodeSchema>
-
 const idSchema = z.uuid()
-const safeSignedAmountSchema = z
-  .number()
-  .int()
-  .min(-Number.MAX_SAFE_INTEGER)
-  .max(Number.MAX_SAFE_INTEGER)
-
-const priceSnapshotCommon = {
-  currency: currencyCodeSchema,
-  totalMinor: moneySchema,
-  /** Signed to support either a surcharge or a negotiated discount. */
-  adjustmentMinor: safeSignedAmountSchema.optional(),
-  adjustmentReason: optionalText(500).optional(),
-}
-
-const priceAdjustmentIsComplete = (
-  value: z.infer<typeof priceSnapshotCommonSchema>,
-) =>
-  (value.adjustmentMinor === undefined &&
-    value.adjustmentReason === undefined) ||
-  (value.adjustmentMinor !== undefined &&
-    value.adjustmentReason !== undefined &&
-    /\S/.test(value.adjustmentReason))
-
-const priceSnapshotCommonSchema = z.strictObject(priceSnapshotCommon)
-
-export const perUnitPriceSnapshotSchema = z
-  .strictObject({
-    basis: z.literal('per_unit'),
-    ...priceSnapshotCommon,
-    baseNightlyPriceMinor: moneySchema,
-    nights: reservationCount.min(1),
-  })
-  .refine(priceAdjustmentIsComplete, {
-    path: ['adjustmentReason'],
-    message: 'adjustmentMinor and adjustmentReason must be supplied together',
-  })
-
-export const perPersonPriceSnapshotSchema = z
-  .strictObject({
-    basis: z.literal('per_person'),
-    ...priceSnapshotCommon,
-    ageRanges: ageRangesSchema,
-    rates: ratesSchema,
-    nights: reservationCount.min(1),
-  })
-  .refine(priceAdjustmentIsComplete, {
-    path: ['adjustmentReason'],
-    message: 'adjustmentMinor and adjustmentReason must be supplied together',
-  })
-
-export const reservationPriceSnapshotSchema = z.discriminatedUnion('basis', [
-  perUnitPriceSnapshotSchema,
-  perPersonPriceSnapshotSchema,
-])
-export type ReservationPriceSnapshot = z.infer<
-  typeof reservationPriceSnapshotSchema
->
 
 const accommodationTypeValuesSchema = z.strictObject({
   name: nonBlankText(200),
@@ -438,6 +395,7 @@ export type ReservationAccount = z.infer<typeof reservationAccountSchema>
 export const reservationResponseSchema = z.strictObject({
   id: idSchema,
   campingId: idSchema,
+  stayId: idSchema.nullable(),
   accommodationTypeId: idSchema,
   unitId: idSchema.nullable(),
   checkInDate: dateRange.checkInDate,
@@ -485,6 +443,39 @@ export const reservationStatusCommandSchema = z.strictObject({
 export type ReservationStatusCommand = z.infer<
   typeof reservationStatusCommandSchema
 >
+
+/**
+ * Inputs for previewing the price at check-in. The reservation remains the
+ * source of truth for contact, occupants, and its stored dates.
+ */
+export const reservationCheckInQuoteSchema = z.strictObject({
+  version: reservationVersion,
+  arrivalDate: z.iso.date(),
+})
+export type ReservationCheckInQuote = z.infer<
+  typeof reservationCheckInQuoteSchema
+>
+
+/**
+ * Inputs for checking a reservation in. The accepted total confirms the
+ * check-in quote; vehicle and location details belong to the resulting stay.
+ */
+export const reservationCheckInSchema = z
+  .strictObject({
+    version: reservationVersion,
+    arrivalDate: z.iso.date(),
+    acceptedTotalMinor: moneySchema,
+    hasVehicle: z.boolean().default(false),
+    vehicleDescription: z.string().trim().default(''),
+    licensePlate: z.string().trim().default(''),
+    location: z.string().trim().default(''),
+  })
+  .transform((value) => ({
+    ...value,
+    vehicleDescription: value.hasVehicle ? value.vehicleDescription : '',
+    licensePlate: value.hasVehicle ? value.licensePlate : '',
+  }))
+export type ReservationCheckIn = z.infer<typeof reservationCheckInSchema>
 
 const reservationListDateRange = {
   checkInDate: z.iso.date().optional(),
@@ -624,6 +615,8 @@ export const reservationOpenApiSchemas = {
   reservationCreate: reservationCreateSchema,
   reservationPatch: reservationPatchSchema,
   reservationStatusCommand: reservationStatusCommandSchema,
+  reservationCheckInQuote: reservationCheckInQuoteSchema,
+  reservationCheckIn: reservationCheckInSchema,
   reservationPayment: reservationPaymentSchema,
   reservationPaymentInput: reservationPaymentInputSchema,
   reservationPaymentVoid: reservationPaymentVoidSchema,

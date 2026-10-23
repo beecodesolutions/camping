@@ -194,6 +194,93 @@ test('reservation list query applies pagination and bounded date filters', () =>
   )
 })
 
+test('reservation check-in command defaults and normalizes vehicle details', () => {
+  assert.deepEqual(
+    c.reservationCheckInQuoteSchema.parse({
+      version: 1,
+      arrivalDate: '2026-10-23',
+    }),
+    { version: 1, arrivalDate: '2026-10-23' },
+  )
+  for (const invalid of [
+    { version: 1 },
+    { version: 1, arrivalDate: '2026-10-23', acceptedTotalMinor: 1000 },
+    { version: 1, arrivalDate: '2026-10-23', responsibleName: 'Guest' },
+  ]) {
+    assert.equal(
+      c.reservationCheckInQuoteSchema.safeParse(invalid).success,
+      false,
+    )
+  }
+  assert.deepEqual(
+    c.reservationCheckInSchema.parse({
+      version: 1,
+      arrivalDate: '2026-10-23',
+      acceptedTotalMinor: 36000,
+    }),
+    {
+      version: 1,
+      arrivalDate: '2026-10-23',
+      acceptedTotalMinor: 36000,
+      hasVehicle: false,
+      vehicleDescription: '',
+      licensePlate: '',
+      location: '',
+    },
+  )
+  assert.deepEqual(
+    c.reservationCheckInSchema.parse({
+      version: 2,
+      arrivalDate: '2026-10-23',
+      acceptedTotalMinor: 36000,
+      hasVehicle: true,
+      vehicleDescription: '  camper van  ',
+      licensePlate: '  ABC-123  ',
+      location: '  Site A1  ',
+    }),
+    {
+      version: 2,
+      arrivalDate: '2026-10-23',
+      acceptedTotalMinor: 36000,
+      hasVehicle: true,
+      vehicleDescription: 'camper van',
+      licensePlate: 'ABC-123',
+      location: 'Site A1',
+    },
+  )
+  assert.deepEqual(
+    c.reservationCheckInSchema.parse({
+      version: 1,
+      arrivalDate: '2026-10-23',
+      acceptedTotalMinor: 36000,
+      hasVehicle: false,
+      vehicleDescription: '  should be removed  ',
+      licensePlate: '  should be removed  ',
+      location: '  Site B2  ',
+    }),
+    {
+      version: 1,
+      arrivalDate: '2026-10-23',
+      acceptedTotalMinor: 36000,
+      hasVehicle: false,
+      vehicleDescription: '',
+      licensePlate: '',
+      location: 'Site B2',
+    },
+  )
+  for (const invalid of [
+    {},
+    { version: 0 },
+    { version: 2_147_483_648 },
+    { version: 1, extra: true },
+    { version: 1, hasVehicle: 'false' },
+    { version: 1, responsibleName: 'Guest' },
+    { version: 1, checkInDate: '2026-10-23' },
+  ]) {
+    assert.equal(c.reservationCheckInSchema.safeParse(invalid).success, false)
+  }
+})
+
 test('accommodation inventory mode carries its capacity invariant', () => {
   const type = {
     name: 'Cabaña familiar',

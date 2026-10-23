@@ -15,6 +15,7 @@ import { ReservationController } from './reservations/reservation.controller'
 import { ReservationPaymentsController } from './reservations/reservation-payments.controller'
 import { ReservationService } from './reservations/reservation.service'
 import { ReservationPaymentsService } from './reservations/reservation-payments.service'
+import { ReservationCheckInService } from './reservations/reservation-checkin.service'
 
 @Module({
   imports: [DatabaseModule, AuthModule],
@@ -35,6 +36,7 @@ import { ReservationPaymentsService } from './reservations/reservation-payments.
     AvailabilityService,
     ReservationService,
     ReservationPaymentsService,
+    ReservationCheckInService,
   ],
 })
 export class AppModule {}

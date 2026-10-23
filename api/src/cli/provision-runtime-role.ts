@@ -182,7 +182,7 @@ async function main(): Promise<void> {
         `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.stays TO ${roleIdentifier}`,
       )
       await manager.query(
-        `GRANT UPDATE (version, closed_at, closed_by_id, closure, reservation_id) ON TABLE ${schemaIdentifier}.stays TO ${roleIdentifier}`,
+        `GRANT UPDATE (version, estimated_departure, closed_at, closed_by_id, closure, reservation_id, accommodation_price_snapshot) ON TABLE ${schemaIdentifier}.stays TO ${roleIdentifier}`,
       )
       await manager.query(
         `GRANT SELECT, INSERT ON TABLE ${schemaIdentifier}.extra_templates TO ${roleIdentifier}`,
@@ -195,6 +195,9 @@ async function main(): Promise<void> {
       )
       await manager.query(
         `GRANT UPDATE (voided_at, voided_by_id, void_reason) ON TABLE ${schemaIdentifier}.payments TO ${roleIdentifier}`,
+      )
+      await manager.query(
+        `GRANT UPDATE (stay_id) ON TABLE ${schemaIdentifier}.payments TO ${roleIdentifier}`,
       )
       await manager.query(
         `GRANT SELECT, INSERT, DELETE ON TABLE ${schemaIdentifier}.applied_extras TO ${roleIdentifier}`,

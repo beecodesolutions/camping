@@ -16,13 +16,17 @@ import { assertAllowedOrigin } from '../common/security'
 import { ApiEndpoint } from '../openapi/decorators'
 import { openApiRef } from '../openapi/schemas'
 import { ReservationService } from './reservation.service'
+import { ReservationCheckInService } from './reservation-checkin.service'
 
 @Controller('api/reservations')
 @UseGuards(AuthGuard)
 @ApiTags('reservations')
 @ApiCookieAuth('camping_session')
 export class ReservationController {
-  constructor(private readonly reservationService: ReservationService) {}
+  constructor(
+    private readonly reservationService: ReservationService,
+    private readonly reservationCheckInService: ReservationCheckInService,
+  ) {}
 
   @Post('quote')
   @ApiEndpoint({
@@ -140,6 +144,46 @@ export class ReservationController {
   ) {
     assertAllowedOrigin(request)
     return this.reservationService.quoteEdit(request.auth!, id, request.body)
+  }
+
+  @Post(':id/check-in/quote')
+  @ApiParam({ name: 'id', format: 'uuid', type: String })
+  @ApiEndpoint({
+    operationId: 'reservationCheckInQuote',
+    summary: 'Cotizar el ingreso de una reserva',
+    status: 201,
+    body: openApiRef('ReservationCheckInQuote'),
+    response: openApiRef('ReservationQuote'),
+    errors: [400, 401, 403, 404, 409, 413, 500],
+  })
+  checkInQuote(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    assertAllowedOrigin(request)
+    return this.reservationCheckInService.quote(request.auth!, id, request.body)
+  }
+
+  @Post(':id/check-in')
+  @ApiParam({ name: 'id', format: 'uuid', type: String })
+  @ApiEndpoint({
+    operationId: 'reservationCheckIn',
+    summary: 'Ingresar una reserva',
+    status: 201,
+    body: openApiRef('ReservationCheckIn'),
+    response: openApiRef('Reservation'),
+    errors: [400, 401, 403, 404, 409, 413, 500],
+  })
+  checkIn(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    assertAllowedOrigin(request)
+    return this.reservationCheckInService.checkIn(
+      request.auth!,
+      id,
+      request.body,
+    )
   }
 
   @Patch(':id')

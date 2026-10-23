@@ -4,6 +4,7 @@ import {
   checkInSchemaForTimezone,
   closeRequestSchema,
   paymentInputSchema,
+  reservationPriceSnapshotSchema,
   quoteRequestSchema,
   todayInTimezone,
   type AgeRanges,
@@ -26,6 +27,14 @@ import { CampingEntity } from '../database/entities/camping.entity'
 import { StayEntity } from '../database/entities/stay.entity'
 import { AppliedExtraEntity } from '../database/entities/applied-extra.entity'
 import { PaymentEntity } from '../database/entities/payment.entity'
+import { ReservationEntity } from '../database/entities/reservation.entity'
+import { AuditLogEntity } from '../database/entities/audit-log.entity'
+import { OutboxEventEntity } from '../database/entities/outbox-event.entity'
+import { withInventoryTransaction } from '../accommodations/inventory-transaction'
+import {
+  lockReservation,
+  nextReservationVersion,
+} from '../reservations/reservation-support'
 import type { AuthContext } from '../auth/auth.types'
 
 type ClosureValue = CostBreakdown & { closedAt: string; closedBy: string }
@@ -35,6 +44,11 @@ type PaymentValues = {
   paidOn: string
   note: string
   idempotencyKey: string
+}
+
+type PaymentAppendResult = {
+  payment: PaymentEntity
+  created: boolean
 }
 
 @Injectable()
@@ -57,6 +71,7 @@ export class StayService {
       closedAt: null,
       closedById: null,
       closure: null,
+      accommodationPriceSnapshot: null,
     })
     this.calculate(
       { ...stay, extras: [], payments: [] } as StayEntity,
@@ -89,7 +104,7 @@ export class StayService {
         order: { createdAt: 'DESC', id: 'DESC' },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        relations: { extras: true, payments: true },
+        relations: { extras: true, payments: true, reservation: true },
       })
     return {
       items: items.map((stay) => this.toStay(stay, context.camping.timezone)),
@@ -114,6 +129,11 @@ export class StayService {
     const parsed = quoteRequestSchema.safeParse(raw)
     if (!parsed.success) throw zodBadRequest(parsed.error)
     const stay = await this.findStay(context.camping.id, id)
+    this.assertLinkedDeparture(
+      stay,
+      stay.reservation ?? null,
+      parsed.data.departureDate,
+    )
     if (stay.closure) {
       const breakdown = this.asBreakdown(stay.closure)
       return {
@@ -149,25 +169,43 @@ export class StayService {
     const parsed = paymentInputSchema.safeParse(raw)
     if (!parsed.success) throw zodBadRequest(parsed.error)
     this.validatePaymentDate(parsed.data.paidOn, context.camping.timezone)
-    const runner = this.dataSource.createQueryRunner()
-    await runner.connect()
-    await runner.startTransaction()
     try {
-      const stay = await this.lockStay(
-        runner.manager,
-        context.camping.id,
-        stayId,
+      return await withInventoryTransaction(
+        this.dataSource,
+        context,
+        async (manager) => {
+          const { stay, reservation } = await this.lockStayMutation(
+            manager,
+            context.camping.id,
+            stayId,
+          )
+          if (reservation && reservation.status !== 'checked_in')
+            throw conflict(
+              'La reserva no está activa',
+              'RESERVATION_PAYMENT_FORBIDDEN',
+            )
+          if (reservation && stay.closure)
+            throw conflict('La estadía ya fue cerrada', 'STAY_CLOSED')
+          const result = await this.appendPayment(
+            manager,
+            context,
+            stay,
+            parsed.data,
+          )
+          if (result.created && reservation)
+            await this.advanceLinkedReservationPayment(
+              manager,
+              context,
+              reservation,
+              stay,
+              result.payment,
+            )
+          return this.toStay(stay, context.camping.timezone)
+        },
       )
-      await this.appendPayment(runner.manager, context, stay, parsed.data)
-      const result = this.toStay(stay, context.camping.timezone)
-      await runner.commitTransaction()
-      return result
     } catch (error) {
-      if (runner.isTransactionActive) await runner.rollbackTransaction()
       if (isUniqueViolation(error)) throw this.idempotencyConflict()
       throw error
-    } finally {
-      await runner.release()
     }
   }
 
@@ -179,89 +217,132 @@ export class StayService {
         parsed.data.payment.paidOn,
         context.camping.timezone,
       )
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
     try {
-      const stay = await this.lockStay(
-        queryRunner.manager,
-        context.camping.id,
-        id,
-      )
-      if (stay.closure) {
-        if (stay.closure.departureDate !== parsed.data.departureDate)
-          throw conflict(
-            'La estadía ya fue cerrada con otra fecha',
-            'STAY_CLOSED',
-          )
-        if (parsed.data.payment) {
-          const existing = await this.findIdempotentPayment(
-            queryRunner.manager,
+      return await withInventoryTransaction(
+        this.dataSource,
+        context,
+        async (manager) => {
+          const { stay, reservation } = await this.lockStayMutation(
+            manager,
             context.camping.id,
-            parsed.data.payment.idempotencyKey,
+            id,
           )
-          if (!existing)
+          this.assertLinkedDeparture(
+            stay,
+            reservation,
+            parsed.data.departureDate,
+          )
+          if (stay.closure) {
+            if (stay.closure.departureDate !== parsed.data.departureDate)
+              throw conflict(
+                'La estadía ya fue cerrada con otra fecha',
+                'STAY_CLOSED',
+              )
+            if (parsed.data.payment) {
+              const existing = await this.findIdempotentPayment(
+                manager,
+                context.camping.id,
+                parsed.data.payment.idempotencyKey,
+              )
+              if (!existing)
+                throw conflict(
+                  'La estadía ya fue cerrada; registrá el pago por separado',
+                  'STAY_CLOSED',
+                )
+              this.assertSamePayment(existing, stay.id, parsed.data.payment)
+            }
+            return this.toStay(stay, context.camping.timezone)
+          }
+          if (stay.version !== parsed.data.version)
             throw conflict(
-              'La estadía ya fue cerrada; registrá el pago por separado',
-              'STAY_CLOSED',
+              'La estadía cambió; actualizá el presupuesto',
+              'STALE_STAY',
             )
-          this.assertSamePayment(existing, stay.id, parsed.data.payment)
-        }
-        await queryRunner.commitTransaction()
-        return this.toStay(stay, context.camping.timezone)
-      }
-      if (stay.version !== parsed.data.version)
-        throw conflict(
-          'La estadía cambió; actualizá el presupuesto',
-          'STALE_STAY',
-        )
-      validateDeparture(
-        stay.arrivalDate,
-        parsed.data.departureDate,
-        context.camping.timezone,
+          if (reservation && reservation.status !== 'checked_in')
+            throw conflict(
+              'La reserva no está activa',
+              'INVALID_RESERVATION_STATE',
+            )
+          validateDeparture(
+            stay.arrivalDate,
+            parsed.data.departureDate,
+            context.camping.timezone,
+          )
+          let appended: PaymentAppendResult | null = null
+          if (parsed.data.payment)
+            appended = await this.appendPayment(
+              manager,
+              context,
+              stay,
+              parsed.data.payment,
+            )
+          const breakdown = this.calculate(stay, parsed.data.departureDate)
+          const account = this.accountForTotal(
+            stay,
+            breakdown.totalMinor,
+            breakdown.departureDate,
+          )
+          if (account.balanceMinor !== 0)
+            throw conflict(
+              'El saldo debe quedar en cero para cerrar la estadía',
+              'BALANCE_NOT_ZERO',
+            )
+          const closedAt = new Date().toISOString()
+          stay.closedAt = new Date(closedAt)
+          stay.closedById = context.user.id
+          stay.closure = { ...breakdown, closedAt, closedBy: context.user.id }
+          await manager.save(stay)
+          if (reservation) {
+            const beforeVersion = reservation.version
+            reservation.status = 'checked_out'
+            reservation.version = nextReservationVersion(reservation.version)
+            reservation.updatedAt = new Date()
+            await manager.save(reservation)
+            await this.appendLinkedReservationMutation(
+              manager,
+              context,
+              reservation,
+              'reservation.checked_out',
+              'ReservationCheckedOut',
+              {
+                reservationId: reservation.id,
+                stayId: stay.id,
+                status: 'checked_in',
+                version: beforeVersion,
+              },
+              {
+                reservationId: reservation.id,
+                stayId: stay.id,
+                status: reservation.status,
+                version: reservation.version,
+                ...(appended?.created
+                  ? {
+                      paymentId: appended.payment.id,
+                      paymentAmountMinor: appended.payment.amountMinor,
+                      paymentIdempotencyKey: appended.payment.idempotencyKey,
+                    }
+                  : {}),
+              },
+            )
+          }
+          return this.toStay(stay, context.camping.timezone)
+        },
       )
-      if (parsed.data.payment)
-        await this.appendPayment(
-          queryRunner.manager,
-          context,
-          stay,
-          parsed.data.payment,
-        )
-      const breakdown = this.calculate(stay, parsed.data.departureDate)
-      const account = this.accountForTotal(
-        stay,
-        breakdown.totalMinor,
-        breakdown.departureDate,
-      )
-      if (account.balanceMinor !== 0)
-        throw conflict(
-          'El saldo debe quedar en cero para cerrar la estadía',
-          'BALANCE_NOT_ZERO',
-        )
-      const closedAt = new Date().toISOString()
-      stay.closedAt = new Date(closedAt)
-      stay.closedById = context.user.id
-      stay.closure = { ...breakdown, closedAt, closedBy: context.user.id }
-      await queryRunner.manager.save(stay)
-      await queryRunner.commitTransaction()
-      return this.toStay(stay, context.camping.timezone)
     } catch (error) {
-      if (queryRunner.isTransactionActive)
-        await queryRunner.rollbackTransaction()
       if (isUniqueViolation(error)) throw this.idempotencyConflict()
       throw error
-    } finally {
-      await queryRunner.release()
     }
   }
 
   calculate(stay: StayEntity, departureDate: string): CostBreakdown {
     const nights = daysBetween(stay.arrivalDate, departureDate)
-    const accommodationMinor = ensureSafeMoney(
-      stay.adults * stay.rates.adults * nights +
-        stay.children * stay.rates.children * nights +
-        stay.infants * stay.rates.infants * nights,
-    )
+    const accommodationMinor = stay.accommodationPriceSnapshot
+      ? this.linkedAccommodationTotal(stay, nights)
+      : ensureSafeMoney(
+          stay.adults * stay.rates.adults * nights +
+            stay.children * stay.rates.children * nights +
+            stay.infants * stay.rates.infants * nights,
+        )
     const extrasMinor = ensureSafeMoney(
       (stay.extras ?? []).reduce(
         (total, extra) =>
@@ -282,7 +363,12 @@ export class StayService {
   account(stay: StayEntity, timezone: string): StayAccount {
     const breakdown = stay.closure
       ? this.asBreakdown(stay.closure)
-      : this.calculate(stay, todayInTimezone(timezone))
+      : this.calculate(
+          stay,
+          stay.accommodationPriceSnapshot
+            ? this.acceptedDeparture(stay)
+            : todayInTimezone(timezone),
+        )
     return this.accountForTotal(
       stay,
       breakdown.totalMinor,
@@ -297,7 +383,7 @@ export class StayService {
   ): Promise<StayEntity> {
     const stay = await manager.findOne(StayEntity, {
       where: { id, campingId },
-      relations: { extras: true, payments: true },
+      relations: { extras: true, payments: true, reservation: true },
     })
     if (!stay) throw notFound('Estadía')
     return stay
@@ -309,6 +395,10 @@ export class StayService {
       responsibleName: stay.responsibleName,
       document: stay.document,
       nationality: stay.nationality,
+      reservationId: stay.reservationId,
+      accommodationPriceSnapshot: stay.accommodationPriceSnapshot
+        ? reservationPriceSnapshotSchema.parse(stay.accommodationPriceSnapshot)
+        : null,
       phone: stay.phone,
       arrivalDate: stay.arrivalDate,
       estimatedDeparture: stay.estimatedDeparture ?? '',
@@ -363,12 +453,35 @@ export class StayService {
     return stay
   }
 
+  private async lockStayMutation(
+    manager: EntityManager,
+    campingId: string,
+    id: string,
+  ): Promise<{ stay: StayEntity; reservation: ReservationEntity | null }> {
+    const candidate = await manager.findOne(StayEntity, {
+      where: { id, campingId },
+      select: { id: true, reservationId: true },
+    })
+    if (!candidate) throw notFound('Estadía')
+    const reservation = candidate.reservationId
+      ? await lockReservation(manager, campingId, candidate.reservationId)
+      : null
+    const stay = await this.lockStay(manager, campingId, id)
+    if ((stay.reservationId ?? null) !== (reservation?.id ?? null))
+      throw conflict(
+        'La reserva vinculada cambió; actualizá la pantalla',
+        'STALE_STAY',
+      )
+    stay.reservation = reservation
+    return { stay, reservation }
+  }
+
   private async appendPayment(
     manager: EntityManager,
     context: AuthContext,
     stay: StayEntity,
     input: PaymentValues,
-  ): Promise<void> {
+  ): Promise<PaymentAppendResult> {
     const existing = await this.findIdempotentPayment(
       manager,
       context.camping.id,
@@ -376,7 +489,7 @@ export class StayService {
     )
     if (existing) {
       this.assertSamePayment(existing, stay.id, input)
-      return
+      return { payment: existing, created: false }
     }
     if (stay.closure) {
       const balance = this.account(stay, context.camping.timezone).balanceMinor
@@ -395,11 +508,102 @@ export class StayService {
       note: input.note,
       recordedById: context.user.id,
       idempotencyKey: input.idempotencyKey,
+      reservationId: stay.reservationId,
+      voidedAt: null,
+      voidedById: null,
+      voidReason: null,
     })
     await manager.save(payment)
     stay.payments.push(payment)
     stay.version += 1
     await manager.update(StayEntity, stay.id, { version: stay.version })
+    return { payment, created: true }
+  }
+
+  private async advanceLinkedReservationPayment(
+    manager: EntityManager,
+    context: AuthContext,
+    reservation: ReservationEntity,
+    stay: StayEntity,
+    payment: PaymentEntity,
+  ): Promise<void> {
+    const beforeVersion = reservation.version
+    reservation.version = nextReservationVersion(reservation.version)
+    reservation.updatedAt = new Date()
+    await manager.save(reservation)
+    await this.appendLinkedReservationMutation(
+      manager,
+      context,
+      reservation,
+      'reservation.payment_recorded',
+      'PaymentRecorded',
+      {
+        reservationId: reservation.id,
+        stayId: stay.id,
+        version: beforeVersion,
+        paymentId: payment.id,
+        paymentAmountMinor: payment.amountMinor,
+        paymentIdempotencyKey: payment.idempotencyKey,
+        method: payment.method,
+        paidOn: payment.paidOn,
+      },
+      {
+        reservationId: reservation.id,
+        stayId: stay.id,
+        version: reservation.version,
+        paymentId: payment.id,
+        paymentAmountMinor: payment.amountMinor,
+        paymentIdempotencyKey: payment.idempotencyKey,
+        method: payment.method,
+        paidOn: payment.paidOn,
+      },
+    )
+  }
+
+  private async appendLinkedReservationMutation(
+    manager: EntityManager,
+    context: AuthContext,
+    reservation: ReservationEntity,
+    action: string,
+    eventType: string,
+    before: Record<string, unknown>,
+    after: Record<string, unknown>,
+  ): Promise<void> {
+    await manager.save(
+      manager.create(AuditLogEntity, {
+        campingId: reservation.campingId,
+        actorId: context.user.id,
+        action,
+        entityType: 'Reservation',
+        entityId: reservation.id,
+        beforeState: before,
+        afterState: after,
+      }),
+    )
+    await manager.save(
+      manager.create(OutboxEventEntity, {
+        campingId: reservation.campingId,
+        aggregateType: 'Reservation',
+        aggregateId: reservation.id,
+        eventType,
+        payload: {
+          reservationId: reservation.id,
+          stayId: after.stayId ?? before.stayId,
+          version: reservation.version,
+          status: reservation.status,
+          ...(after.paymentId
+            ? {
+                paymentId: after.paymentId,
+                paymentAmountMinor: after.paymentAmountMinor,
+                paymentIdempotencyKey: after.paymentIdempotencyKey,
+              }
+            : {}),
+        },
+        publishedAt: null,
+        attempts: 0,
+        lastError: null,
+      }),
+    )
   }
 
   private async findIdempotentPayment(
@@ -441,7 +645,9 @@ export class StayService {
   ): StayAccount {
     const paidMinor = (stay.payments ?? []).reduce(
       (total, payment) =>
-        ensureSafeMoney(total + ensureSafeMoney(payment.amountMinor)),
+        payment.voidedAt === null
+          ? ensureSafeMoney(total + ensureSafeMoney(payment.amountMinor))
+          : total,
       0,
     )
     const balanceMinor = totalMinor - paidMinor
@@ -456,13 +662,79 @@ export class StayService {
   private toPayment(payment: PaymentEntity): Payment {
     return {
       id: payment.id,
+      reservationId: payment.reservationId,
       amountMinor: payment.amountMinor,
       method: payment.method,
       paidOn: payment.paidOn,
       note: payment.note,
       createdAt: payment.createdAt.toISOString(),
       recordedBy: payment.recordedById,
+      voidedAt: payment.voidedAt?.toISOString() ?? null,
+      voidedBy: payment.voidedById,
+      voidReason: payment.voidReason,
     }
+  }
+
+  private linkedAccommodationTotal(stay: StayEntity, nights: number): number {
+    const snapshot = reservationPriceSnapshotSchema.parse(
+      stay.accommodationPriceSnapshot,
+    )
+    let baseMinor: number
+    if (snapshot.basis === 'per_unit') {
+      baseMinor = this.safeMultiplyMoney(snapshot.baseNightlyPriceMinor, nights)
+    } else {
+      const nightly = this.safeAddMoney(
+        this.safeAddMoney(
+          this.safeMultiplyMoney(stay.adults, snapshot.rates.adults),
+          this.safeMultiplyMoney(stay.children, snapshot.rates.children),
+        ),
+        this.safeMultiplyMoney(stay.infants, snapshot.rates.infants),
+      )
+      baseMinor = this.safeMultiplyMoney(nightly, nights)
+    }
+    return ensureSafeMoney(baseMinor + (snapshot.adjustmentMinor ?? 0))
+  }
+
+  private safeMultiplyMoney(left: number, right: number): number {
+    if (!Number.isSafeInteger(left) || !Number.isSafeInteger(right))
+      throw new BadRequestException({
+        code: 'MONEY_OVERFLOW',
+        message: 'Importe inválido',
+      })
+    return ensureSafeMoney(left * right)
+  }
+
+  private safeAddMoney(left: number, right: number): number {
+    if (!Number.isSafeInteger(left + right))
+      throw new BadRequestException({
+        code: 'MONEY_OVERFLOW',
+        message: 'Importe inválido',
+      })
+    return ensureSafeMoney(left + right)
+  }
+
+  private acceptedDeparture(stay: StayEntity): string {
+    const departure = stay.reservation?.checkOutDate ?? stay.estimatedDeparture
+    if (!departure)
+      throw conflict(
+        'La reserva vinculada no tiene una salida aceptada',
+        'RESERVATION_DATES_CHANGED',
+      )
+    return departure
+  }
+
+  private assertLinkedDeparture(
+    stay: StayEntity,
+    reservation: ReservationEntity | null,
+    departureDate: string,
+  ): void {
+    if (!stay.reservationId) return
+    const accepted = reservation?.checkOutDate ?? stay.estimatedDeparture
+    if (!accepted || departureDate !== accepted)
+      throw conflict(
+        'La salida de la reserva cambió; cotizá o actualizá la reserva antes de cerrar la estadía',
+        'RESERVATION_DATES_CHANGED',
+      )
   }
 
   private validatePaymentDate(paidOn: string, timezone: string): void {

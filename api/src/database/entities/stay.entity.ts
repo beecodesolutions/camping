@@ -9,7 +9,11 @@ import {
   PrimaryGeneratedColumn,
   Relation,
 } from 'typeorm'
-import type { AgeRanges, Rates } from '@camping/contracts'
+import type {
+  AgeRanges,
+  Rates,
+  ReservationPriceSnapshot,
+} from '@camping/contracts'
 import { CampingEntity } from './camping.entity'
 import { UserEntity } from './user.entity'
 import { AppliedExtraEntity } from './applied-extra.entity'
@@ -43,6 +47,13 @@ export class StayEntity {
 
   @Column({ name: 'reservation_id', type: 'uuid', nullable: true })
   reservationId!: string | null
+
+  @Column({
+    name: 'accommodation_price_snapshot',
+    type: 'jsonb',
+    nullable: true,
+  })
+  accommodationPriceSnapshot!: ReservationPriceSnapshot | null
 
   @OneToOne(() => ReservationEntity, (reservation) => reservation.stay, {
     nullable: true,

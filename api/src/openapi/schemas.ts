@@ -105,7 +105,11 @@ export const openApiSchemas: Record<string, SchemaObject> = {
 for (const [name, schema] of Object.entries(reservationOpenApiSchemas)) {
   openApiSchemas[componentName(name)] = zodOpenApiSchema(
     schema,
-    name === 'reservationListQuery' ? 'input' : 'output',
+    name === 'reservationListQuery' ||
+      name === 'reservationCheckInQuote' ||
+      name === 'reservationCheckIn'
+      ? 'input'
+      : 'output',
   )
 }
 

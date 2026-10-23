@@ -24,6 +24,8 @@ Base `/api`. JSON; cookie de sesión `camping_session`. Todos los endpoints de n
 | POST   | `/reservations/:id/confirm`                  | Confirma una reserva pendiente                                           |
 | POST   | `/reservations/:id/cancel`                   | Cancela una reserva pendiente o confirmada                               |
 | POST   | `/reservations/:id/no-show`                  | Marca no presentado desde la fecha de entrada                            |
+| POST   | `/reservations/:id/check-in/quote`           | Cotiza el ingreso con fecha real y versión actual                        |
+| POST   | `/reservations/:id/check-in`                 | Ingresa la reserva y crea su estadía vinculada                           |
 | POST   | `/reservations/:id/payments`                 | Registra un pago manual idempotente                                      |
 | POST   | `/reservations/:id/payments/:paymentId/void` | Anula un pago con motivo, sin devolución bancaria                        |
 | GET    | `/extra-templates`                           | Plantillas del camping, incluidas desactivadas                           |
@@ -120,9 +122,57 @@ medios son `cash`, `transfer` y `card`; se permiten varios pagos y un excedente
 se muestra como crédito. Cancelar conserva sus pagos y sus cargos. Un pago
 puede anularse mientras la reserva esté pendiente, confirmada, cancelada o
 marcada no-show; la anulación conserva actor, fecha y motivo y no ejecuta una
-devolución bancaria. Las operaciones de estadía, check-in y check-out quedan
-fuera de esta etapa. Repetir la misma clave de idempotencia con el payload
+devolución bancaria. Antes del ingreso, esta regla aplica a los pagos propios
+de la reserva. Repetir la misma clave de idempotencia con el payload
 inmutable devuelve la reserva con el pago existente, incluso después de
-anularlo, sin incrementar versión ni crear auditoría/outbox; cambiar el
-payload responde 409. Repetir una anulación con el mismo motivo devuelve el
-estado actual sin nueva mutación y cambiarlo responde 409.
+anularlo, ingresar la reserva o cerrar su estadía, sin incrementar versión ni
+crear auditoría/outbox; cambiar el payload responde 409. Repetir una anulación
+con el mismo motivo devuelve el estado actual sin nueva mutación y cambiarlo
+responde 409.
+
+El ingreso desde una reserva usa dos operaciones. `POST
+/reservations/:id/check-in/quote` recibe `{ version, arrivalDate }` y devuelve
+la cotización del ingreso. La fecha real debe ser igual o posterior a la
+entrada reservada, no puede superar el día local actual y debe ser anterior a
+la salida reservada. La cotización conserva la tarifa base, moneda, rangos y
+ajustes absolutos de la reserva; una llegada anticipada requiere editar primero
+la fecha de la reserva y aceptar su nuevo total. Una llegada posterior exige
+una nueva cotización cuando cambia el precio.
+
+`POST /reservations/:id/check-in` recibe esa versión, `arrivalDate`,
+`acceptedTotalMinor` y los datos físicos de la llegada (`hasVehicle`,
+`vehicleDescription`, `licensePlate` y `location`). El ingreso exige que el
+total aceptado coincida con la cotización y crea como máximo una estadía para
+la reserva. La respuesta de reserva incluye `stayId`; la estadía incluye
+`reservationId` y `accommodationPriceSnapshot`. Los pagos existentes quedan
+vinculados a la reserva y a la nueva estadía mediante sus dos identificadores;
+no se duplican registros. Repetir el ingreso ya realizado devuelve la misma
+representación si la fecha y los datos normalizados de llegada coinciden. Una
+repetición cuando la reserva ya está en `checked_in` valida la fecha real y los
+datos de vehículo y ubicación, ignora `version` y `acceptedTotalMinor`, y
+devuelve la estadía existente sin recalcular precio ni crear un cobro nuevo.
+Esto permite reintentar después de extender la salida y recalcular la estadía
+actual. Intentar ingresar una reserva en `checked_out` responde conflicto.
+
+Una estadía física abierta bloquea su unidad aunque su fecha de salida
+planificada ya haya pasado. En una estadía vinculada, la cotización y el PATCH
+solo permiten cambiar la salida. Mientras la reserva está en `checked_in`, su
+cotización y PATCH solo aceptan ese cambio de salida y, cuando corresponde, el
+par explícito de ajuste (`agreedTotalMinor` y `priceAdjustmentReason`); no se
+editan contacto, ocupantes ni otros datos. Cualquier cambio que afecte el
+alojamiento requiere una cotización de reserva y un total aceptado antes de
+actualizar la estadía. La salida planificada, el snapshot de alojamiento y la
+versión de la estadía se mantienen sincronizados con la reserva.
+
+La cuenta de una estadía vinculada suma el alojamiento completo aceptado por la
+reserva más los extras activos; no sustituye el total congelado por un cálculo
+acumulado hasta hoy. Su cotización y cierre requieren que la salida de la
+reserva ya tenga la cotización y el PATCH aceptados cuando haya cambiado. El
+cierre requiere saldo cero y confirma la salida y el
+estado de la reserva en una sola transacción. Repetir el mismo cierre devuelve
+el resultado original. Los pagos nuevos registrados por la ruta de estadía
+conservan ambos identificadores. Un pago vinculado puede anularse desde la
+ruta de pagos de la reserva mientras la estadía vinculada esté abierta y la
+reserva siga en `checked_in`; la anulación incrementa ambas versiones. Los
+pagos de una estadía cerrada no se pueden anular. Las estadías creadas sin
+reserva mantienen el flujo directo anterior.

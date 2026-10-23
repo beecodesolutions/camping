@@ -27,6 +27,7 @@ import { todayInTimezone } from '@camping/contracts'
 import { CampingEntity } from '../database/entities/camping.entity'
 import { AccommodationTypeEntity } from '../database/entities/accommodation-type.entity'
 import { AccommodationUnitEntity } from '../database/entities/accommodation-unit.entity'
+import { StayEntity } from '../database/entities/stay.entity'
 import { PaymentEntity } from '../database/entities/payment.entity'
 import {
   ReservationEntity,
@@ -44,8 +45,10 @@ import {
 import {
   appendReservationMutation,
   lockReservation,
+  lockReservationStay,
   nextReservationVersion,
   reservationView,
+  reservationViews,
 } from './reservation-support'
 
 type QuoteInput = ReservationQuoteCreate
@@ -134,6 +137,15 @@ function checkPeople(
 ): void {
   if (!Number.isSafeInteger(value.adults + value.children + value.infants))
     throw conflict('Ocupación fuera de rango', 'OCCUPANCY_INVALID')
+}
+
+function nextStayVersion(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || value >= 2_147_483_647)
+    throw conflict(
+      'La versión de la estadía está fuera de rango',
+      'VERSION_OVERFLOW',
+    )
+  return value + 1
 }
 
 @Injectable()
@@ -288,9 +300,7 @@ export class ReservationService {
         for (const row of rows)
           row.payments = paymentsByReservation.get(row.id) ?? []
       }
-      const items = await Promise.all(
-        rows.map((row) => reservationView(runner.manager, context, row)),
-      )
+      const items = await reservationViews(runner.manager, context, rows)
       await runner.commitTransaction()
       return reservationPageSchema.parse({
         items,
@@ -334,6 +344,8 @@ export class ReservationService {
       { campingId: context.camping.id },
       async (manager) => {
         const row = await lockReservation(manager, context.camping.id, id)
+        if (row.status === 'checked_in')
+          return this.quoteCheckedIn(manager, context, row, patch)
         if (row.status !== 'pending' && row.status !== 'confirmed')
           throw conflict(
             'La reserva no se puede editar',
@@ -375,6 +387,8 @@ export class ReservationService {
       { campingId: context.camping.id },
       async (manager) => {
         const row = await lockReservation(manager, context.camping.id, id)
+        if (row.status === 'checked_in')
+          return this.updateCheckedIn(manager, context, row, patch)
         if (row.status !== 'pending' && row.status !== 'confirmed')
           throw conflict(
             'La reserva no se puede editar',
@@ -491,6 +505,179 @@ export class ReservationService {
         return reservationView(manager, context, saved)
       },
     )
+  }
+
+  private checkedInEditKeys = new Set([
+    'version',
+    'checkOutDate',
+    'acceptedTotalMinor',
+    'agreedTotalMinor',
+    'priceAdjustmentReason',
+  ])
+
+  private assertCheckedInEditShape(patch: ReservationPatch): void {
+    const keys = Object.keys(patch)
+    if (
+      !patch.checkOutDate ||
+      keys.some((key) => !this.checkedInEditKeys.has(key))
+    )
+      throw conflict(
+        'Una reserva ingresada solo permite cambiar checkOutDate y precio',
+        'RESERVATION_CHECKED_IN_FIELDS_FORBIDDEN',
+      )
+  }
+
+  private checkedInCheckout(
+    row: ReservationEntity,
+    checkOutDate: string,
+    timezone: string,
+  ): void {
+    if (checkOutDate <= row.checkInDate)
+      throw conflict(
+        'La salida debe ser posterior al ingreso real',
+        'VALIDATION_ERROR',
+      )
+    const today = todayInTimezone(timezone)
+    if (checkOutDate < today)
+      throw conflict('La salida no puede quedar en el pasado', 'PAST_CHECKOUT')
+    if (checkOutDate > row.checkOutDate && checkOutDate <= today)
+      throw conflict(
+        'La extensión debe terminar después de hoy',
+        'FUTURE_CHECKOUT_REQUIRED',
+      )
+  }
+
+  private checkedInSnapshot(
+    row: ReservationEntity,
+    patch: ReservationPatch,
+  ): PriceSnapshot {
+    const checkOutDate = patch.checkOutDate!
+    const current = reservationPriceSnapshotSchema.parse(row.priceSnapshot)
+    const explicitOverride =
+      patch.agreedTotalMinor !== undefined ||
+      patch.priceAdjustmentReason !== undefined
+    if (!explicitOverride)
+      return baseFromSnapshot(
+        current,
+        row.checkInDate,
+        checkOutDate,
+        row.adults,
+        row.children,
+        row.infants,
+      )
+    return priceSnapshotFor({
+      inventoryMode: current.basis === 'per_unit' ? 'individual' : 'unlimited',
+      currency: current.currency,
+      baseNightlyPriceMinor:
+        current.basis === 'per_unit'
+          ? current.baseNightlyPriceMinor
+          : undefined,
+      rates: current.basis === 'per_person' ? current.rates : undefined,
+      ageRanges: current.basis === 'per_person' ? current.ageRanges : undefined,
+      checkInDate: row.checkInDate,
+      checkOutDate,
+      adults: row.adults,
+      children: row.children,
+      infants: row.infants,
+      agreedTotalMinor: patch.agreedTotalMinor,
+      priceAdjustmentReason: patch.priceAdjustmentReason,
+    })
+  }
+
+  private async quoteCheckedIn(
+    manager: EntityManager,
+    context: AuthContext,
+    row: ReservationEntity,
+    patch: ReservationQuoteUpdate,
+  ): Promise<ReservationUpdateQuote> {
+    this.assertCheckedInEditShape(patch)
+    if (row.version !== patch.version)
+      throw conflict(
+        'La reserva cambió; actualizá la pantalla',
+        'STALE_RESERVATION',
+      )
+    this.checkedInCheckout(row, patch.checkOutDate!, context.camping.timezone)
+    const stay = await lockReservationStay(manager, context.camping.id, row.id)
+    if (stay.closure) throw conflict('La estadía ya fue cerrada', 'STAY_CLOSED')
+    const snapshot = this.checkedInSnapshot(row, patch)
+    if (row.unitId)
+      await assertUnitAvailable(
+        manager,
+        context.camping.id,
+        row.unitId,
+        row.checkInDate,
+        patch.checkOutDate!,
+        undefined,
+        row.id,
+      )
+    return reservationUpdateQuoteSchema.parse({
+      reservationId: row.id,
+      version: row.version,
+      priceSnapshot: snapshotWithoutInternalBase(snapshot),
+    })
+  }
+
+  private async updateCheckedIn(
+    manager: EntityManager,
+    context: AuthContext,
+    row: ReservationEntity,
+    patch: ReservationPatch,
+  ): Promise<ReservationResponse> {
+    this.assertCheckedInEditShape(patch)
+    if (row.version !== patch.version)
+      throw conflict(
+        'La reserva cambió; actualizá la pantalla',
+        'STALE_RESERVATION',
+      )
+    this.checkedInCheckout(row, patch.checkOutDate!, context.camping.timezone)
+    const stay = await lockReservationStay(manager, context.camping.id, row.id)
+    if (stay.closure) throw conflict('La estadía ya fue cerrada', 'STAY_CLOSED')
+    const snapshot = this.checkedInSnapshot(row, patch)
+    if (row.unitId)
+      await assertUnitAvailable(
+        manager,
+        context.camping.id,
+        row.unitId,
+        row.checkInDate,
+        patch.checkOutDate!,
+        undefined,
+        row.id,
+      )
+    ensureAccepted(patch, snapshot.totalMinor)
+    const before = state(row)
+    const stayValue = stay as StayEntity & {
+      accommodationPriceSnapshot: ReturnType<
+        typeof reservationPriceSnapshotSchema.parse
+      >
+    }
+    stay.estimatedDeparture = patch.checkOutDate!
+    stayValue.accommodationPriceSnapshot = snapshotWithoutInternalBase(snapshot)
+    stay.version = nextStayVersion(stay.version)
+    await manager.save(stay)
+    row.checkOutDate = patch.checkOutDate!
+    row.priceSnapshot = snapshotWithoutInternalBase(snapshot)
+    row.version = nextReservationVersion(row.version)
+    row.updatedAt = new Date()
+    const saved = await manager.save(row)
+    await appendReservationMutation(
+      manager,
+      context,
+      saved,
+      'reservation.checked_in_updated',
+      'InventoryChanged',
+      { ...before, stayId: stay.id },
+      {
+        ...state(saved),
+        stayId: stay.id,
+        stay: {
+          stayId: stay.id,
+          estimatedDeparture: stay.estimatedDeparture,
+          accommodationPriceSnapshot: snapshotWithoutInternalBase(snapshot),
+          version: stay.version,
+        },
+      },
+    )
+    return reservationView(manager, context, saved)
   }
 
   private replacement(

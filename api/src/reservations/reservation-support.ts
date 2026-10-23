@@ -3,13 +3,15 @@ import {
   reservationPriceSnapshotSchema,
   type ReservationResponse,
 } from '@camping/contracts'
-import type { EntityManager } from 'typeorm'
+import { In, type EntityManager } from 'typeorm'
 import { conflict, notFound } from '../common/errors'
 import type { AuthContext } from '../auth/auth.types'
 import { AuditLogEntity } from '../database/entities/audit-log.entity'
 import { OutboxEventEntity } from '../database/entities/outbox-event.entity'
 import { PaymentEntity } from '../database/entities/payment.entity'
 import { ReservationEntity } from '../database/entities/reservation.entity'
+import { AppliedExtraEntity } from '../database/entities/applied-extra.entity'
+import { StayEntity } from '../database/entities/stay.entity'
 
 const payloadFields = [
   'reservationId',
@@ -19,6 +21,7 @@ const payloadFields = [
   'checkOutDate',
   'typeId',
   'unitId',
+  'stayId',
 ] as const
 
 export async function lockReservation(
@@ -32,6 +35,25 @@ export async function lockReservation(
   })
   if (!row) throw notFound('Reserva')
   return row
+}
+
+export async function lockReservationStay(
+  manager: EntityManager,
+  campingId: string,
+  reservationId: string,
+): Promise<StayEntity> {
+  const stay = await manager.findOne(StayEntity, {
+    where: { campingId, reservationId },
+    lock: { mode: 'pessimistic_write' },
+  })
+  if (!stay) throw notFound('Estadía vinculada')
+  stay.extras = await manager.find(AppliedExtraEntity, {
+    where: { stayId: stay.id },
+  })
+  stay.payments = await manager.find(PaymentEntity, {
+    where: { campingId, stayId: stay.id },
+  })
+  return stay
 }
 
 function safeAdd(left: number, right: number): number {
@@ -55,20 +77,63 @@ export async function reservationView(
   context: AuthContext,
   row: ReservationEntity,
 ): Promise<ReservationResponse> {
-  const payments =
-    row.payments ??
-    (await manager.find(PaymentEntity, {
-      where: { campingId: context.camping.id, reservationId: row.id },
-      order: { createdAt: 'ASC', id: 'ASC' },
-    }))
+  const stay = await manager.findOne(StayEntity, {
+    where: { campingId: context.camping.id, reservationId: row.id },
+    relations: { extras: true },
+  })
+  const payments = await manager.find(PaymentEntity, {
+    where: [
+      { campingId: context.camping.id, reservationId: row.id },
+      ...(stay ? [{ campingId: context.camping.id, stayId: stay.id }] : []),
+    ],
+    order: { createdAt: 'ASC', id: 'ASC' },
+  })
+  return reservationViewFromAssociation(context, row, stay, payments)
+}
+
+function safeMultiply(left: number, right: number): number {
+  const result = left * right
+  if (!Number.isSafeInteger(result) || result < 0)
+    throw conflict('Importe fuera de rango', 'MONEY_OVERFLOW')
+  return result
+}
+
+function activeExtrasTotal(stay: StayEntity): number {
+  let total = 0
+  for (const extra of stay.extras ?? [])
+    total = safeAdd(total, safeMultiply(extra.quantity, extra.unitPriceMinor))
+  return total
+}
+
+function reservationTotal(
+  row: ReservationEntity,
+  stay: StayEntity | null,
+): number {
+  if (stay?.closure) {
+    const total = stay.closure.totalMinor
+    if (!Number.isSafeInteger(total) || total < 0)
+      throw conflict('Importe fuera de rango', 'MONEY_OVERFLOW')
+    return total
+  }
+  if (!stay) return row.priceSnapshot.totalMinor
+  return safeAdd(row.priceSnapshot.totalMinor, activeExtrasTotal(stay))
+}
+
+function reservationViewFromAssociation(
+  context: AuthContext,
+  row: ReservationEntity,
+  stay: StayEntity | null,
+  payments: PaymentEntity[],
+): ReservationResponse {
   let paidMinor = 0
   for (const payment of payments)
     if (payment.voidedAt === null)
       paidMinor = safeAdd(paidMinor, payment.amountMinor)
-  const totalMinor = row.priceSnapshot.totalMinor
+  const totalMinor = reservationTotal(row, stay)
   const value = {
     id: row.id,
     campingId: row.campingId,
+    stayId: stay?.id ?? null,
     accommodationTypeId: row.accommodationTypeId,
     unitId: row.unitId,
     checkInDate: row.checkInDate,
@@ -111,6 +176,55 @@ export async function reservationView(
   return reservationResponseSchema.parse(value)
 }
 
+/**
+ * Render a page of reservations with one stay, extras, and payment query per
+ * page. Individual reads still use reservationView above.
+ */
+export async function reservationViews(
+  manager: EntityManager,
+  context: AuthContext,
+  rows: ReservationEntity[],
+): Promise<ReservationResponse[]> {
+  if (!rows.length) return []
+  const reservationIds = rows.map((row) => row.id)
+  const stays = await manager.find(StayEntity, {
+    where: { campingId: context.camping.id, reservationId: In(reservationIds) },
+    relations: { extras: true },
+  })
+  const staysByReservation = new Map(
+    stays.map((stay) => [stay.reservationId!, stay]),
+  )
+  const staysById = new Map(stays.map((stay) => [stay.id, stay]))
+  const stayIds = stays.map((stay) => stay.id)
+  const payments = await manager.find(PaymentEntity, {
+    where: [
+      { campingId: context.camping.id, reservationId: In(reservationIds) },
+      ...(stayIds.length
+        ? [{ campingId: context.camping.id, stayId: In(stayIds) }]
+        : []),
+    ],
+    order: { createdAt: 'ASC', id: 'ASC' },
+  })
+  const paymentsByReservation = new Map<string, PaymentEntity[]>()
+  for (const payment of payments) {
+    const reservationId =
+      payment.reservationId ??
+      staysById.get(payment.stayId ?? '')?.reservationId
+    if (!reservationId) continue
+    const list = paymentsByReservation.get(reservationId) ?? []
+    list.push(payment)
+    paymentsByReservation.set(reservationId, list)
+  }
+  return rows.map((row) =>
+    reservationViewFromAssociation(
+      context,
+      row,
+      staysByReservation.get(row.id) ?? null,
+      paymentsByReservation.get(row.id) ?? [],
+    ),
+  )
+}
+
 function minimalPayload(row: ReservationEntity): Record<string, unknown> {
   const value: Record<string, unknown> = {
     reservationId: row.id,
@@ -137,11 +251,21 @@ function auditState(
     'accommodationTypeId',
     'typeId',
     'unitId',
+    'stayId',
     'source',
     'adults',
     'children',
     'infants',
+    'responsibleName',
+    'email',
+    'phone',
+    'document',
+    'nationality',
+    'source',
+    'notes',
     'priceSnapshot',
+    'stay',
+    'stayVersion',
     'paymentId',
     'paymentAmountMinor',
     'paymentIdempotencyKey',
@@ -188,6 +312,7 @@ export async function appendReservationMutation(
         ...minimalPayload(row),
         origin: 'manual',
         bookingSource: row.source,
+        ...(after?.stayId ? { stayId: after.stayId } : {}),
         ...(after?.paymentId ? { paymentId: after.paymentId } : {}),
         ...(after?.paymentAmountMinor
           ? { paymentAmountMinor: after.paymentAmountMinor }

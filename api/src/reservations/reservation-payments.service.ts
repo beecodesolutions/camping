@@ -16,6 +16,7 @@ import { ReservationEntity } from '../database/entities/reservation.entity'
 import {
   appendReservationMutation,
   lockReservation,
+  lockReservationStay,
   nextReservationVersion,
   reservationView,
 } from './reservation-support'
@@ -48,6 +49,15 @@ function paymentConflict(): ReturnType<typeof conflict> {
     'La clave de idempotencia ya fue usada con otro pago',
     'IDEMPOTENCY_CONFLICT',
   )
+}
+
+function nextStayVersion(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || value >= 2_147_483_647)
+    throw conflict(
+      'La versión de la estadía está fuera de rango',
+      'VERSION_OVERFLOW',
+    )
+  return value + 1
 }
 
 @Injectable()
@@ -176,7 +186,7 @@ export class ReservationPaymentsService {
           )
         }
 
-        await this.assertReservationCanVoidPayment(
+        const linkedStay = await this.assertReservationCanVoidPayment(
           manager,
           reservation,
           payment,
@@ -195,12 +205,19 @@ export class ReservationPaymentsService {
         payment.voidedById = context.user.id
         payment.voidReason = input.voidReason
         await manager.save(payment)
+        if (linkedStay) {
+          linkedStay.version = nextStayVersion(linkedStay.version)
+          await manager.save(linkedStay)
+        }
         reservation.version = nextReservationVersion(reservation.version)
         reservation.updatedAt = new Date()
         await manager.save(reservation)
         const after = {
           ...before,
           version: reservation.version,
+          ...(linkedStay
+            ? { stayId: linkedStay.id, stayVersion: linkedStay.version }
+            : {}),
           voidedAt: payment.voidedAt?.toISOString() ?? null,
           voidedBy: payment.voidedById,
           voidReason: payment.voidReason,
@@ -211,7 +228,11 @@ export class ReservationPaymentsService {
           reservation,
           'reservation.payment_voided',
           'PaymentVoided',
-          { ...before, version: oldVersion },
+          {
+            ...before,
+            version: oldVersion,
+            ...(linkedStay ? { stayId: linkedStay.id } : {}),
+          },
           after,
         )
         return reservationView(manager, context, reservation)
@@ -226,7 +247,6 @@ export class ReservationPaymentsService {
   ): void {
     if (
       existing.reservationId !== reservationId ||
-      existing.stayId !== null ||
       existing.amountMinor !== input.amountMinor ||
       existing.method !== input.method ||
       existing.paidOn !== input.paidOn ||
@@ -284,7 +304,24 @@ export class ReservationPaymentsService {
     manager: EntityManager,
     reservation: ReservationEntity,
     payment: PaymentEntity,
-  ): Promise<void> {
+  ): Promise<StayEntity | null> {
+    if (reservation.status === 'checked_out')
+      throw conflict('La reserva ya fue cerrada', 'RESERVATION_STATUS_CLOSED')
+    if (reservation.status === 'checked_in') {
+      const stay = await lockReservationStay(
+        manager,
+        reservation.campingId,
+        reservation.id,
+      )
+      if (stay.closure)
+        throw conflict('La estadía ya fue cerrada', 'STAY_CLOSED')
+      if (payment.stayId !== null && payment.stayId !== stay.id)
+        throw conflict(
+          'El pago no pertenece a la estadía vinculada',
+          'RESERVATION_LINKED_STAY',
+        )
+      return stay
+    }
     if (
       payment.stayId !== null ||
       (await this.linkedStayFor(manager, reservation)) !== null
@@ -292,14 +329,6 @@ export class ReservationPaymentsService {
       throw conflict(
         'La reserva ya está vinculada a una estadía',
         'RESERVATION_LINKED_STAY',
-      )
-    if (
-      reservation.status === 'checked_in' ||
-      reservation.status === 'checked_out'
-    )
-      throw conflict(
-        'La reserva ya ingresó o fue cerrada',
-        'RESERVATION_STATUS_CLOSED',
       )
     if (
       reservation.status !== 'pending' &&
@@ -311,6 +340,7 @@ export class ReservationPaymentsService {
         'La reserva no admite anulaciones',
         'RESERVATION_PAYMENT_FORBIDDEN',
       )
+    return null
   }
 
   private assertAccountSafe(

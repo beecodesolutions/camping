@@ -38,7 +38,14 @@ bloqueos describen unidad, rango y motivo, sin huésped ni cobros.
 
 Pendiente → confirmada → ingresada → finalizada. Pendiente y confirmada pueden pasar a cancelada o no presentado. El ingreso exige confirmación y produce como máximo una estadía, idempotentemente. No se reabren estados terminales en esta entrega.
 
-Pendientes y confirmadas consumen inventario. No hay vencimiento automático ni liberación por ausencia del huésped. Cancelación y no presentado liberan inventario explícitamente. Las reservas ingresadas conservan su asignación hasta la salida acordada; presencia real y disponibilidad prevista se muestran como conceptos distintos.
+Pendientes y confirmadas consumen inventario. No hay vencimiento automático ni liberación por ausencia del huésped. Cancelación y no presentado liberan inventario explícitamente. Las reservas ingresadas conservan su asignación hasta la salida acordada; presencia real y disponibilidad prevista se muestran como conceptos distintos. Una estadía física abierta también bloquea su unidad aunque la salida planificada ya haya pasado.
+
+El ingreso desde reserva requiere una fecha real igual o posterior a la entrada
+reservada, no posterior al día local actual y anterior a la salida reservada.
+Una llegada anticipada se resuelve editando primero la fecha de la reserva y
+aceptando el nuevo total; una llegada tardía que cambie el precio requiere una
+nueva cotización. El ingreso es idempotente y crea como máximo una estadía por
+reserva.
 
 Fechas PostgreSQL `date`, formato ISO, intervalo `[checkInDate, checkOutDate)` con salida posterior a entrada. Una salida permite otra entrada ese día. No reutilizar el cálculo de cobro mínimo de una noche del piloto para determinar solapamientos.
 
@@ -78,17 +85,24 @@ sesión autenticada como ámbito. La escritura de la entidad, su auditoría y el
 outbox se confirma en la misma transacción; los cambios de tarifa emiten
 `RateChanged` y los cambios de inventario emiten `InventoryChanged`.
 
-Una estadía abierta que supera su salida prevista requiere resolución: no impide guardar reservas futuras, pero sí ingresar otro grupo a su unidad. Extender la reserva vuelve a validar disponibilidad; nunca desplaza silenciosamente otra reserva.
+Una estadía abierta que supera su salida prevista requiere resolución: puede
+guardar reservas futuras, pero bloquea el ingreso físico de otro grupo a su
+unidad mientras siga abierta. Extender la reserva vuelve a validar
+disponibilidad; nunca desplaza silenciosamente otra reserva.
 
 ## Precios, pagos y transición
 
 Espacios cerrados: tarifa por unidad/noche y total acordado editable explícitamente. Camping libre: tarifa por persona/noche conservando rangos infantiles del piloto. El snapshot guarda la base de cálculo y el importe acordado; cambiar configuración no altera reservas existentes. Modificaciones de fechas o alojamiento requieren aceptar un nuevo presupuesto.
 
 Cada reserva admite múltiples pagos en efectivo, transferencia o tarjeta. En la
-etapa 3 el pago queda vinculado a la reserva y no a una estadía; la asociación
-con una estadía pertenece a la etapa 4 y debe conservar el mismo registro, sin
-copiarlo. Los pagos históricos conservan su `stay_id` cuando exista. Los
-saldos se derivan del precio y pagos no anulados; no son campos editables.
+En la etapa 3 el pago queda vinculado a la reserva. Al ingresar, el mismo
+registro conserva su `reservation_id` y recibe `stay_id`; nunca se copian pagos.
+Los pagos nuevos de una estadía vinculada mantienen ambos identificadores. Un
+pago de una estadía vinculada se puede anular desde la ruta de pagos de reserva
+solo mientras la estadía esté abierta y la reserva siga en `checked_in`; la
+anulación incrementa ambas versiones. Los pagos de estadías cerradas no se
+anulan. Los saldos se derivan del precio y pagos no anulados; no son campos
+editables.
 
 Anular un anticipo erróneo conserva motivo, actor y fecha y lo excluye del saldo. Cancelar una reserva no anula sus pagos. Las devoluciones quedan fuera de alcance; un anticipo retenido sigue visible y pendiente de resolución fuera del sistema.
 
@@ -157,11 +171,57 @@ cuenta congelada con `totalMinor`, `paidMinor` y `balanceMinor`. No incluye
 pagos nuevos solo se registran en pendientes o confirmadas. Cancelar conserva
 pagos y cargos. Anular se permite en pendientes, confirmadas, canceladas y
 no-show; mantiene motivo, actor y fecha y no inicia devoluciones bancarias.
-Los pagos vinculados a estadía o check-in/check-out quedan fuera de esta
-etapa. Repetir la misma clave con el payload exacto es idempotente incluso
-después de anular o cancelar; cambiar el payload da 409. Anular otra vez con
-el mismo motivo devuelve el estado actual sin otra mutación, auditoría o
-evento; con motivo distinto da 409.
+Los pagos vinculados a estadía o check-in/check-out se describen en la etapa 4.
+Repetir la misma clave con el payload exacto es idempotente incluso después de
+anular, cancelar, ingresar la reserva o cerrar la estadía; cambiar el payload
+da 409. Anular otra vez con el mismo motivo devuelve el estado actual sin otra
+mutación, auditoría o evento; con motivo distinto da 409.
+
+## API de ingreso desde reserva de la etapa 4
+
+La etapa 4 agrega dos operaciones con `operationId` estable:
+`reservationCheckInQuote` y `reservationCheckIn`. `POST
+/api/reservations/:id/check-in/quote` recibe `{ version, arrivalDate }` y
+devuelve el presupuesto del ingreso. La fecha real debe ser igual o posterior
+a `checkInDate`, no superar el día local actual y ser anterior a
+`checkOutDate`. La cotización conserva la tarifa base, moneda, rangos y ajuste
+absoluto congelados en la reserva.
+
+`POST /api/reservations/:id/check-in` recibe la versión, fecha real, total
+aceptado y datos físicos del grupo. Solo crea una estadía para la reserva y
+devuelve la reserva con `stayId`; la estadía devuelve `reservationId` y
+`accommodationPriceSnapshot`. Los pagos existentes mantienen el mismo registro
+con ambos vínculos (`reservation_id` y `stay_id`), y los pagos nuevos por la
+ruta de estadía también conservan ambos identificadores.
+
+Una llegada anticipada exige editar primero la fecha de entrada de la reserva y
+aceptar su nuevo precio. Una llegada tardía que cambie el importe exige pedir y
+aceptar una nueva cotización. Repetir un ingreso ya aplicado devuelve la misma
+representación cuando la fecha y los datos normalizados de llegada coinciden;
+si la reserva ya está en `checked_in`, valida fecha, vehículo y ubicación,
+ignora `version` y `acceptedTotalMinor`, y devuelve la estadía existente sin
+recalcular precio ni crear un cobro nuevo. Esto permite reintentar después de
+extender la salida y recalcular la estadía actual. Intentar ingresar una
+reserva en `checked_out` responde conflicto; nunca crea otra estadía ni duplica
+pagos.
+
+Una estadía vinculada solo permite cambiar su salida mediante cotización y
+PATCH. Mientras la reserva está en `checked_in`, su cotización y PATCH solo
+aceptan esa salida y, cuando corresponde, el par explícito de ajuste
+(`agreedTotalMinor` y `priceAdjustmentReason`); no permiten editar contacto u
+ocupantes. Si cambia el precio de alojamiento, primero se cotiza y actualiza la
+reserva con el total aceptado. La salida planificada, el snapshot y la versión
+de la estadía se sincronizan con la reserva. Su cuenta usa el alojamiento
+completo aceptado por la reserva más los extras activos, y su cotización o
+cierre exige que la salida de la reserva esté previamente aceptada cuando haya
+cambiado.
+
+El cierre exige saldo cero y confirma la salida y el estado de la reserva en
+una sola transacción. Repetir el mismo cierre es idempotente. Un pago vinculado
+solo puede anularse desde la ruta de pagos de reserva mientras la estadía esté
+abierta y la reserva siga en `checked_in`; la operación incrementa ambas
+versiones. Los pagos de una estadía cerrada no se anulan. Las estadías directas
+sin reserva conservan el comportamiento anterior.
 
 ## Etapas y validación
 

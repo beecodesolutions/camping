@@ -45,6 +45,8 @@ const expectedRoutes = [
   'POST /api/reservations/{id}/confirm',
   'POST /api/reservations/{id}/cancel',
   'POST /api/reservations/{id}/no-show',
+  'POST /api/reservations/{id}/check-in/quote',
+  'POST /api/reservations/{id}/check-in',
   'POST /api/reservations/{id}/payments',
   'POST /api/reservations/{id}/payments/{paymentId}/void',
 ]
@@ -119,11 +121,21 @@ test('offline OpenAPI document describes implemented pilot and inventory routes'
     assert.ok(document.components.schemas.ReservationQuoteUpdate)
     assert.ok(document.components.schemas.ReservationUpdateQuote)
     assert.ok(document.components.schemas.ReservationStatusCommand)
+    assert.ok(document.components.schemas.ReservationCheckInQuote)
+    assert.ok(document.components.schemas.ReservationCheckIn)
     assert.ok(document.components.schemas.ReservationListQuery)
     assert.ok(document.components.schemas.ReservationPage)
     assert.ok(document.components.schemas.ReservationAccount)
     assert.ok(document.components.schemas.AvailabilityQuery)
     assert.ok(document.components.schemas.AvailabilityResponse)
+
+    const staySchema = document.components.schemas.Stay
+    assert.ok(staySchema.properties.reservationId)
+    assert.ok(staySchema.properties.accommodationPriceSnapshot)
+    const stayPaymentSchema = staySchema.properties.payments.items
+    assert.ok(stayPaymentSchema.properties.voidedAt)
+    assert.ok(stayPaymentSchema.properties.voidedBy)
+    assert.ok(stayPaymentSchema.properties.voidReason)
 
     const reservationList = document.paths['/api/reservations'].get
     assert.equal(
@@ -145,6 +157,8 @@ test('offline OpenAPI document describes implemented pilot and inventory routes'
         'reservationConfirm',
         'reservationCancel',
         'reservationNoShow',
+        'reservationCheckInQuote',
+        'reservationCheckIn',
         'reservationPaymentRecord',
         'reservationPaymentVoid',
       ].sort(),

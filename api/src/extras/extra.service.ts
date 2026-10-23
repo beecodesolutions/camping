@@ -136,7 +136,12 @@ export class ExtraService {
         stayId,
         runner.manager,
       )
-      this.stayService.calculate(updated, stay.arrivalDate)
+      this.stayService.calculate(
+        updated,
+        updated.accommodationPriceSnapshot
+          ? (updated.estimatedDeparture ?? stay.arrivalDate)
+          : stay.arrivalDate,
+      )
       const result = this.stayService.toStay(updated, context.camping.timezone)
       await runner.commitTransaction()
       return result
@@ -216,7 +221,12 @@ export class ExtraService {
         stayId,
         runner.manager,
       )
-      this.stayService.calculate(updated, stay.arrivalDate)
+      this.stayService.calculate(
+        updated,
+        updated.accommodationPriceSnapshot
+          ? (updated.estimatedDeparture ?? stay.arrivalDate)
+          : stay.arrivalDate,
+      )
       const result = this.stayService.toStay(updated, context.camping.timezone)
       await runner.commitTransaction()
       return result

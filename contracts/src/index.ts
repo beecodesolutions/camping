@@ -1,35 +1,24 @@
 import { z } from 'zod'
-import { getCountries, parsePhoneNumberFromString } from 'libphonenumber-js/min'
-export const countries = getCountries()
+import { parsePhoneNumberFromString } from 'libphonenumber-js/min'
+import {
+  ageRangesSchema,
+  countries,
+  moneySchema,
+  paymentMethodSchema,
+  ratesSchema,
+  safeCount,
+} from './contract-primitives'
+import { reservationPriceSnapshotSchema } from './reservation-pricing'
+export {
+  ageRangesSchema,
+  countries,
+  moneySchema,
+  paymentMethodSchema,
+  ratesSchema,
+  safeCount,
+} from './contract-primitives'
+export type { AgeRanges, Rates } from './contract-primitives'
 export const categories = ['adults', 'children', 'infants'] as const
-export const safeCount = z
-  .number()
-  .int()
-  .nonnegative()
-  .max(Number.MAX_SAFE_INTEGER)
-export const moneySchema = safeCount
-export const ratesSchema = z.strictObject({
-  adults: moneySchema,
-  children: moneySchema,
-  infants: moneySchema,
-})
-export type Rates = z.infer<typeof ratesSchema>
-const ageRange = z.strictObject({ min: safeCount, max: safeCount.nullable() })
-export const ageRangesSchema = z
-  .strictObject({ adults: ageRange, children: ageRange, infants: ageRange })
-  .refine(
-    (r) =>
-      r.infants.min === 0 &&
-      r.infants.max !== null &&
-      r.infants.max >= 0 &&
-      r.children.min === r.infants.max + 1 &&
-      r.children.max !== null &&
-      r.children.max >= r.children.min &&
-      r.adults.min === r.children.max + 1 &&
-      r.adults.max === null,
-    'Invalid age ranges',
-  )
-export type AgeRanges = z.infer<typeof ageRangesSchema>
 export function todayInTimezone(timezone: string, now = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
@@ -145,7 +134,6 @@ export const appliedExtraSchema = extraValuesSchema.extend({
   templateId: z.string().nullable(),
 })
 export type AppliedExtra = z.infer<typeof appliedExtraSchema>
-export const paymentMethodSchema = z.enum(['cash', 'transfer', 'card'])
 export const paymentInputSchema = z.strictObject({
   amountMinor: moneySchema.min(1),
   method: paymentMethodSchema,
@@ -156,12 +144,16 @@ export const paymentInputSchema = z.strictObject({
 export type PaymentInput = z.input<typeof paymentInputSchema>
 export const paymentSchema = z.object({
   id: z.uuid(),
+  reservationId: z.uuid().nullable().default(null),
   amountMinor: moneySchema.min(1),
   method: paymentMethodSchema,
   paidOn: z.iso.date(),
   note: z.string(),
   createdAt: z.string(),
   recordedBy: z.string(),
+  voidedAt: z.string().nullable().default(null),
+  voidedBy: z.string().nullable().default(null),
+  voidReason: z.string().nullable().default(null),
 })
 export type Payment = z.infer<typeof paymentSchema>
 export const accountSchema = z.object({
@@ -201,6 +193,10 @@ export const closureSchema = costBreakdownSchema.extend({
 })
 export const staySchema = z.object({
   id: z.string(),
+  reservationId: z.uuid().nullable().default(null),
+  accommodationPriceSnapshot: reservationPriceSnapshotSchema
+    .nullable()
+    .default(null),
   responsibleName: z.string(),
   document: z.string(),
   nationality: z.string(),
