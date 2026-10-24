@@ -35,6 +35,7 @@ import {
 import StayList, { type StaySelection } from './StayList'
 import ReservationCheckInDialog from './ReservationCheckInDialog'
 import LucideIcon from './components/LucideIcon'
+import DashboardWidget from './components/DashboardWidget'
 import AccommodationFilter from './AccommodationFilter'
 import { useAppDispatch, useAppSelector } from './app/hooks'
 import {
@@ -603,43 +604,19 @@ export default function DashboardToday({
           }}
         />
       )}
-      <Paper
-        component="section"
-        aria-labelledby="active-stays-title"
-        variant="outlined"
-        sx={{ p: 2, borderRadius: 2 }}
-      >
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 1,
-            mb: 1,
-          }}
-        >
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ alignItems: 'center', minWidth: 0 }}
-          >
-            <Typography
-              id="active-stays-title"
-              component="h2"
-              variant="h6"
-              sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' } }}
-            >
-              {t('home.activeStays')}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {activeStays.length}
-            </Typography>
-          </Stack>
+      <DashboardWidget
+        titleId="active-stays-title"
+        title={t('home.activeStays')}
+        subtitle={t('home.activeStaysCount', { count: activeStays.length })}
+        titleVariant="h6"
+        contentSpacing={1}
+        action={
           <AccommodationFilter
             value={activeFilter}
             onChange={(value) => dispatch(accommodationFilterChanged(value))}
           />
-        </Stack>
+        }
+      >
         <StayList
           items={activeStays}
           timezone={profile.timezone}
@@ -649,7 +626,7 @@ export default function DashboardToday({
           unitNames={unitNames}
           reservationsById={reservationsById}
         />
-      </Paper>
+      </DashboardWidget>
     </Stack>
   )
 }
