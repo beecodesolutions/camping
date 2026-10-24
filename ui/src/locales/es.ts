@@ -57,6 +57,9 @@ const es = {
     closedStays: 'Historial',
     staysList: 'Alojamientos',
     noStays: 'No hay alojamientos para mostrar.',
+    accommodation: 'Alojamiento',
+    unknownUnit: 'Unidad sin nombre',
+    freeCamping: 'Camping libre',
   },
   auth: {
     title: 'Ingresar al camping',

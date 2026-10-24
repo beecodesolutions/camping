@@ -24,8 +24,12 @@ import {
   useLazyStaysQuery,
 } from './services/api'
 import { addDays, typeNameById } from './services/calendar'
+import StayList, { type StaySelection } from './StayList'
 
-type DashboardProps = { profile: CampingProfile }
+type DashboardProps = {
+  profile: CampingProfile
+  onSelect: (selection: StaySelection) => void
+}
 type DashboardState = {
   arrivals: ReservationResponse[]
   stays: Stay[]
@@ -233,21 +237,35 @@ function DepartureRow({
   )
 }
 
-export default function DashboardToday({ profile }: DashboardProps) {
+export default function DashboardToday({ profile, onSelect }: DashboardProps) {
   const { t, i18n } = useTranslation()
   const query = useTodayData(profile)
+  const dashboard = query.status === 'ready' ? query.data : null
   const types = useAccommodationTypesQuery()
   const units = useAccommodationUnitsQuery()
   const typeNames = useMemo(
     () => typeNameById((types.data ?? []) as AccommodationType[]),
     [types.data],
   )
+  const typeModes = useMemo(
+    () =>
+      new Map((types.data ?? []).map((type) => [type.id, type.inventoryMode])),
+    [types.data],
+  )
   const unitNames = useMemo(
     () => new Map((units.data ?? []).map((unit) => [unit.id, unit.name])),
     [units.data],
   )
+  const reservationsById = useMemo(
+    () =>
+      new Map(
+        (dashboard?.checkedInReservations ?? [])
+          .filter((reservation) => reservation.stayId)
+          .map((reservation) => [reservation.stayId as string, reservation]),
+      ),
+    [dashboard?.checkedInReservations],
+  )
   const today = todayInTimezone(profile.timezone)
-  const dashboard = query.status === 'ready' ? query.data : null
   const linkedReservationIds = useMemo(
     () =>
       new Set(
@@ -382,6 +400,43 @@ export default function DashboardToday({ profile }: DashboardProps) {
             </Box>
           )}
         </Stack>
+      </Paper>
+      <Paper
+        component="section"
+        aria-labelledby="active-stays-title"
+        variant="outlined"
+        sx={{ p: 2, borderRadius: 2 }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            mb: 1,
+          }}
+        >
+          <Typography
+            id="active-stays-title"
+            component="h2"
+            variant="h6"
+            sx={{ fontWeight: 700 }}
+          >
+            {t('home.activeStays')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {dashboard.stays.length}
+          </Typography>
+        </Stack>
+        <StayList
+          items={dashboard.stays}
+          timezone={profile.timezone}
+          onSelect={onSelect}
+          typeNames={typeNames}
+          typeModes={typeModes}
+          unitNames={unitNames}
+          reservationsById={reservationsById}
+        />
       </Paper>
     </Stack>
   )

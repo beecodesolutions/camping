@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { AvailabilityResponse } from '@camping/contracts'
-import { availabilityForDate, monthRange, shiftMonth } from './calendar'
+import type {
+  AvailabilityResponse,
+  ReservationResponse,
+  Stay,
+} from '@camping/contracts'
+import {
+  availabilityForDate,
+  dedupeLinkedStays,
+  monthRange,
+  shiftMonth,
+} from './calendar'
 
 const individual = {
   typeId: '00000000-0000-4000-8000-000000000001',
@@ -48,5 +57,26 @@ describe('availability calendar helpers', () => {
       tone: 'none',
       available: 0,
     })
+  })
+
+  it('keeps active room and camping stays while removing linked reservation duplicates', () => {
+    const activeStays = [
+      { id: 'stay-room', reservationId: 'reservation-room' },
+      { id: 'stay-camping', reservationId: null },
+    ] as Stay[]
+    const reservations = [
+      { id: 'reservation-room' },
+      { id: 'reservation-camping' },
+    ] as ReservationResponse[]
+
+    const result = dedupeLinkedStays(activeStays, reservations)
+
+    expect(result.stays.map((stay) => stay.id)).toEqual([
+      'stay-room',
+      'stay-camping',
+    ])
+    expect(result.reservations.map((reservation) => reservation.id)).toEqual([
+      'reservation-camping',
+    ])
   })
 })

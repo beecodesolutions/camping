@@ -94,10 +94,8 @@ export default function CampingWorkspace({
   const [registeredName, setRegisteredName] = useState<string | null>(null)
   const camping = useCampingQuery()
   const stays = useStaysQuery(
-    section === 'home'
-      ? { status: 'active', page: 1, pageSize: 10 }
-      : { status: stayStatus, page, pageSize },
-    { skip: section === 'settings' },
+    { status: stayStatus, page, pageSize },
+    { skip: section !== 'stays' },
   )
   const [logout, logoutState] = useLogoutMutation()
   const profile = camping.data
@@ -178,7 +176,7 @@ export default function CampingWorkspace({
               </Tabs>
               {homeView === 'today' ? (
                 <Box sx={{ mt: 2 }}>
-                  <DashboardToday profile={profile} />
+                  <DashboardToday profile={profile} onSelect={setSelection} />
                 </Box>
               ) : (
                 <Box sx={{ mt: 2 }}>
@@ -206,64 +204,6 @@ export default function CampingWorkspace({
                       />
                     </Box>
                   </Stack>
-                  <Paper
-                    component="section"
-                    aria-labelledby="active-stays-title"
-                    variant="outlined"
-                    sx={{ mt: 2, p: 2, borderRadius: 2 }}
-                  >
-                    <Stack
-                      direction="row"
-                      sx={{
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 1,
-                      }}
-                    >
-                      <Typography
-                        id="active-stays-title"
-                        component="h2"
-                        variant="subtitle1"
-                        sx={{ fontWeight: 700 }}
-                      >
-                        {t('home.activeStays')}
-                      </Typography>
-                      <Button
-                        onClick={() => {
-                          setStayStatus('active')
-                          setPage(1)
-                          setSection('stays')
-                        }}
-                        sx={{ flexShrink: 0 }}
-                      >
-                        {t('home.allStays')}
-                      </Button>
-                    </Stack>
-                    {stays.isFetching && (
-                      <Typography color="text.secondary">
-                        {t('common.loading')}
-                      </Typography>
-                    )}
-                    {stays.isError && (
-                      <Alert
-                        severity="error"
-                        action={
-                          <Button onClick={() => void stays.refetch()}>
-                            {t('common.retry')}
-                          </Button>
-                        }
-                      >
-                        {t('home.loadError')}
-                      </Alert>
-                    )}
-                    {stays.currentData && (
-                      <StayList
-                        items={stays.currentData.items}
-                        timezone={profile.timezone}
-                        onSelect={setSelection}
-                      />
-                    )}
-                  </Paper>
                 </>
               )}
             </>
