@@ -49,12 +49,13 @@ import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
-import OccupancyChart from './OccupancyChart'
 import WorkspaceNavigation, {
   type WorkspaceSection,
 } from './WorkspaceNavigation'
 import PendingBalanceCard from './PendingBalanceCard'
 import { useTimeOfDay } from './app/timeOfDay'
+import AvailabilityCalendar from './AvailabilityCalendar'
+import DashboardToday from './DashboardToday'
 
 type WorkspaceProps = { user: SessionUser; themeControl: ReactNode }
 const pageSize = 8
@@ -85,6 +86,7 @@ export default function CampingWorkspace({
   const { t } = useTranslation()
   const { greeting } = useTimeOfDay()
   const [section, setSection] = useState<WorkspaceSection>('home')
+  const [homeView, setHomeView] = useState<'today' | 'calendar'>('today')
   const [stayStatus, setStayStatus] = useState<'active' | 'closed'>('active')
   const [page, setPage] = useState(1)
   const [selection, setSelection] = useState<StaySelection | null>(null)
@@ -163,83 +165,107 @@ export default function CampingWorkspace({
         {section === 'home' &&
           (profile ? (
             <>
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={2}
-                sx={{ mt: 2 }}
+              <Tabs
+                value={homeView}
+                onChange={(_, value: 'today' | 'calendar') =>
+                  setHomeView(value)
+                }
+                aria-label={t('home.views')}
+                sx={{ mt: 1 }}
               >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <OccupancyCard
-                    activeGroups={profile.activeGroups}
-                    activePeople={profile.activePeople}
-                    activeVehicles={profile.activeVehicles}
-                  />
+                <Tab value="today" label={t('home.todayTab')} />
+                <Tab value="calendar" label={t('home.calendarTab')} />
+              </Tabs>
+              {homeView === 'today' ? (
+                <Box sx={{ mt: 2 }}>
+                  <DashboardToday profile={profile} />
                 </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <PendingBalanceCard
-                    pendingAmountMinor={profile.pendingAmountMinor}
-                    currency={profile.currency}
-                  />
+              ) : (
+                <Box sx={{ mt: 2 }}>
+                  <AvailabilityCalendar profile={profile} />
                 </Box>
-              </Stack>
-              <Paper
-                component="section"
-                aria-labelledby="active-stays-title"
-                variant="outlined"
-                sx={{ mt: 2, p: 2, borderRadius: 2 }}
-              >
-                <Stack
-                  direction="row"
-                  sx={{
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 1,
-                  }}
-                >
-                  <Typography
-                    id="active-stays-title"
-                    component="h2"
-                    variant="subtitle1"
-                    sx={{ fontWeight: 700 }}
+              )}
+              {homeView === 'today' && (
+                <>
+                  <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={2}
+                    sx={{ mt: 2 }}
                   >
-                    {t('home.activeStays')}
-                  </Typography>
-                  <Button
-                    onClick={() => {
-                      setStayStatus('active')
-                      setPage(1)
-                      setSection('stays')
-                    }}
-                    sx={{ flexShrink: 0 }}
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <OccupancyCard
+                        activeGroups={profile.activeGroups}
+                        activePeople={profile.activePeople}
+                        activeVehicles={profile.activeVehicles}
+                      />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <PendingBalanceCard
+                        pendingAmountMinor={profile.pendingAmountMinor}
+                        currency={profile.currency}
+                      />
+                    </Box>
+                  </Stack>
+                  <Paper
+                    component="section"
+                    aria-labelledby="active-stays-title"
+                    variant="outlined"
+                    sx={{ mt: 2, p: 2, borderRadius: 2 }}
                   >
-                    {t('home.allStays')}
-                  </Button>
-                </Stack>
-                {stays.isFetching && (
-                  <Typography color="text.secondary">
-                    {t('common.loading')}
-                  </Typography>
-                )}
-                {stays.isError && (
-                  <Alert
-                    severity="error"
-                    action={
-                      <Button onClick={() => void stays.refetch()}>
-                        {t('common.retry')}
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                      }}
+                    >
+                      <Typography
+                        id="active-stays-title"
+                        component="h2"
+                        variant="subtitle1"
+                        sx={{ fontWeight: 700 }}
+                      >
+                        {t('home.activeStays')}
+                      </Typography>
+                      <Button
+                        onClick={() => {
+                          setStayStatus('active')
+                          setPage(1)
+                          setSection('stays')
+                        }}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        {t('home.allStays')}
                       </Button>
-                    }
-                  >
-                    {t('home.loadError')}
-                  </Alert>
-                )}
-                {stays.currentData && (
-                  <StayList
-                    items={stays.currentData.items}
-                    timezone={profile.timezone}
-                    onSelect={setSelection}
-                  />
-                )}
-              </Paper>
+                    </Stack>
+                    {stays.isFetching && (
+                      <Typography color="text.secondary">
+                        {t('common.loading')}
+                      </Typography>
+                    )}
+                    {stays.isError && (
+                      <Alert
+                        severity="error"
+                        action={
+                          <Button onClick={() => void stays.refetch()}>
+                            {t('common.retry')}
+                          </Button>
+                        }
+                      >
+                        {t('home.loadError')}
+                      </Alert>
+                    )}
+                    {stays.currentData && (
+                      <StayList
+                        items={stays.currentData.items}
+                        timezone={profile.timezone}
+                        onSelect={setSelection}
+                      />
+                    )}
+                  </Paper>
+                </>
+              )}
             </>
           ) : (
             <LoadingPanel />
@@ -252,7 +278,6 @@ export default function CampingWorkspace({
           )
         ) : section === 'stays' ? (
           <Stack spacing={2} sx={{ mt: 2 }}>
-            <OccupancyChart />
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={1}

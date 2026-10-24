@@ -179,6 +179,8 @@ export const handlers = [
     const stay: Stay = {
       ...result.data,
       id: `demo-stay-${Date.now()}`,
+      reservationId: null,
+      accommodationPriceSnapshot: null,
       currency: profile.currency,
       ageRanges: structuredClone(profile.ageRanges),
       rates: structuredClone(profile.rates),
@@ -239,8 +241,12 @@ export const handlers = [
         stay.payments.push({
           ...payment,
           id: crypto.randomUUID(),
+          reservationId: null,
           createdAt: new Date().toISOString(),
           recordedBy: user.id,
+          voidedAt: null,
+          voidedBy: null,
+          voidReason: null,
         })
       }
     }
@@ -274,8 +280,12 @@ export const handlers = [
     stay.payments.push({
       ...result.data,
       id: crypto.randomUUID(),
+      reservationId: null,
       createdAt: new Date().toISOString(),
       recordedBy: user.id,
+      voidedAt: null,
+      voidedBy: null,
+      voidReason: null,
     })
     stay.account = stayAccount(stay)
     updateProfile()
