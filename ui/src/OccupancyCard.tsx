@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Box, Paper, Stack, SvgIcon, Typography } from '@mui/material'
+import { Box, Paper, Stack, Typography } from '@mui/material'
+import { Tent } from 'lucide-react'
+import LucideIcon from './components/LucideIcon'
 import type { CampingProfile } from './services/api'
 
 type OccupancyCardProps = Pick<
@@ -22,9 +24,7 @@ export default function OccupancyCard({
     >
       <Stack spacing={2}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <SvgIcon color="primary" aria-hidden="true">
-            <path d="M12 3 1 21h22L12 3Zm0 5 6.8 11H14v-6h-4v6H5.2L12 8Z" />
-          </SvgIcon>
+          <LucideIcon icon={Tent} color="primary" aria-hidden="true" />
           <Typography
             id="occupancy-title"
             component="h2"

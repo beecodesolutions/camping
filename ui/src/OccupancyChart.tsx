@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Box, Paper, Stack, SvgIcon, Typography, useTheme } from '@mui/material'
+import { Box, Paper, Stack, Typography, useTheme } from '@mui/material'
+import { BarChart3 } from 'lucide-react'
+import LucideIcon from './components/LucideIcon'
 import {
   Bar,
   BarChart,
@@ -45,9 +47,7 @@ export default function OccupancyChart() {
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <SvgIcon color="inherit" aria-hidden="true">
-          <path d="M4 13h4v7H4zm6-9h4v16h-4zm6 5h4v11h-4z" />
-        </SvgIcon>
+        <LucideIcon icon={BarChart3} color="inherit" aria-hidden="true" />
         <Typography
           id="occupancy-history-title"
           component="h2"

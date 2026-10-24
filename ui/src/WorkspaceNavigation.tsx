@@ -1,5 +1,8 @@
 import { useState, type ReactNode } from 'react'
+import { Menu as MenuIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import LucideIcon from './components/LucideIcon'
+
 import {
   Box,
   Button,
@@ -7,7 +10,6 @@ import {
   Menu,
   MenuItem,
   Stack,
-  SvgIcon,
   Typography,
 } from '@mui/material'
 
@@ -86,9 +88,7 @@ export default function WorkspaceNavigation({
           onClick={(event) => setAnchor(event.currentTarget)}
           sx={{ display: { xs: 'inline-flex', md: 'none' } }}
         >
-          <SvgIcon>
-            <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" />
-          </SvgIcon>
+          <LucideIcon icon={MenuIcon} />
         </IconButton>
         <Menu
           id="workspace-menu"

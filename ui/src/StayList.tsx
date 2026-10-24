@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next'
 import {
   Box,
   IconButton,
-  SvgIcon,
   Tooltip,
   List,
   ListItem,
@@ -11,7 +10,16 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
+import {
+  BedDouble,
+  Building2,
+  CircleDollarSign,
+  LogOut,
+  Plus,
+  Tent,
+} from 'lucide-react'
 import type { ReservationResponse, Stay } from '@camping/contracts'
+import LucideIcon from './components/LucideIcon'
 import { todayInTimezone } from './checkIn/schema'
 import { relativeDay } from './services/relativeDay'
 import { formatMoney } from './services/money'
@@ -77,6 +85,12 @@ export default function StayList({
           : stay.reservationId
             ? 'neutral'
             : 'tent'
+        const stayIcon =
+          iconKind === 'bed'
+            ? BedDouble
+            : iconKind === 'tent'
+              ? Tent
+              : Building2
         return (
           <ListItem
             key={stay.id}
@@ -100,19 +114,12 @@ export default function StayList({
                     spacing={0.5}
                     sx={{ alignItems: 'center', flexWrap: 'wrap' }}
                   >
-                    <SvgIcon
+                    <LucideIcon
+                      icon={stayIcon}
                       aria-hidden="true"
                       focusable="false"
                       sx={{ fontSize: 18, color: 'text.secondary' }}
-                    >
-                      {iconKind === 'bed' ? (
-                        <path d="M3 18v-7h2v3h5V9h6a5 5 0 0 1 5 5v4h-2v-2H5v2H3Zm4-6h3V9H7v3Zm5 0h7a3 3 0 0 0-3-3h-4v3Z" />
-                      ) : iconKind === 'tent' ? (
-                        <path d="m2 20 5.8-11.6a4.7 4.7 0 0 1 8.4 0L22 20h-2.2l-1.5-3H5.7l-1.5 3H2Zm4.7-5h6.6L10 8.4 6.7 15Zm5 0h3.6l-1.8-3.6-1.8 3.6Z" />
-                      ) : (
-                        <path d="M5 4h14v16H5V4Zm3 3v2h2V7H8Zm6 0v2h2V7h-2ZM8 12v2h2v-2H8Zm6 0v2h2v-2h-2Zm-6 4v2h2v-2H8Zm6 0v2h2v-2h-2Z" />
-                      )}
-                    </SvgIcon>
+                    />
                     <Box component="span">{accommodation}</Box>
                     <Box component="span">
                       · {relativeDay(stay.arrivalDate, today, i18n.language)} ·{' '}
@@ -190,9 +197,7 @@ export default function StayList({
                         color: 'accent.main',
                       }}
                     >
-                      <SvgIcon>
-                        <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
-                      </SvgIcon>
+                      <LucideIcon icon={Plus} />
                     </IconButton>
                   </Tooltip>
                 )}
@@ -242,19 +247,7 @@ export default function StayList({
                         color: 'accent.main',
                       }}
                     >
-                      <SvgIcon>
-                        <g
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M12 18H3V5h18v7M3 9a4 4 0 0 0 4-4m10 0a4 4 0 0 0 4 4M3 14a4 4 0 0 1 4 4" />
-                          <circle cx="12" cy="11.5" r="2.5" />
-                          <path d="M18 15v6m-3-3h6" />
-                        </g>
-                      </SvgIcon>
+                      <LucideIcon icon={CircleDollarSign} />
                     </IconButton>
                   </Tooltip>
                 </Stack>
@@ -272,18 +265,7 @@ export default function StayList({
                       '&:hover': { bgcolor: 'primary.dark' },
                     }}
                   >
-                    <SvgIcon>
-                      <g
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M10 4H4v16h6M4 4l7-2v20l-7-2M14 12h8m-3-3 3 3-3 3" />
-                        <path d="M8 12h.01" />
-                      </g>
-                    </SvgIcon>
+                    <LucideIcon icon={LogOut} />
                   </IconButton>
                 </Tooltip>
               )}

@@ -8,13 +8,14 @@ import {
   IconButton,
   Paper,
   Stack,
-  SvgIcon,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
   useTheme,
 } from '@mui/material'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { alpha, type Theme } from '@mui/material/styles'
+import LucideIcon from './components/LucideIcon'
 import type {
   AccommodationType,
   CampingProfile,
@@ -455,14 +456,7 @@ export default function AvailabilityCalendar({ profile }: Props) {
           aria-label={t('common.previous')}
           onClick={() => setMonth(shiftMonth(month, -1))}
         >
-          <SvgIcon>
-            <path
-              d="m14 6-6 6 6 6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-          </SvgIcon>
+          <LucideIcon icon={ChevronLeft} />
         </IconButton>
         <Typography
           sx={{
@@ -479,14 +473,7 @@ export default function AvailabilityCalendar({ profile }: Props) {
           aria-label={t('common.next')}
           onClick={() => setMonth(shiftMonth(month, 1))}
         >
-          <SvgIcon>
-            <path
-              d="m10 6 6 6-6 6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-          </SvgIcon>
+          <LucideIcon icon={ChevronRight} />
         </IconButton>
         <Button size="small" onClick={() => setMonth(monthKey(today))}>
           {t('calendar.today')}
