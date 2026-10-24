@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeIndividualOccupancy } from './individualOccupancy'
+import {
+  summarizeIndividualOccupancy,
+  summarizeOccupancy,
+} from './individualOccupancy'
 import { readAllPages } from './pagination'
 
 const types = [
@@ -9,6 +12,97 @@ const types = [
 ] as const
 
 describe('individual occupancy', () => {
+  it('derives total, camping, and individual metrics from the same active data', () => {
+    const result = summarizeOccupancy(
+      types,
+      [
+        { id: 'room-1', typeId: 'rooms', enabled: true },
+        { id: 'room-2', typeId: 'rooms', enabled: true },
+      ],
+      [
+        {
+          id: 'reservation-room',
+          status: 'checked_in',
+          stayId: 'stay-room',
+          unitId: 'room-1',
+          accommodationTypeId: 'rooms',
+        },
+        {
+          id: 'reservation-camping',
+          status: 'checked_in',
+          stayId: 'stay-camping',
+          unitId: null,
+          accommodationTypeId: 'camping',
+        },
+        {
+          id: 'reservation-pending',
+          status: 'pending',
+          stayId: null,
+          unitId: 'room-2',
+          accommodationTypeId: 'rooms',
+        },
+        {
+          id: 'reservation-closed',
+          status: 'checked_out',
+          stayId: 'stay-closed',
+          unitId: 'room-2',
+          accommodationTypeId: 'rooms',
+        },
+      ],
+      [
+        {
+          id: 'stay-room',
+          reservationId: 'reservation-room',
+          adults: 2,
+          children: 1,
+          infants: 0,
+          hasVehicle: true,
+        },
+        {
+          id: 'stay-camping',
+          reservationId: 'reservation-camping',
+          adults: 2,
+          children: 0,
+          infants: 1,
+          hasVehicle: false,
+        },
+        {
+          id: 'stay-legacy',
+          reservationId: null,
+          adults: 1,
+          children: 0,
+          infants: 0,
+          hasVehicle: true,
+        },
+        {
+          id: 'stay-unknown',
+          reservationId: 'missing-reservation',
+          adults: 9,
+          children: 0,
+          infants: 0,
+          hasVehicle: true,
+        },
+        {
+          id: 'stay-room',
+          reservationId: 'reservation-room',
+          adults: 99,
+          children: 0,
+          infants: 0,
+          hasVehicle: false,
+        },
+      ],
+    )
+
+    expect(result.total).toEqual({ groups: 4, people: 16, vehicles: 3 })
+    expect(result.camping).toEqual({ groups: 2, people: 4, vehicles: 1 })
+    expect(result.individual).toEqual({ groups: 1, people: 3, vehicles: 1 })
+    expect(result.individualUnits).toMatchObject({
+      occupied: 1,
+      total: 2,
+      unoccupied: 1,
+    })
+  })
+
   it('reads every page before calculating the aggregate', async () => {
     const pages: Record<
       number,

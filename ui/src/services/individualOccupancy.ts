@@ -11,6 +11,91 @@ export type IndividualOccupancy = {
   unoccupied: number
 }
 
+export type OccupancyMetrics = {
+  groups: number
+  people: number
+  vehicles: number
+}
+
+export type OccupancySummary = {
+  total: OccupancyMetrics
+  camping: OccupancyMetrics
+  individual: OccupancyMetrics
+  individualUnits: IndividualOccupancy
+}
+
+function metrics(
+  stays: ReadonlyArray<
+    Pick<Stay, 'adults' | 'children' | 'infants' | 'hasVehicle'>
+  >,
+): OccupancyMetrics {
+  return {
+    groups: stays.length,
+    people: stays.reduce(
+      (total, stay) => total + stay.adults + stay.children + stay.infants,
+      0,
+    ),
+    vehicles: stays.filter((stay) => stay.hasVehicle).length,
+  }
+}
+
+export function summarizeOccupancy(
+  types: ReadonlyArray<
+    Pick<AccommodationType, 'id' | 'enabled' | 'inventoryMode'>
+  >,
+  units: ReadonlyArray<Pick<AccommodationUnit, 'id' | 'typeId' | 'enabled'>>,
+  reservations: ReadonlyArray<
+    Pick<
+      ReservationResponse,
+      'id' | 'status' | 'stayId' | 'unitId' | 'accommodationTypeId'
+    >
+  >,
+  stays: ReadonlyArray<
+    Pick<
+      Stay,
+      'id' | 'reservationId' | 'adults' | 'children' | 'infants' | 'hasVehicle'
+    >
+  >,
+): OccupancySummary {
+  const uniqueStayMap = new Map<string, (typeof stays)[number]>()
+  for (const stay of stays) {
+    if (!uniqueStayMap.has(stay.id)) uniqueStayMap.set(stay.id, stay)
+  }
+  const uniqueStays = Array.from(uniqueStayMap.values())
+  const reservationsById = new Map(
+    reservations.map((reservation) => [reservation.id, reservation]),
+  )
+  const campingStays = uniqueStays.filter((stay) => {
+    if (!stay.reservationId) return true
+    const reservation = reservationsById.get(stay.reservationId)
+    return (
+      reservation?.status === 'checked_in' &&
+      types.find((type) => type.id === reservation.accommodationTypeId)
+        ?.inventoryMode === 'unlimited'
+    )
+  })
+  const individualStays = uniqueStays.filter((stay) => {
+    if (!stay.reservationId) return false
+    const reservation = reservationsById.get(stay.reservationId)
+    return (
+      reservation?.status === 'checked_in' &&
+      types.find((type) => type.id === reservation.accommodationTypeId)
+        ?.inventoryMode === 'individual'
+    )
+  })
+  return {
+    total: metrics(uniqueStays),
+    camping: metrics(campingStays),
+    individual: metrics(individualStays),
+    individualUnits: summarizeIndividualOccupancy(
+      types,
+      units,
+      reservations,
+      individualStays,
+    ),
+  }
+}
+
 export function summarizeIndividualOccupancy(
   types: ReadonlyArray<
     Pick<AccommodationType, 'id' | 'enabled' | 'inventoryMode'>

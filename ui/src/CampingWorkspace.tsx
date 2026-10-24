@@ -53,7 +53,6 @@ import WorkspaceNavigation, {
   type WorkspaceSection,
 } from './WorkspaceNavigation'
 import PendingBalanceCard from './PendingBalanceCard'
-import UnitsOccupancyCard from './UnitsOccupancyCard'
 import { useTimeOfDay } from './app/timeOfDay'
 import AvailabilityCalendar from './AvailabilityCalendar'
 import DashboardToday from './DashboardToday'
@@ -177,15 +176,13 @@ export default function CampingWorkspace({
                   mb: 2,
                 }}
               >
-                <Box sx={{ minWidth: 0 }}>
-                  <OccupancyCard
-                    activeGroups={profile.activeGroups}
-                    activePeople={profile.activePeople}
-                    activeVehicles={profile.activeVehicles}
-                  />
-                </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <UnitsOccupancyCard profile={profile} />
+                <Box
+                  sx={{
+                    minWidth: 0,
+                    gridColumn: { sm: 'span 2', lg: 'span 2' },
+                  }}
+                >
+                  <OccupancyCard profile={profile} />
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <PendingBalanceCard
