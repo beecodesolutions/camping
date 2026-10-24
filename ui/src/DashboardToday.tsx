@@ -35,6 +35,9 @@ import {
 import StayList, { type StaySelection } from './StayList'
 import ReservationCheckInDialog from './ReservationCheckInDialog'
 import LucideIcon from './components/LucideIcon'
+import AccommodationFilter, {
+  type AccommodationFilterValue,
+} from './AccommodationFilter'
 
 type DashboardProps = {
   profile: CampingProfile
@@ -210,6 +213,7 @@ function ReservationRow({
         flexDirection: 'row',
         gap: 1,
         py: 1.25,
+        '&:last-child': { borderBottom: 0 },
       }}
     >
       <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -292,6 +296,7 @@ function DepartureRow({
         flexDirection: 'row',
         gap: 1,
         py: 1.25,
+        '&:last-child': { borderBottom: 0 },
       }}
     >
       <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -350,6 +355,8 @@ export default function DashboardToday({
 }: DashboardProps) {
   const { t, i18n } = useTranslation()
   const query = useTodayData(profile, refreshKey)
+  const [activeFilter, setActiveFilter] =
+    useState<AccommodationFilterValue>('total')
   const [checkInReservation, setCheckInReservation] =
     useState<ReservationResponse | null>(null)
   const dashboard = query.status === 'ready' ? query.data : null
@@ -372,6 +379,24 @@ export default function DashboardToday({
     () => indexReservationsById(dashboard?.checkedInReservations ?? []),
     [dashboard?.checkedInReservations],
   )
+  const activeStays = (dashboard?.stays ?? []).filter((stay) => {
+    if (activeFilter === 'total') return true
+    const reservation = stay.reservationId
+      ? reservationsById.get(stay.reservationId)
+      : undefined
+    const identity = buildAccommodationIdentity({
+      reservation,
+      hasReservation: Boolean(stay.reservationId),
+      location: stay.location,
+      typeModes,
+      labels: {
+        accommodation: t('home.accommodation'),
+        freeCamping: t('home.freeCamping'),
+        unknownUnit: t('home.unknownUnit'),
+      },
+    })
+    return identity.kind === activeFilter
+  })
   const today = todayInTimezone(profile.timezone)
   const linkedReservationIds = useMemo(
     () =>
@@ -590,20 +615,30 @@ export default function DashboardToday({
             mb: 1,
           }}
         >
-          <Typography
-            id="active-stays-title"
-            component="h2"
-            variant="h6"
-            sx={{ fontWeight: 700 }}
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ alignItems: 'center', minWidth: 0 }}
           >
-            {t('home.activeStays')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {dashboard.stays.length}
-          </Typography>
+            <Typography
+              id="active-stays-title"
+              component="h2"
+              variant="h6"
+              sx={{ fontWeight: 700, fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
+              {t('home.activeStays')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {activeStays.length}
+            </Typography>
+          </Stack>
+          <AccommodationFilter
+            value={activeFilter}
+            onChange={setActiveFilter}
+          />
         </Stack>
         <StayList
-          items={dashboard.stays}
+          items={activeStays}
           timezone={profile.timezone}
           onSelect={onSelect}
           typeNames={typeNames}

@@ -7,13 +7,14 @@ import {
   CircularProgress,
   Paper,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Typography,
 } from '@mui/material'
-import { BedDouble, Tent, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 import type { AccommodationType, CampingProfile } from '@camping/contracts'
 import LucideIcon from './components/LucideIcon'
+import AccommodationFilter, {
+  type AccommodationFilterValue,
+} from './AccommodationFilter'
 import {
   useAccommodationTypesQuery,
   useAccommodationUnitsQuery,
@@ -33,7 +34,6 @@ type LegacyProps = Pick<
   'activeGroups' | 'activePeople' | 'activeVehicles'
 >
 type Props = LiveProps | LegacyProps
-type Filter = 'total' | 'camping' | 'individual'
 type State =
   | { status: 'loading' }
   | { status: 'ready'; data: OccupancySummary }
@@ -93,7 +93,7 @@ function LiveOccupancyCard({ profile }: LiveProps) {
   const units = useAccommodationUnitsQuery()
   const [readReservations] = useLazyReservationsQuery()
   const [readStays] = useLazyStaysQuery()
-  const [filter, setFilter] = useState<Filter>('total')
+  const [filter, setFilter] = useState<AccommodationFilterValue>('total')
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<State>({ status: 'loading' })
   const retry = useCallback(() => {
@@ -167,8 +167,8 @@ function LiveOccupancyCard({ profile }: LiveProps) {
         <Box
           sx={{
             display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            alignItems: { xs: 'stretch', sm: 'center' },
+            flexDirection: 'row',
+            alignItems: 'center',
             gap: 1,
             width: '100%',
           }}
@@ -193,31 +193,7 @@ function LiveOccupancyCard({ profile }: LiveProps) {
               minWidth: 0,
             }}
           >
-            <ToggleButtonGroup
-              value={filter}
-              exclusive
-              onChange={(_, value: Filter | null) => value && setFilter(value)}
-              aria-label={t('home.occupancyFilter')}
-              size="small"
-              sx={{
-                maxWidth: '100%',
-                flexWrap: 'wrap',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <ToggleButton value="total">
-                <LucideIcon icon={Users} sx={{ mr: 0.5, fontSize: 17 }} />
-                {t('home.occupancyTotal')}
-              </ToggleButton>
-              <ToggleButton value="camping">
-                <LucideIcon icon={Tent} sx={{ mr: 0.5, fontSize: 17 }} />
-                {t('home.occupancyCamping')}
-              </ToggleButton>
-              <ToggleButton value="individual">
-                <LucideIcon icon={BedDouble} sx={{ mr: 0.5, fontSize: 17 }} />
-                {t('home.occupancyIndividual')}
-              </ToggleButton>
-            </ToggleButtonGroup>
+            <AccommodationFilter value={filter} onChange={setFilter} />
           </Box>
         </Box>
         {loading ? (
@@ -284,8 +260,11 @@ function LiveOccupancyCard({ profile }: LiveProps) {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'max-content max-content',
-                justifyContent: { xs: 'end', sm: 'end' },
+                gridTemplateColumns: {
+                  xs: 'max-content max-content max-content max-content',
+                  sm: 'max-content max-content',
+                },
+                justifyContent: { xs: 'start', sm: 'end' },
                 alignItems: 'center',
                 columnGap: 1,
                 rowGap: 0.5,

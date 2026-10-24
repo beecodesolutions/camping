@@ -94,6 +94,7 @@ export default function StayList({
               disablePadding
               divider
               sx={{
+                '&:last-child': { borderBottom: 0 },
                 alignItems: { xs: 'center', sm: 'stretch' },
                 flexDirection: { xs: 'row', sm: 'column', md: 'row' },
               }}
