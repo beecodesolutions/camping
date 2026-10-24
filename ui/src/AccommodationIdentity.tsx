@@ -9,10 +9,12 @@ export default function AccommodationIdentity({
   identity,
   meta,
   people,
+  compactMobile = false,
 }: {
   identity: AccommodationIdentityValue
   meta?: ReactNode
   people?: number
+  compactMobile?: boolean
 }) {
   const { t } = useTranslation()
   const icon = identity.kind === 'camping' ? Tent : BedDouble
@@ -23,7 +25,8 @@ export default function AccommodationIdentity({
       spacing={0.5}
       sx={{
         alignItems: 'center',
-        flexWrap: 'wrap',
+        flexWrap: compactMobile ? { xs: 'nowrap', sm: 'wrap' } : 'wrap',
+        minWidth: 0,
         fontSize: '0.875rem',
         lineHeight: 1.43,
         color: 'text.secondary',
@@ -35,6 +38,7 @@ export default function AccommodationIdentity({
         focusable="false"
         sx={(theme) => ({
           fontSize: 18,
+          flexShrink: 0,
           color:
             identity.kind === 'camping'
               ? theme.palette.mode === 'dark'
@@ -50,14 +54,46 @@ export default function AccommodationIdentity({
       <Box
         component="span"
         sx={{
+          minWidth: 0,
+          overflow: compactMobile ? { xs: 'hidden', sm: 'visible' } : undefined,
+          textOverflow: 'ellipsis',
+          whiteSpace: compactMobile
+            ? { xs: 'nowrap', sm: 'normal' }
+            : undefined,
           fontSize: '0.875rem',
           lineHeight: 1.43,
           color: 'text.secondary',
         }}
       >
-        {identity.label}
+        {compactMobile ? (
+          <>
+            <Box
+              component="span"
+              sx={{ display: { xs: 'inline', sm: 'none' } }}
+            >
+              {identity.compactLabel ?? identity.label}
+            </Box>
+            <Box
+              component="span"
+              sx={{ display: { xs: 'none', sm: 'inline' } }}
+            >
+              {identity.label}
+            </Box>
+          </>
+        ) : (
+          identity.label
+        )}
       </Box>
-      {meta !== undefined && <Box component="span">· {meta}</Box>}
+      {meta !== undefined && (
+        <Box
+          component="span"
+          sx={{
+            display: compactMobile ? { xs: 'none', sm: 'inline' } : undefined,
+          }}
+        >
+          · {meta}
+        </Box>
+      )}
       {people !== undefined && (
         <>
           <Box component="span">·</Box>
@@ -65,7 +101,7 @@ export default function AccommodationIdentity({
             component="span"
             direction="row"
             spacing={0.25}
-            sx={{ alignItems: 'center' }}
+            sx={{ alignItems: 'center', flexShrink: 0 }}
           >
             <LucideIcon
               icon={Users}

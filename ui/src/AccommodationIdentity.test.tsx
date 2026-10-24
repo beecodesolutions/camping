@@ -35,7 +35,11 @@ describe('accommodation identity', () => {
         unitNames: new Map([['room-1', 'Pino 1']]),
         labels,
       }),
-    ).toEqual({ kind: 'individual', label: 'Habitación privada · Pino 1' })
+    ).toEqual({
+      kind: 'individual',
+      label: 'Habitación privada · Pino 1',
+      compactLabel: 'Pino 1',
+    })
   })
 
   it('keeps linked camping and unlinked camping distinct from an unknown stay', () => {
@@ -49,19 +53,32 @@ describe('accommodation identity', () => {
         typeModes: new Map([['camp-type', 'unlimited']]),
         labels,
       }),
-    ).toEqual({ kind: 'camping', label: 'Camping libre' })
+    ).toEqual({
+      kind: 'camping',
+      label: 'Camping libre',
+      compactLabel: 'Camping libre',
+    })
     expect(
       buildAccommodationIdentity({
         location: 'Pino 1',
         labels,
       }),
-    ).toEqual({ kind: 'camping', label: 'Camping libre · Pino 1' })
+    ).toEqual({
+      kind: 'camping',
+      label: 'Camping libre · Pino 1',
+      compactLabel: 'Pino 1',
+    })
     expect(
       buildAccommodationIdentity({ hasReservation: true, labels }),
-    ).toEqual({ kind: 'neutral', label: 'Alojamiento' })
+    ).toEqual({
+      kind: 'neutral',
+      label: 'Alojamiento',
+      compactLabel: 'Unidad sin nombre',
+    })
     expect(buildAccommodationIdentity({ labels })).toEqual({
       kind: 'camping',
       label: 'Camping libre',
+      compactLabel: 'Camping libre',
     })
   })
 })

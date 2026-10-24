@@ -90,6 +90,7 @@ export default function CampingWorkspace({
   const [stayStatus, setStayStatus] = useState<'active' | 'closed'>('active')
   const [page, setPage] = useState(1)
   const [selection, setSelection] = useState<StaySelection | null>(null)
+  const [todayRefreshKey, setTodayRefreshKey] = useState(0)
   const [checkInOpen, setCheckInOpen] = useState(false)
   const [registeredName, setRegisteredName] = useState<string | null>(null)
   const camping = useCampingQuery()
@@ -204,7 +205,11 @@ export default function CampingWorkspace({
               </Tabs>
               {homeView === 'today' ? (
                 <Box sx={{ mt: 2 }}>
-                  <DashboardToday profile={profile} onSelect={setSelection} />
+                  <DashboardToday
+                    profile={profile}
+                    onSelect={setSelection}
+                    refreshKey={todayRefreshKey}
+                  />
                 </Box>
               ) : (
                 <Box sx={{ mt: 2 }}>
@@ -283,6 +288,7 @@ export default function CampingWorkspace({
           action={selection.action}
           timezone={profile.timezone}
           onClose={() => setSelection(null)}
+          onChanged={() => setTodayRefreshKey((value) => value + 1)}
         />
       )}
     </>
@@ -335,11 +341,13 @@ function StayDetail({
   action,
   timezone,
   onClose,
+  onChanged,
 }: {
   id: string
   action: StayAction
   timezone: string
   onClose: () => void
+  onChanged?: () => void
 }) {
   const { t, i18n } = useTranslation()
   const stayQuery = useStayQuery(id)
@@ -492,6 +500,7 @@ function StayDetail({
         version: preview.version,
         ...(payment && balance > 0 ? { payment } : {}),
       }).unwrap()
+      onChanged?.()
       onClose()
     } catch (e) {
       setError(

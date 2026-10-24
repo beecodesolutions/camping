@@ -50,6 +50,8 @@ const es = {
     expectedArrivals: 'Llegadas esperadas',
     expectedDepartures: 'Salidas de hoy',
     overdueDepartures: 'Salidas atrasadas',
+    checkInAction: 'Check-in',
+    checkOutAction: 'Check-out',
     noArrivals: 'No hay llegadas esperadas.',
     noDepartures: 'No hay salidas para hoy.',
     activeStays: 'Alojamientos activos',
@@ -153,6 +155,7 @@ const es = {
     quantity: 'Cantidad',
     addExtra: 'Agregar',
     addExtraAction: 'Agregar extra',
+    moreActions: 'Más acciones',
     extraError: 'No pudimos guardar el extra.',
     closeTitle: 'Cerrar alojamiento',
     closedSummary: 'Cierre registrado',
@@ -225,6 +228,18 @@ const es = {
     noCountries: 'No se encontraron países',
     phone: 'Teléfono',
     submit: 'Registrar ingreso',
+    reservationTitle: 'Registrar check-in',
+    reservationGuests:
+      '{{adults}} adultos · {{children}} niños · {{infants}} bebés',
+    preview: 'Cotizar ingreso',
+    quoting: 'Cotizando…',
+    confirm: 'Confirmar check-in',
+    totalAtArrival: 'Total al ingresar',
+    reservationQuoteError: 'No pudimos cotizar el ingreso de la reserva.',
+    reservationChanged:
+      'La reserva cambió. Cerrá esta ventana y actualizá la agenda.',
+    reservationSaveError:
+      'No pudimos registrar el check-in de la reserva. Intentá de nuevo.',
     saving: 'Registrando…',
     success: 'Ingreso de {{name}} registrado.',
     saveError:

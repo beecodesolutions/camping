@@ -4,6 +4,7 @@ export type AccommodationIdentityKind = 'individual' | 'camping' | 'neutral'
 export type AccommodationIdentityValue = {
   kind: AccommodationIdentityKind
   label: string
+  compactLabel?: string
 }
 type Labels = {
   accommodation: string
@@ -56,6 +57,9 @@ export function buildAccommodationIdentity({
           : mode === 'unlimited'
             ? 'camping'
             : 'neutral',
+      compactLabel:
+        unitName ||
+        (mode === 'unlimited' ? labels.freeCamping : labels.unknownUnit),
       label:
         !unitName || unitName === typeName
           ? typeName
@@ -63,9 +67,21 @@ export function buildAccommodationIdentity({
     }
   }
   if (hasReservation) {
-    return { kind: 'neutral', label: labels.accommodation }
+    return {
+      kind: 'neutral',
+      label: labels.accommodation,
+      compactLabel: labels.unknownUnit,
+    }
   }
   return location
-    ? { kind: 'camping', label: `${labels.freeCamping} · ${location}` }
-    : { kind: 'camping', label: labels.freeCamping }
+    ? {
+        kind: 'camping',
+        label: `${labels.freeCamping} · ${location}`,
+        compactLabel: location,
+      }
+    : {
+        kind: 'camping',
+        label: labels.freeCamping,
+        compactLabel: labels.freeCamping,
+      }
 }

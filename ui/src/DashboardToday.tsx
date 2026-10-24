@@ -4,12 +4,15 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
-  Divider,
+  IconButton,
+  List,
+  ListItem,
   Paper,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material'
+import { LogIn, LogOut } from 'lucide-react'
 import type {
   AccommodationType,
   CampingProfile,
@@ -30,10 +33,13 @@ import {
   indexReservationsById,
 } from './services/accommodationIdentity'
 import StayList, { type StaySelection } from './StayList'
+import ReservationCheckInDialog from './ReservationCheckInDialog'
+import LucideIcon from './components/LucideIcon'
 
 type DashboardProps = {
   profile: CampingProfile
   onSelect: (selection: StaySelection) => void
+  refreshKey?: number
 }
 type DashboardState = {
   arrivals: ReservationResponse[]
@@ -55,7 +61,7 @@ type DepartureItem = Pick<
   | 'infants'
   | 'estimatedDeparture'
   | 'reservationId'
-> & { reservation?: ReservationResponse }
+> & { reservation?: ReservationResponse; canCheckOut?: boolean }
 
 function formatDate(value: string, language: string) {
   return new Intl.DateTimeFormat(language, {
@@ -84,6 +90,7 @@ async function allPages<T>(
 
 function useTodayData(
   profile: CampingProfile,
+  refreshKey: number,
 ): LoadState & { retry: () => void } {
   const [readReservations] = useLazyReservationsQuery()
   const [readStays] = useLazyStaysQuery()
@@ -134,7 +141,11 @@ function useTodayData(
           status: 'ready',
           data: {
             arrivals: [...pending, ...confirmed]
-              .filter((reservation) => reservation.checkInDate === today)
+              .filter(
+                (reservation) =>
+                  reservation.checkInDate === today &&
+                  reservation.status === 'confirmed',
+              )
               .sort((left, right) =>
                 left.responsibleName.localeCompare(right.responsibleName),
               ),
@@ -151,6 +162,7 @@ function useTodayData(
     }
   }, [
     attempt,
+    refreshKey,
     profile.activeGroups,
     profile.activePeople,
     profile.pendingAmountMinor,
@@ -168,12 +180,14 @@ function ReservationRow({
   typeModes,
   unitNames,
   language,
+  onCheckIn,
 }: {
   reservation: ReservationResponse
   typeNames: Map<string, string>
   typeModes: Map<string, string>
   unitNames: Map<string, string>
   language: string
+  onCheckIn: () => void
 }) {
   const { t } = useTranslation()
   const identity = buildAccommodationIdentity({
@@ -188,29 +202,55 @@ function ReservationRow({
     },
   })
   return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+    <ListItem
+      disableGutters
+      divider
+      sx={{
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 1,
+        py: 1.25,
+      }}
+    >
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontWeight: 700 }} noWrap>
+        <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
           {reservation.responsibleName}
         </Typography>
         <AccommodationIdentity
           identity={identity}
+          compactMobile
           people={guestCount(reservation)}
         />
       </Box>
-      <Chip
-        size="small"
-        label={reservation.status === 'pending' ? 'Pendiente' : 'Confirmada'}
-        color={reservation.status === 'pending' ? 'warning' : 'success'}
-      />
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: { xs: 'none', sm: 'block' } }}
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}
       >
-        {formatDate(reservation.checkOutDate, language)}
-      </Typography>
-    </Stack>
+        <Tooltip title={t('home.checkInAction')}>
+          <IconButton
+            aria-label={t('home.checkInAction')}
+            onClick={onCheckIn}
+            sx={{
+              width: 44,
+              height: 44,
+              bgcolor: 'success.main',
+              color: 'success.contrastText',
+              '&:hover': { bgcolor: 'success.dark' },
+            }}
+          >
+            <LucideIcon icon={LogIn} />
+          </IconButton>
+        </Tooltip>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: { xs: 'none', sm: 'block' } }}
+        >
+          {formatDate(reservation.checkOutDate, language)}
+        </Typography>
+      </Stack>
+    </ListItem>
   )
 }
 
@@ -220,14 +260,14 @@ function DepartureRow({
   typeModes,
   unitNames,
   language,
-  overdue,
+  onCheckOut,
 }: {
   stay: DepartureItem
   typeNames: Map<string, string>
   typeModes: Map<string, string>
   unitNames: Map<string, string>
   language: string
-  overdue: boolean
+  onCheckOut: () => void
 }) {
   const { t } = useTranslation()
   const identity = buildAccommodationIdentity({
@@ -244,35 +284,74 @@ function DepartureRow({
     },
   })
   return (
-    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+    <ListItem
+      disableGutters
+      divider
+      sx={{
+        alignItems: 'center',
+        flexDirection: 'row',
+        gap: 1,
+        py: 1.25,
+      }}
+    >
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontWeight: 700 }} noWrap>
+        <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
           {stay.responsibleName}
         </Typography>
         <AccommodationIdentity
           identity={identity}
+          compactMobile
           people={stay.adults + stay.children + stay.infants}
         />
       </Box>
-      <Chip
-        size="small"
-        label={overdue ? 'Atrasada' : 'Hoy'}
-        color={overdue ? 'error' : 'warning'}
-      />
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: { xs: 'none', sm: 'block' } }}
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}
       >
-        {formatDate(stay.estimatedDeparture, language)}
-      </Typography>
-    </Stack>
+        {stay.canCheckOut && (
+          <Tooltip title={t('home.checkOutAction')}>
+            <IconButton
+              aria-label={t('home.checkOutAction')}
+              onClick={onCheckOut}
+              sx={(theme) => {
+                const palette = theme.palette.warning
+                const background =
+                  theme.palette.mode === 'dark' ? palette.light : palette.dark
+                return {
+                  width: 44,
+                  height: 44,
+                  bgcolor: background,
+                  color: theme.palette.getContrastText(background),
+                  '&:hover': { bgcolor: palette.main },
+                }
+              }}
+            >
+              <LucideIcon icon={LogOut} />
+            </IconButton>
+          </Tooltip>
+        )}
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: { xs: 'none', sm: 'block' } }}
+        >
+          {formatDate(stay.estimatedDeparture, language)}
+        </Typography>
+      </Stack>
+    </ListItem>
   )
 }
 
-export default function DashboardToday({ profile, onSelect }: DashboardProps) {
+export default function DashboardToday({
+  profile,
+  onSelect,
+  refreshKey = 0,
+}: DashboardProps) {
   const { t, i18n } = useTranslation()
-  const query = useTodayData(profile)
+  const query = useTodayData(profile, refreshKey)
+  const [checkInReservation, setCheckInReservation] =
+    useState<ReservationResponse | null>(null)
   const dashboard = query.status === 'ready' ? query.data : null
   const types = useAccommodationTypesQuery()
   const units = useAccommodationUnitsQuery()
@@ -316,7 +395,7 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
       dashboard.checkedInReservations
         .filter((reservation) => !linkedReservationIds.has(reservation.id))
         .map((reservation) => ({
-          id: reservation.id,
+          id: reservation.stayId ?? reservation.id,
           reservationId: null,
           responsibleName: reservation.responsibleName,
           location: '',
@@ -325,10 +404,12 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
           infants: reservation.infants,
           estimatedDeparture: reservation.checkOutDate,
           reservation,
+          canCheckOut: Boolean(reservation.stayId),
         }))
     const withReservations = (items: Stay[]) =>
       items.map((stay) => ({
         ...stay,
+        canCheckOut: true,
         reservation: stay.reservationId
           ? reservationsById.get(stay.reservationId)
           : undefined,
@@ -375,13 +456,24 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {formatDate(today, i18n.language)} · {profile.timezone}
         </Typography>
-        <Stack spacing={1.5} divider={<Divider flexItem />}>
+        <Stack spacing={3}>
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            <Typography
+              component="h3"
+              variant="subtitle1"
+              sx={(theme) => ({
+                mb: 0.5,
+                fontWeight: 700,
+                color:
+                  theme.palette.mode === 'dark'
+                    ? 'success.light'
+                    : 'success.dark',
+              })}
+            >
               {t('home.expectedArrivals')}
             </Typography>
             {dashboard.arrivals.length ? (
-              <Stack spacing={1.25}>
+              <List disablePadding>
                 {dashboard.arrivals.map((reservation) => (
                   <ReservationRow
                     key={reservation.id}
@@ -390,9 +482,10 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
                     typeModes={typeModes}
                     unitNames={unitNames}
                     language={i18n.language}
+                    onCheckIn={() => setCheckInReservation(reservation)}
                   />
                 ))}
-              </Stack>
+              </List>
             ) : (
               <Typography variant="body2" color="text.secondary">
                 {t('home.noArrivals')}
@@ -400,11 +493,22 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
             )}
           </Box>
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            <Typography
+              component="h3"
+              variant="subtitle1"
+              sx={(theme) => ({
+                mb: 0.5,
+                fontWeight: 700,
+                color:
+                  theme.palette.mode === 'dark'
+                    ? 'warning.light'
+                    : 'warning.dark',
+              })}
+            >
               {t('home.expectedDepartures')}
             </Typography>
             {departures.today.length ? (
-              <Stack spacing={1.25}>
+              <List disablePadding>
                 {departures.today.map((stay) => (
                   <DepartureRow
                     key={stay.id}
@@ -413,10 +517,12 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
                     typeModes={typeModes}
                     unitNames={unitNames}
                     language={i18n.language}
-                    overdue={false}
+                    onCheckOut={() =>
+                      onSelect({ id: stay.id, action: 'close' })
+                    }
                   />
                 ))}
-              </Stack>
+              </List>
             ) : (
               <Typography variant="body2" color="text.secondary">
                 {t('home.noDepartures')}
@@ -425,10 +531,21 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
           </Box>
           {departures.overdue.length > 0 && (
             <Box>
-              <Typography variant="subtitle2" color="error.main" sx={{ mb: 1 }}>
+              <Typography
+                component="h3"
+                variant="subtitle1"
+                sx={(theme) => ({
+                  mb: 0.5,
+                  fontWeight: 700,
+                  color:
+                    theme.palette.mode === 'dark'
+                      ? 'error.light'
+                      : 'error.dark',
+                })}
+              >
                 {t('home.overdueDepartures')}
               </Typography>
-              <Stack spacing={1.25}>
+              <List disablePadding>
                 {departures.overdue.map((stay) => (
                   <DepartureRow
                     key={stay.id}
@@ -437,14 +554,27 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
                     typeModes={typeModes}
                     unitNames={unitNames}
                     language={i18n.language}
-                    overdue
+                    onCheckOut={() =>
+                      onSelect({ id: stay.id, action: 'close' })
+                    }
                   />
                 ))}
-              </Stack>
+              </List>
             </Box>
           )}
         </Stack>
       </Paper>
+      {checkInReservation && (
+        <ReservationCheckInDialog
+          reservation={checkInReservation}
+          timezone={profile.timezone}
+          onClose={() => setCheckInReservation(null)}
+          onSuccess={() => {
+            setCheckInReservation(null)
+            query.retry()
+          }}
+        />
+      )}
       <Paper
         component="section"
         aria-labelledby="active-stays-title"

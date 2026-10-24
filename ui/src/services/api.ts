@@ -11,6 +11,7 @@ import {
   campingProfileSchema,
   extraTemplateSchema,
   reservationPageSchema,
+  reservationQuoteSchema,
   reservationResponseSchema,
   sessionUserSchema,
   stayPageSchema,
@@ -28,6 +29,7 @@ import type {
   PaymentInput,
   ReservationListQuery,
   ReservationPage,
+  ReservationQuote,
   ReservationResponse,
   SessionUser,
   Stay,
@@ -176,6 +178,45 @@ export const apiSlice = createApi({
       transformResponse: (response) =>
         parse(reservationResponseSchema, response),
       providesTags: (_result, _error, id) => [{ type: 'Reservation', id }],
+    }),
+    reservationCheckInQuote: builder.mutation<
+      ReservationQuote,
+      { id: string; version: number; arrivalDate: string }
+    >({
+      query: ({ id, version, arrivalDate }) => ({
+        url: `/reservations/${id}/check-in/quote`,
+        method: 'POST',
+        body: { version, arrivalDate },
+      }),
+      transformResponse: (response) => parse(reservationQuoteSchema, response),
+    }),
+    reservationCheckIn: builder.mutation<
+      ReservationResponse,
+      {
+        id: string
+        version: number
+        arrivalDate: string
+        acceptedTotalMinor: number
+        hasVehicle: boolean
+        vehicleDescription: string
+        licensePlate: string
+        location: string
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/reservations/${id}/check-in`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response) =>
+        parse(reservationResponseSchema, response),
+      invalidatesTags: (_result, _error, arg) => [
+        'Camping',
+        'Availability',
+        'Reservations',
+        { type: 'Reservation', id: arg.id },
+        { type: 'Stays', id: 'LIST' },
+      ],
     }),
     stays: builder.query<
       StayPage,
@@ -345,6 +386,8 @@ export const {
   useLazyReservationsQuery,
   useReservationsQuery,
   useReservationQuery,
+  useReservationCheckInQuoteMutation,
+  useReservationCheckInMutation,
   useStaysQuery,
   useLazyStaysQuery,
   useStayQuery,
