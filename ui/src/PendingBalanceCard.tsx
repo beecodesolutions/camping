@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, Typography } from '@mui/material'
-import { WalletCards } from 'lucide-react'
+import { PiggyBank } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
 import { formatMoney } from './services/money'
 
@@ -21,7 +21,7 @@ export default function PendingBalanceCard({
       <Stack spacing={2}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <LucideIcon
-            icon={WalletCards}
+            icon={PiggyBank}
             sx={{ color: 'secondary.dark' }}
             aria-hidden="true"
           />

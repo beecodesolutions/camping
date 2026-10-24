@@ -12,9 +12,12 @@ import {
 import { Users } from 'lucide-react'
 import type { AccommodationType, CampingProfile } from '@camping/contracts'
 import LucideIcon from './components/LucideIcon'
-import AccommodationFilter, {
-  type AccommodationFilterValue,
-} from './AccommodationFilter'
+import AccommodationFilter from './AccommodationFilter'
+import { useAppDispatch, useAppSelector } from './app/hooks'
+import {
+  accommodationFilterChanged,
+  selectAccommodationFilter,
+} from './app/accommodationFilterSlice'
 import {
   useAccommodationTypesQuery,
   useAccommodationUnitsQuery,
@@ -93,7 +96,8 @@ function LiveOccupancyCard({ profile }: LiveProps) {
   const units = useAccommodationUnitsQuery()
   const [readReservations] = useLazyReservationsQuery()
   const [readStays] = useLazyStaysQuery()
-  const [filter, setFilter] = useState<AccommodationFilterValue>('total')
+  const dispatch = useAppDispatch()
+  const filter = useAppSelector(selectAccommodationFilter)
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<State>({ status: 'loading' })
   const retry = useCallback(() => {
@@ -193,7 +197,10 @@ function LiveOccupancyCard({ profile }: LiveProps) {
               minWidth: 0,
             }}
           >
-            <AccommodationFilter value={filter} onChange={setFilter} />
+            <AccommodationFilter
+              value={filter}
+              onChange={(value) => dispatch(accommodationFilterChanged(value))}
+            />
           </Box>
         </Box>
         {loading ? (

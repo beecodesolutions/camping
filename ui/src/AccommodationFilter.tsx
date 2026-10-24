@@ -2,8 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Box, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { BedDouble, LayoutGrid, Tent } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
-
-export type AccommodationFilterValue = 'total' | 'camping' | 'individual'
+import type { AccommodationFilterValue } from './app/accommodationFilterSlice'
 
 export default function AccommodationFilter({
   value,

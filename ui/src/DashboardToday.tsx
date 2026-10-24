@@ -35,9 +35,12 @@ import {
 import StayList, { type StaySelection } from './StayList'
 import ReservationCheckInDialog from './ReservationCheckInDialog'
 import LucideIcon from './components/LucideIcon'
-import AccommodationFilter, {
-  type AccommodationFilterValue,
-} from './AccommodationFilter'
+import AccommodationFilter from './AccommodationFilter'
+import { useAppDispatch, useAppSelector } from './app/hooks'
+import {
+  accommodationFilterChanged,
+  selectAccommodationFilter,
+} from './app/accommodationFilterSlice'
 
 type DashboardProps = {
   profile: CampingProfile
@@ -355,8 +358,8 @@ export default function DashboardToday({
 }: DashboardProps) {
   const { t, i18n } = useTranslation()
   const query = useTodayData(profile, refreshKey)
-  const [activeFilter, setActiveFilter] =
-    useState<AccommodationFilterValue>('total')
+  const dispatch = useAppDispatch()
+  const activeFilter = useAppSelector(selectAccommodationFilter)
   const [checkInReservation, setCheckInReservation] =
     useState<ReservationResponse | null>(null)
   const dashboard = query.status === 'ready' ? query.data : null
@@ -634,7 +637,7 @@ export default function DashboardToday({
           </Stack>
           <AccommodationFilter
             value={activeFilter}
-            onChange={setActiveFilter}
+            onChange={(value) => dispatch(accommodationFilterChanged(value))}
           />
         </Stack>
         <StayList
