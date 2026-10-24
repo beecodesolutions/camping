@@ -16,6 +16,8 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { alpha, type Theme } from '@mui/material/styles'
 import LucideIcon from './components/LucideIcon'
+import AccommodationIdentity from './AccommodationIdentity'
+import { buildAccommodationIdentity } from './services/accommodationIdentity'
 import type {
   AccommodationType,
   CampingProfile,
@@ -35,6 +37,7 @@ import {
   monthKey,
   monthRange,
   shiftMonth,
+  typeNameById,
   type AvailabilitySummary,
 } from './services/calendar'
 
@@ -216,11 +219,15 @@ function DayDetail({
   selected,
   summary,
   type,
+  typeNames,
+  typeModes,
   unitNames,
 }: {
   selected: SelectedDay
   summary: AvailabilitySummary | null
   type: AccommodationType | undefined
+  typeNames: Map<string, string>
+  typeModes: Map<string, string>
   unitNames: Map<string, string>
 }) {
   const { t, i18n } = useTranslation()
@@ -358,14 +365,24 @@ function DayDetail({
                   label={t(`calendar.status.${reservation.status}`)}
                 />
               </Stack>
-              <Typography variant="body2" color="text.secondary">
-                {reservation.adults +
+              <AccommodationIdentity
+                identity={buildAccommodationIdentity({
+                  reservation,
+                  typeNames,
+                  typeModes,
+                  unitNames,
+                  labels: {
+                    accommodation: t('home.accommodation'),
+                    freeCamping: t('home.freeCamping'),
+                    unknownUnit: t('home.unknownUnit'),
+                  },
+                })}
+                people={
+                  reservation.adults +
                   reservation.children +
-                  reservation.infants}{' '}
-                {t('calendar.guests')} ·{' '}
-                {unitNames.get(reservation.unitId ?? '') ??
-                  t('calendar.noUnit')}
-              </Typography>
+                  reservation.infants
+                }
+              />
               <Typography variant="caption" color="text.secondary">
                 {reservation.checkInDate} → {reservation.checkOutDate}
               </Typography>
@@ -412,6 +429,12 @@ export default function AvailabilityCalendar({ profile }: Props) {
   const unitNames = useMemo(
     () => new Map((units.data ?? []).map((unit) => [unit.id, unit.name])),
     [units.data],
+  )
+  const typeNames = useMemo(() => typeNameById(types.data ?? []), [types.data])
+  const typeModes = useMemo(
+    () =>
+      new Map((types.data ?? []).map((type) => [type.id, type.inventoryMode])),
+    [types.data],
   )
   const selectedTypeData = availability.currentData?.types ?? []
   const selectedAccommodationType = enabledTypes.find(
@@ -560,6 +583,8 @@ export default function AvailabilityCalendar({ profile }: Props) {
           selected={visibleSelectedDay}
           summary={visibleSummary}
           type={visibleAccommodationType}
+          typeNames={typeNames}
+          typeModes={typeModes}
           unitNames={unitNames}
         />
       )}

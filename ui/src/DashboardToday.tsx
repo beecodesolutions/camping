@@ -24,6 +24,11 @@ import {
   useLazyStaysQuery,
 } from './services/api'
 import { addDays, typeNameById } from './services/calendar'
+import AccommodationIdentity from './AccommodationIdentity'
+import {
+  buildAccommodationIdentity,
+  indexReservationsById,
+} from './services/accommodationIdentity'
 import StayList, { type StaySelection } from './StayList'
 
 type DashboardProps = {
@@ -49,7 +54,8 @@ type DepartureItem = Pick<
   | 'children'
   | 'infants'
   | 'estimatedDeparture'
->
+  | 'reservationId'
+> & { reservation?: ReservationResponse }
 
 function formatDate(value: string, language: string) {
   return new Intl.DateTimeFormat(language, {
@@ -159,28 +165,38 @@ function useTodayData(
 function ReservationRow({
   reservation,
   typeNames,
+  typeModes,
   unitNames,
   language,
 }: {
   reservation: ReservationResponse
   typeNames: Map<string, string>
+  typeModes: Map<string, string>
   unitNames: Map<string, string>
   language: string
 }) {
+  const { t } = useTranslation()
+  const identity = buildAccommodationIdentity({
+    reservation,
+    typeNames,
+    typeModes,
+    unitNames,
+    labels: {
+      accommodation: t('home.accommodation'),
+      freeCamping: t('home.freeCamping'),
+      unknownUnit: t('home.unknownUnit'),
+    },
+  })
   return (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography sx={{ fontWeight: 700 }} noWrap>
           {reservation.responsibleName}
         </Typography>
-        <Typography variant="body2" color="text.secondary" noWrap>
-          {typeNames.get(reservation.accommodationTypeId) ?? 'Alojamiento'} ·{' '}
-          {reservation.unitId
-            ? (unitNames.get(reservation.unitId) ?? 'Unidad sin nombre')
-            : 'Camping libre'}{' '}
-          · {guestCount(reservation)}{' '}
-          {guestCount(reservation) === 1 ? 'persona' : 'personas'}
-        </Typography>
+        <AccommodationIdentity
+          identity={identity}
+          people={guestCount(reservation)}
+        />
       </Box>
       <Chip
         size="small"
@@ -200,26 +216,43 @@ function ReservationRow({
 
 function DepartureRow({
   stay,
+  typeNames,
+  typeModes,
+  unitNames,
   language,
   overdue,
 }: {
   stay: DepartureItem
+  typeNames: Map<string, string>
+  typeModes: Map<string, string>
+  unitNames: Map<string, string>
   language: string
   overdue: boolean
 }) {
+  const { t } = useTranslation()
+  const identity = buildAccommodationIdentity({
+    reservation: stay.reservation,
+    hasReservation: Boolean(stay.reservationId || stay.reservation),
+    location: stay.location,
+    typeNames,
+    typeModes,
+    unitNames,
+    labels: {
+      accommodation: t('home.accommodation'),
+      freeCamping: t('home.freeCamping'),
+      unknownUnit: t('home.unknownUnit'),
+    },
+  })
   return (
     <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Typography sx={{ fontWeight: 700 }} noWrap>
           {stay.responsibleName}
         </Typography>
-        <Typography variant="body2" color="text.secondary" noWrap>
-          {stay.location || 'Sin ubicación'} ·{' '}
-          {stay.adults + stay.children + stay.infants}{' '}
-          {stay.adults + stay.children + stay.infants === 1
-            ? 'persona'
-            : 'personas'}
-        </Typography>
+        <AccommodationIdentity
+          identity={identity}
+          people={stay.adults + stay.children + stay.infants}
+        />
       </Box>
       <Chip
         size="small"
@@ -257,12 +290,7 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
     [units.data],
   )
   const reservationsById = useMemo(
-    () =>
-      new Map(
-        (dashboard?.checkedInReservations ?? [])
-          .filter((reservation) => reservation.stayId)
-          .map((reservation) => [reservation.stayId as string, reservation]),
-      ),
+    () => indexReservationsById(dashboard?.checkedInReservations ?? []),
     [dashboard?.checkedInReservations],
   )
   const today = todayInTimezone(profile.timezone)
@@ -289,28 +317,37 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
         .filter((reservation) => !linkedReservationIds.has(reservation.id))
         .map((reservation) => ({
           id: reservation.id,
+          reservationId: null,
           responsibleName: reservation.responsibleName,
           location: '',
           adults: reservation.adults,
           children: reservation.children,
           infants: reservation.infants,
           estimatedDeparture: reservation.checkOutDate,
+          reservation,
         }))
+    const withReservations = (items: Stay[]) =>
+      items.map((stay) => ({
+        ...stay,
+        reservation: stay.reservationId
+          ? reservationsById.get(stay.reservationId)
+          : undefined,
+      }))
     return {
       today: [
-        ...todayStays,
+        ...withReservations(todayStays),
         ...unlinkedReservations.filter(
           (item) => item.estimatedDeparture === today,
         ),
       ],
       overdue: [
-        ...overdueStays,
+        ...withReservations(overdueStays),
         ...unlinkedReservations.filter(
           (item) => item.estimatedDeparture < today,
         ),
       ],
     }
-  }, [dashboard, linkedReservationIds, today])
+  }, [dashboard, linkedReservationIds, reservationsById, today])
 
   if (query.status === 'loading')
     return <Typography color="text.secondary">{t('home.loading')}</Typography>
@@ -350,6 +387,7 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
                     key={reservation.id}
                     reservation={reservation}
                     typeNames={typeNames}
+                    typeModes={typeModes}
                     unitNames={unitNames}
                     language={i18n.language}
                   />
@@ -371,6 +409,9 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
                   <DepartureRow
                     key={stay.id}
                     stay={stay}
+                    typeNames={typeNames}
+                    typeModes={typeModes}
+                    unitNames={unitNames}
                     language={i18n.language}
                     overdue={false}
                   />
@@ -392,6 +433,9 @@ export default function DashboardToday({ profile, onSelect }: DashboardProps) {
                   <DepartureRow
                     key={stay.id}
                     stay={stay}
+                    typeNames={typeNames}
+                    typeModes={typeModes}
+                    unitNames={unitNames}
                     language={i18n.language}
                     overdue
                   />

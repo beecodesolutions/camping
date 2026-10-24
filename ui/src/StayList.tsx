@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import {
-  Box,
   IconButton,
   Tooltip,
   List,
@@ -10,16 +9,11 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import {
-  BedDouble,
-  Building2,
-  CircleDollarSign,
-  LogOut,
-  Plus,
-  Tent,
-} from 'lucide-react'
+import { CircleDollarSign, LogOut, Plus } from 'lucide-react'
 import type { ReservationResponse, Stay } from '@camping/contracts'
 import LucideIcon from './components/LucideIcon'
+import AccommodationIdentity from './AccommodationIdentity'
+import { buildAccommodationIdentity } from './services/accommodationIdentity'
 import { todayInTimezone } from './checkIn/schema'
 import { relativeDay } from './services/relativeDay'
 import { formatMoney } from './services/money'
@@ -60,37 +54,19 @@ export default function StayList({
         const reservation = stay.reservationId
           ? reservationsById?.get(stay.reservationId)
           : undefined
-        const accommodation = reservation
-          ? (() => {
-              const typeName =
-                typeNames?.get(reservation.accommodationTypeId) ??
-                t('home.accommodation')
-              const unitName = reservation.unitId
-                ? (unitNames?.get(reservation.unitId) ?? t('home.unknownUnit'))
-                : t('home.freeCamping')
-              return typeName === unitName
-                ? typeName
-                : `${typeName} · ${unitName}`
-            })()
-          : stay.reservationId
-            ? t('home.accommodation')
-            : stay.location
-              ? `${t('home.freeCamping')} · ${stay.location}`
-              : t('home.freeCamping')
-        const iconKind = reservation
-          ? reservation.unitId ||
-            typeModes?.get(reservation.accommodationTypeId) === 'individual'
-            ? 'bed'
-            : 'tent'
-          : stay.reservationId
-            ? 'neutral'
-            : 'tent'
-        const stayIcon =
-          iconKind === 'bed'
-            ? BedDouble
-            : iconKind === 'tent'
-              ? Tent
-              : Building2
+        const identity = buildAccommodationIdentity({
+          reservation,
+          hasReservation: Boolean(stay.reservationId),
+          location: stay.location,
+          typeNames,
+          typeModes,
+          unitNames,
+          labels: {
+            accommodation: t('home.accommodation'),
+            freeCamping: t('home.freeCamping'),
+            unknownUnit: t('home.unknownUnit'),
+          },
+        })
         return (
           <ListItem
             key={stay.id}
@@ -108,30 +84,15 @@ export default function StayList({
               <ListItemText
                 primary={stay.responsibleName}
                 secondary={
-                  <Stack
-                    component="span"
-                    direction="row"
-                    spacing={0.5}
-                    sx={{ alignItems: 'center', flexWrap: 'wrap' }}
-                  >
-                    <LucideIcon
-                      icon={stayIcon}
-                      aria-hidden="true"
-                      focusable="false"
-                      sx={{ fontSize: 18, color: 'text.secondary' }}
-                    />
-                    <Box component="span">{accommodation}</Box>
-                    <Box component="span">
-                      · {relativeDay(stay.arrivalDate, today, i18n.language)} ·{' '}
-                      {t('stay.peopleCount', {
-                        count: stay.adults + stay.children + stay.infants,
-                      })}
-                    </Box>
-                  </Stack>
+                  <AccommodationIdentity
+                    identity={identity}
+                    meta={relativeDay(stay.arrivalDate, today, i18n.language)}
+                    people={stay.adults + stay.children + stay.infants}
+                  />
                 }
                 slotProps={{
                   primary: {
-                    sx: { fontWeight: 600, overflowWrap: 'anywhere' },
+                    sx: { fontWeight: 700, overflowWrap: 'anywhere' },
                   },
                   secondary: {
                     component: 'div',
