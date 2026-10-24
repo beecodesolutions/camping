@@ -60,6 +60,15 @@ const es = {
     accommodation: 'Alojamiento',
     unknownUnit: 'Unidad sin nombre',
     freeCamping: 'Camping libre',
+    individualOccupancyTitle: 'Habitaciones y cabañas',
+    individualOccupancyLoading: 'Calculando ocupación física…',
+    individualOccupancyError: 'No pudimos cargar la ocupación de unidades.',
+    individualOccupancyEmpty:
+      'No hay habitaciones ni cabañas habilitadas para mostrar.',
+    individualOccupancyOccupiedLabel_one: 'ocupada',
+    individualOccupancyOccupiedLabel_other: 'ocupadas',
+    individualOccupancyUnoccupied_one: '{{count}} sin ocupar',
+    individualOccupancyUnoccupied_other: '{{count}} sin ocupar',
   },
   auth: {
     title: 'Ingresar al camping',

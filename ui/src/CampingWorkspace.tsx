@@ -53,6 +53,7 @@ import WorkspaceNavigation, {
   type WorkspaceSection,
 } from './WorkspaceNavigation'
 import PendingBalanceCard from './PendingBalanceCard'
+import UnitsOccupancyCard from './UnitsOccupancyCard'
 import { useTimeOfDay } from './app/timeOfDay'
 import AvailabilityCalendar from './AvailabilityCalendar'
 import DashboardToday from './DashboardToday'
@@ -163,6 +164,36 @@ export default function CampingWorkspace({
         {section === 'home' &&
           (profile ? (
             <>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0, 1fr)',
+                    sm: 'repeat(2, minmax(0, 1fr))',
+                    lg: 'repeat(3, minmax(0, 1fr))',
+                  },
+                  gap: 2,
+                  mt: 2,
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <OccupancyCard
+                    activeGroups={profile.activeGroups}
+                    activePeople={profile.activePeople}
+                    activeVehicles={profile.activeVehicles}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <UnitsOccupancyCard profile={profile} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <PendingBalanceCard
+                    pendingAmountMinor={profile.pendingAmountMinor}
+                    currency={profile.currency}
+                  />
+                </Box>
+              </Box>
               <Tabs
                 value={homeView}
                 onChange={(_, value: 'today' | 'calendar') =>
@@ -182,29 +213,6 @@ export default function CampingWorkspace({
                 <Box sx={{ mt: 2 }}>
                   <AvailabilityCalendar profile={profile} />
                 </Box>
-              )}
-              {homeView === 'today' && (
-                <>
-                  <Stack
-                    direction={{ xs: 'column', md: 'row' }}
-                    spacing={2}
-                    sx={{ mt: 2 }}
-                  >
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <OccupancyCard
-                        activeGroups={profile.activeGroups}
-                        activePeople={profile.activePeople}
-                        activeVehicles={profile.activeVehicles}
-                      />
-                    </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <PendingBalanceCard
-                        pendingAmountMinor={profile.pendingAmountMinor}
-                        currency={profile.currency}
-                      />
-                    </Box>
-                  </Stack>
-                </>
               )}
             </>
           ) : (
