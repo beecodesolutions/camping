@@ -22,6 +22,7 @@
     "runtime:provision": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/provision-runtime-role.js",
     "seed:demo": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-demo.js",
     "seed:test": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-test.js",
+    "seed:reservations": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-reservations.js",
     "openapi:export": "tsc -p tsconfig.json && node dist/cli/export-openapi.js"
   },
   "dependencies": {

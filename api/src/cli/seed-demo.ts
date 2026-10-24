@@ -61,19 +61,26 @@ async function seedDemo(): Promise<void> {
       }
       const service = new StayService(dataSource)
       const names = [
-        'Familia Río',
-        'Grupo Cordillera',
-        'Pareja Bosque',
-        'Viajero Lago',
-        'Familia Cóndor',
-        'Grupo Sendero',
-        'Pareja Sur',
-        'Familia Arrayán',
-        'Grupo Volcán',
-        'Viajera Estrella',
-        'Familia Cascada',
-        'Grupo Mirador',
+        'Laura Méndez',
+        'Rodrigo Salazar',
+        'Elena Vargas',
+        'Gabriel Cortés',
+        'Isidora Pérez',
+        'Mauricio Silva',
+        'Antonia Lagos',
+        'Cristóbal Pino',
+        'Carolina Núñez',
+        'Sebastián Mora',
+        'Natalia Espinoza',
+        'Pablo Reyes',
       ]
+      const documents = [
+        '18.234.567-8',
+        '16.982.341-2',
+        '14.765.432-1',
+        '19.543.210-6',
+      ]
+      const activeDepartureOffsets = [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
       let inserted = 0
       for (let index = 0; index < 24; index++) {
         const id = demoId(camping.id, index)
@@ -85,22 +92,22 @@ async function seedDemo(): Promise<void> {
           : -(index % 6)
         const arrivalDate = date(arrivalOffset)
         const fields = checkInRequestSchema.parse({
-          responsibleName: `[DEMO] ${names[index % names.length]}${closed ? ' · historial' : ''}`,
-          document: index % 3 ? `DEMO-${index + 1}` : '',
+          responsibleName: names[index % names.length],
+          document: index % 3 ? documents[index % documents.length] : '',
           nationality: ['CL', 'AR', 'BR', ''][index % 4],
           phone: '',
           arrivalDate,
-          estimatedDeparture:
-            index % 3 === 0
-              ? ''
-              : date(closed ? departureOffset : 2 + (index % 4)),
+          estimatedDeparture: date(
+            closed ? departureOffset : activeDepartureOffsets[index],
+          ),
           adults: 1 + (index % 3),
           children: index % 3,
           infants: index % 2,
           hasVehicle: index % 3 !== 0,
-          vehicleDescription: index % 2 ? 'Camper de prueba' : '',
+          vehicleDescription: index % 2 ? 'Camper Sprinter' : '',
           licensePlate: '',
-          location: index % 4 ? `Sector demo ${index % 4}` : '',
+          location:
+            index % 4 ? ['Pino 1', 'Arrayán 2', 'Mirador 3'][index % 3]! : '',
         })
         const stay = manager.create(StayEntity, {
           ...fields,
@@ -138,7 +145,7 @@ async function seedDemo(): Promise<void> {
             manager.create(AppliedExtraEntity, {
               stayId: id,
               templateId: null,
-              description: '[DEMO] Servicio libre',
+              description: 'Carga de leña',
               category: 'Servicios',
               quantity: 2,
               unitPriceMinor: 1500,

@@ -42,9 +42,15 @@ Después de migrar, ejecutar seed y crear usuario local:
 pnpm db:seed:demo
 ```
 
-Agrega 12 estadías activas y 12 cerradas a La Izuelina, identificadas con `[DEMO]`: distintas fechas, grupos, vehículos, extras de plantilla y libres. Permite probar paginación, ocupación, detalle, presupuestos y cierres. Repetir no duplica ni sobrescribe registros, tampoco reabre estadías cerradas desde UI. Fechas se calculan al crear cada registro; siguientes ejecuciones las conservan. Usa tarifas/configuración actuales y calcula cierres con la misma lógica de la API.
+Agrega 12 estadías activas y 12 cerradas a La Izuelina, con nombres ficticios naturales: distintas fechas, grupos, vehículos, extras de plantilla y libres. Permite probar paginación, ocupación, detalle, presupuestos y cierres. Repetir no duplica ni sobrescribe registros, tampoco reabre estadías cerradas desde UI. Fechas se calculan al crear cada registro; siguientes ejecuciones las conservan. Usa tarifas/configuración actuales y calcula cierres con la misma lógica de la API.
 
 Solo admite PostgreSQL local y rechaza `NODE_ENV=production`. No crea usuarios, modifica plantillas ni borra datos existentes. Recargar navegador tras ejecutar. Estos registros son ficticios, no historia real del camping.
+
+Para probar el flujo de reservas con inventario individual y camping libre, usar [`docs/local-reservation-seed.md`](docs/local-reservation-seed.md):
+
+```sh
+pnpm db:seed:reservations
+```
 
 ## Reglas del piloto
 
