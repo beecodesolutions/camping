@@ -113,7 +113,7 @@ There are no seeds, automatic migration reverts or database rollback hooks.
    environment names are case-insensitive). Restrict
    deployment branches to **main only**, with no matching tags. OIDC trust uses
    exact `aud=sts.amazonaws.com` and
-   `sub=repo:beecodesolutions/camping:environment:Production`; with environments,
+   `sub=repo:beecodesolutions@193028516/camping@1377905327:environment:Production`; with environments,
    branch restriction must also be enforced by environment protection. Set required
    reviewers if desired (that makes each automatic run wait for approval).
    Add environment variables `AWS_DEPLOY_ROLE_ARN` and `CF_EXECUTION_ROLE_ARN` from
@@ -192,6 +192,25 @@ Local verification uses `node --test scripts/test-production-delivery.cjs` (mock
 AWS and HTTP, no production access), `actionlint .github/workflows/production-api.yml`,
 `shellcheck scripts/production-stack.sh`, the configured Prettier/oxlint checks,
 and `pnpm package:lambda`. The workflow runs the safeguard tests before packaging.
-The first real OIDC session, migration/provision run, change-set execution and
-published HTTP verification will occur after merging to `main`; local validation
-and setup readback do not substitute for that production execution evidence.
+The first successful production execution is [run 40998797382, attempt 3](https://github.com/beecodesolutions/camping/actions/runs/40998797382/attempts/3),
+for main SHA `3dfa9ec7770b0a2dddf1ff5f3fa1195b70993f60`. OIDC, migration check,
+runtime provisioning, publication, CloudFormation deployment and all HTTP checks
+passed. The stack finished `UPDATE_COMPLETE`, retaining its database secret,
+concurrency and canonical origin. Local validation alone does not establish this
+production execution evidence.
+
+### OIDC subject verification
+
+Before configuring trust, read `gh api repos/beecodesolutions/camping/actions/oidc/customization/sub`.
+This repository uses immutable subjects (`use_immutable_subject=true`), whose
+`sub_claim_prefix` includes the organization and repository IDs. Append
+`:environment:Production` to that exact prefix, preserving capitalization.
+The legacy subject without IDs is rejected by AWS. Confirm the actual subject in
+CloudTrail's `AssumeRoleWithWebIdentity` event identity without printing OIDC tokens.
+The first run failed at role assumption, before any migration or application deployment.
+
+SAM transform processing also uses the CloudFormation service role. Both deployment
+roles need `cloudformation:CreateChangeSet` on the exact AWS-managed
+`transform/Serverless-2016-10-31` ARN. A missing service-role permission fails
+change-set creation before application execution; database migration/provisioning
+may already have succeeded and must not be reverted automatically.
