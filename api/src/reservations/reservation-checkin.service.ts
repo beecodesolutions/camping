@@ -373,7 +373,7 @@ export class ReservationCheckInService {
       )
     if (type.inventoryMode === 'unlimited') {
       if (reservation.unitId)
-        throw conflict('El camping libre no admite unidad', 'UNIT_NOT_ALLOWED')
+        throw conflict('El camping no admite unidad', 'UNIT_NOT_ALLOWED')
       return type
     }
     if (!reservation.unitId)

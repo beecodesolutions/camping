@@ -11,7 +11,7 @@ semilla usa el usuario habilitado existente del camping; no crea credenciales.
 
 La semilla crea, si faltan, el tipo individual `Habitación privada` con tres
 unidades (`Habitación 1`, `Habitación 2`, `Habitación 3`) y precio de 45.000
-CLP por noche, además del tipo ilimitado `Camping libre`, que usa las tarifas
+CLP por noche, además del tipo ilimitado `Camping`, que usa las tarifas
 por persona actuales del camping. Luego crea doce reservas ficticias, con
 estados pendientes, confirmados e ingresados, pagos parciales en efectivo,
 transferencia y tarjeta, y nombres y notas ficticios naturales. La matriz incluye un

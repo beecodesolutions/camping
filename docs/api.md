@@ -96,7 +96,7 @@ normaliza a `manual` si se omite; en eventos de outbox aparece como
 `balanceMinor`.
 
 El precio se calcula por unidad y noche para alojamientos individuales. Para
-camping libre se calcula por persona y noche con los rangos de edad y tarifas
+camping se calcula por persona y noche con los rangos de edad y tarifas
 congelados en el snapshot. Un total manual (`agreedTotalMinor`) exige
 `priceAdjustmentReason`; ambos campos deben aparecer juntos. No se aceptan
 flotantes ni se recalculan importes de dinero silenciosamente. Cambiar fechas,

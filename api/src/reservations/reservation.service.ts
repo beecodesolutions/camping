@@ -792,7 +792,7 @@ export class ReservationService {
     const totalPeople = input.adults + input.children + input.infants
     if (type.inventoryMode === 'unlimited') {
       if (input.unitId)
-        throw conflict('El camping libre no admite unidad', 'UNIT_NOT_ALLOWED')
+        throw conflict('El camping no admite unidad', 'UNIT_NOT_ALLOWED')
       return type
     }
     if (!input.unitId)

@@ -48,7 +48,7 @@ Agrega 12 estadías activas y 12 cerradas a La Izuelina, con nombres ficticios n
 
 Solo admite PostgreSQL local y rechaza `NODE_ENV=production`. No crea usuarios, modifica plantillas ni borra datos existentes. Recargar navegador tras ejecutar. Estos registros son ficticios, no historia real del camping.
 
-Para probar el flujo de reservas con inventario individual y camping libre, usar [`docs/local-reservation-seed.md`](docs/local-reservation-seed.md):
+Para probar el flujo de reservas con inventario individual y camping, usar [`docs/local-reservation-seed.md`](docs/local-reservation-seed.md):
 
 ```sh
 pnpm db:seed:reservations
