@@ -165,28 +165,6 @@ export default function CampingWorkspace({
             pb: { xs: 'calc(160px + env(safe-area-inset-bottom))', md: 14 },
           }}
         >
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{
-              mb: 3,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="overline"
-                color="primary.main"
-                sx={{ overflowWrap: 'anywhere' }}
-              >
-                {profile?.name ?? t('common.appName')}
-              </Typography>
-              <Typography component="h1" variant="h5" sx={{ fontWeight: 700 }}>
-                {t(`navigation.${section}`)}
-              </Typography>
-            </Box>
-          </Stack>
           {logoutState.isError && (
             <Alert severity="error">{t('auth.logoutError')}</Alert>
           )}
@@ -195,11 +173,13 @@ export default function CampingWorkspace({
               {t('checkIn.success', { name: registeredName })}
             </Alert>
           )}
-          {profile && section === 'home' && (
+          {profile && (
             <HomeHeader
               name={profile.name}
-              greeting={t(greeting)}
-              userName={user.name}
+              greeting={
+                section === 'home' ? t(greeting) : t(`navigation.${section}`)
+              }
+              userName={section === 'home' ? user.name : undefined}
               showCheckIn={false}
             />
           )}

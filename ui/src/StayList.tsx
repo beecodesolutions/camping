@@ -105,7 +105,7 @@ export default function StayList({
                   minWidth: 0,
                   flex: 1,
                   borderRadius: 1,
-                  px: { xs: 0, sm: 2 },
+                  px: 0,
                 }}
               >
                 <ListItemText

@@ -46,7 +46,9 @@ export default function PendingBalanceCard({
               overflowWrap: 'anywhere',
             }}
           >
-            {formatMoney(pendingAmountMinor, currency, i18n.language)}{' '}
+            {formatMoney(pendingAmountMinor, currency, i18n.language, {
+              hideCurrency: true,
+            })}{' '}
             <Typography
               component="span"
               variant="body2"

@@ -58,7 +58,7 @@ export default function HomeHeader({
             {name}
           </Typography>
           <Typography
-            component="h2"
+            component="h1"
             variant="h4"
             sx={{
               fontWeight: 650,
