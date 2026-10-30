@@ -15,6 +15,7 @@ import {
   FormControlLabel,
   Switch,
   IconButton,
+  Menu,
   MenuItem,
   Paper,
   Stack,
@@ -23,7 +24,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { Plus } from 'lucide-react'
+import { Ellipsis, Plus } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
 import MoneyField from './components/MoneyField'
 import { paymentInputSchema } from '@camping/contracts'
@@ -1304,7 +1305,7 @@ function ExtraRow({
 }
 
 function SettingsPanel({ profile }: { profile: CampingProfile }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const templates = useExtraTemplatesQuery()
   const [create, createState] = useCreateExtraTemplateMutation()
   const [update] = useUpdateExtraTemplateMutation()
@@ -1338,6 +1339,16 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
       setError(t('settings.saveError'))
     }
   }
+  const extrasByCategory = new Map<string, ExtraTemplate[]>()
+  for (const template of templates.data ?? []) {
+    const key = template.category?.trim() ?? ''
+    const items = extrasByCategory.get(key) ?? []
+    items.push(template)
+    extrasByCategory.set(key, items)
+  }
+  const categories = [...extrasByCategory.keys()].sort((a, b) =>
+    a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, i18n.language),
+  )
   return (
     <Stack spacing={3} sx={{ mt: 3 }}>
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -1410,14 +1421,25 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
           {templates.isError && (
             <Alert severity="error">{t('settings.loadError')}</Alert>
           )}
-          {(templates.data ?? []).map((template) => (
-            <TemplateRow
-              key={template.id}
-              template={template}
-              currency={profile.currency}
-              moneyDecimals={profile.moneyDecimals}
-              onSave={update}
-            />
+          {categories.map((category) => (
+            <Stack key={category} spacing={2}>
+              <Typography
+                component="h3"
+                variant="subtitle1"
+                sx={{ fontWeight: 700 }}
+              >
+                {category || t('settings.uncategorized')}
+              </Typography>
+              {extrasByCategory.get(category)?.map((template) => (
+                <TemplateRow
+                  key={template.id}
+                  template={template}
+                  currency={profile.currency}
+                  moneyDecimals={profile.moneyDecimals}
+                  onSave={update}
+                />
+              ))}
+            </Stack>
           ))}
         </Stack>
         <Divider sx={{ my: 2 }} />
@@ -1469,9 +1491,11 @@ function TemplateRow({
   moneyDecimals: 0 | null
   onSave: ReturnType<typeof useUpdateExtraTemplateMutation>[0]
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [description, setDescription] = useState(template.description)
   const [category, setCategory] = useState(template.category ?? '')
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+  const [editingCategory, setEditingCategory] = useState(false)
   const [price, setPrice] = useState(template.unitPriceMinor)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
@@ -1485,21 +1509,26 @@ function TemplateRow({
     setError(false)
     try {
       await onSave({ id: template.id, patch }).unwrap()
+      return true
     } catch {
       setError(true)
+      return false
     } finally {
       setSaving(false)
     }
   }
   return (
-    <Box sx={formGridSx}>
-      <TextField
-        size="small"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        label={t('stay.category')}
-        disabled={saving}
-      />
+    <Box
+      sx={{
+        ...formGridSx,
+        gridTemplateColumns: {
+          xs: 'minmax(0, 1fr)',
+          sm: 'repeat(2, minmax(0, 1fr))',
+          md: 'minmax(0, 2fr) minmax(0, 1fr) auto',
+        },
+        alignItems: 'start',
+      }}
+    >
       <TextField
         size="small"
         label={t('stay.description')}
@@ -1509,7 +1538,8 @@ function TemplateRow({
       />
       <MoneyField
         size="small"
-        label={t('stay.unitPrice')}
+        label={`${t('stay.unitPrice')} (${currency})`}
+        helperText=""
         currency={currency}
         moneyDecimals={moneyDecimals}
         valueMinor={price}
@@ -1520,23 +1550,16 @@ function TemplateRow({
         direction="row"
         useFlexGap
         sx={{
-          gridColumn: '1 / -1',
+          gridColumn: { xs: '1 / -1', md: 'auto' },
+          minHeight: (theme) => theme.spacing(5),
           gap: 1,
           alignItems: 'center',
-          flexWrap: 'wrap',
+          flexWrap: { xs: 'wrap', md: 'nowrap' },
         }}
       >
-        <Typography sx={{ mr: 'auto', overflowWrap: 'anywhere' }}>
-          {formatMoney(price, currency, i18n.language)}
-        </Typography>
-        {error && (
-          <Typography color="error">{t('settings.saveError')}</Typography>
-        )}
         <Button
           size="small"
-          onClick={() =>
-            void save({ category, description, unitPriceMinor: price })
-          }
+          onClick={() => void save({ description, unitPriceMinor: price })}
           disabled={saving || !Number.isSafeInteger(price) || price < 0}
         >
           {t('common.save')}
@@ -1548,7 +1571,78 @@ function TemplateRow({
         >
           {template.enabled ? t('settings.deactivate') : t('settings.activate')}
         </Button>
+        <IconButton
+          aria-label={t('settings.extraActions', {
+            name: template.description,
+          })}
+          disabled={saving}
+          aria-haspopup="menu"
+          aria-expanded={Boolean(menuAnchor)}
+          onClick={(event) => setMenuAnchor(event.currentTarget)}
+        >
+          <LucideIcon icon={Ellipsis} />
+        </IconButton>
       </Stack>
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={() => setMenuAnchor(null)}
+      >
+        <MenuItem
+          onClick={() => {
+            setMenuAnchor(null)
+            setCategory(template.category ?? '')
+            setEditingCategory(true)
+          }}
+        >
+          {t('settings.changeCategory')}
+        </MenuItem>
+      </Menu>
+      <Dialog
+        open={editingCategory}
+        onClose={() => {
+          if (!saving) setEditingCategory(false)
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('settings.changeCategory')}</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>{template.description}</Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            label={t('stay.category')}
+            value={category}
+            disabled={saving}
+            onChange={(event) => setCategory(event.target.value)}
+          />
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {t('settings.saveError')}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={saving} onClick={() => setEditingCategory(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={saving}
+            onClick={async () => {
+              if (await save({ category: category.trim() }))
+                setEditingCategory(false)
+            }}
+          >
+            {t('common.save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {error && (
+        <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>
+          {t('settings.saveError')}
+        </Alert>
+      )}
     </Box>
   )
 }
