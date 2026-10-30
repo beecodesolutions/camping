@@ -46,7 +46,8 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           role-session-name: camping-${{ github.run_id }}-${{ github.run_attempt }}
           aws-region: us-east-1
-          allowed-account-ids: '048834125079'
+      - name: Verify AWS account
+        run: test "$(aws sts get-caller-identity --query Account --output text)" = '048834125079'
       - name: Check existing production stack and retain parameters
         run: bash scripts/production-stack.sh prepare
       - name: Migrate and provision production runtime
