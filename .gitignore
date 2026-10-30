@@ -3,6 +3,7 @@ dist/
 coverage/
 *.tsbuildinfo
 *.log
+docs/openapi.json
 .env
 .env.*
 !.env.example

@@ -1,13 +1,17 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { DataSource } from 'typeorm'
 import {
   ageRangesSchema,
   campingProfileSchema,
   ratesSchema,
+  moneySettingsSchema,
+  hasMoneyPrecision,
   type CampingProfile,
 } from '@camping/contracts'
 import { ensureSafeMoney } from '../common/date'
 import { zodBadRequest, notFound } from '../common/errors'
+import { withInventoryTransaction } from '../accommodations/inventory-transaction'
+import { AuditLogEntity } from '../database/entities/audit-log.entity'
 import { CampingEntity } from '../database/entities/camping.entity'
 import { StayEntity } from '../database/entities/stay.entity'
 import type { AuthContext } from '../auth/auth.types'
@@ -61,6 +65,7 @@ export class CampingService {
       country: camping.country,
       currency: camping.currency,
       timezone: camping.timezone,
+      moneyDecimals: camping.moneyDecimals,
       ageRanges: ageRangesSchema.parse(camping.ageRanges),
       rates: ratesSchema.parse(camping.rates),
       activeGroups: Number(row?.groups ?? 0),
@@ -70,12 +75,64 @@ export class CampingService {
     })
   }
 
+  async updateMoneySettings(
+    context: AuthContext,
+    raw: unknown,
+  ): Promise<CampingProfile> {
+    const parsed = moneySettingsSchema.safeParse(raw)
+    if (!parsed.success) throw zodBadRequest(parsed.error)
+    await withInventoryTransaction(
+      this.dataSource,
+      context,
+      async (manager) => {
+        const camping = await manager.findOneByOrFail(CampingEntity, {
+          id: context.camping.id,
+        })
+        if (camping.moneyDecimals === parsed.data.moneyDecimals) return
+        await manager.update(CampingEntity, camping.id, {
+          moneyDecimals: parsed.data.moneyDecimals,
+          updatedAt: new Date(),
+        })
+        await manager.save(
+          AuditLogEntity,
+          manager.create(AuditLogEntity, {
+            campingId: camping.id,
+            actorId: context.user.id,
+            action: 'camping.money_settings_updated',
+            entityType: 'Camping',
+            entityId: camping.id,
+            beforeState: { moneyDecimals: camping.moneyDecimals },
+            afterState: { moneyDecimals: parsed.data.moneyDecimals },
+          }),
+        )
+      },
+    )
+    return this.profile(context)
+  }
+
   async updateRates(
     context: AuthContext,
     raw: unknown,
   ): Promise<CampingProfile> {
     const parsed = ratesSchema.safeParse(raw)
     if (!parsed.success) throw zodBadRequest(parsed.error)
+    const camping = await this.dataSource
+      .getRepository(CampingEntity)
+      .findOneByOrFail({ id: context.camping.id })
+    if (
+      (Object.keys(parsed.data) as Array<keyof typeof parsed.data>).some(
+        (category) =>
+          parsed.data[category] !== camping.rates[category] &&
+          !hasMoneyPrecision(
+            parsed.data[category],
+            camping.currency,
+            camping.moneyDecimals,
+          ),
+      )
+    )
+      throw new BadRequestException(
+        'Este camping no admite centavos en las tarifas',
+      )
     await this.dataSource
       .getRepository(CampingEntity)
       .update(

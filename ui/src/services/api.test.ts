@@ -47,6 +47,103 @@ it('expone errores HTTP y permite reintentar', async () => {
   request.unsubscribe()
 })
 
+it('cotiza y confirma el check-in de una reserva con el total aceptado', async () => {
+  const reservationId = '00000000-0000-4000-8000-000000000101'
+  const response = {
+    id: reservationId,
+    campingId: '00000000-0000-4000-8000-000000000102',
+    stayId: null,
+    accommodationTypeId: '00000000-0000-4000-8000-000000000103',
+    unitId: null,
+    checkInDate: '2026-10-23',
+    checkOutDate: '2026-10-25',
+    responsibleName: 'Ana',
+    email: null,
+    phone: null,
+    document: null,
+    nationality: '',
+    adults: 2,
+    children: 0,
+    infants: 0,
+    status: 'confirmed',
+    source: 'manual',
+    notes: '',
+    priceSnapshot: {
+      basis: 'per_unit',
+      currency: 'CLP',
+      totalMinor: 30000,
+      baseNightlyPriceMinor: 30000,
+      nights: 1,
+    },
+    payments: [],
+    account: { totalMinor: 30000, paidMinor: 0, balanceMinor: 30000 },
+    version: 1,
+    createdAt: '2026-10-22T12:00:00.000Z',
+    updatedAt: '2026-10-22T12:00:00.000Z',
+  }
+  const quote = {
+    priceSnapshot: { ...response.priceSnapshot, nights: 2, totalMinor: 60000 },
+  }
+  let acceptedTotalMinor = 0
+  server.use(
+    http.post(
+      `*/api/reservations/${reservationId}/check-in/quote`,
+      async ({ request }) => {
+        const body = (await request.json()) as {
+          version: number
+          arrivalDate: string
+        }
+        expect(body).toEqual({ version: 1, arrivalDate: '2026-10-23' })
+        return HttpResponse.json(quote)
+      },
+    ),
+    http.post(
+      `*/api/reservations/${reservationId}/check-in`,
+      async ({ request }) => {
+        const body = (await request.json()) as {
+          acceptedTotalMinor: number
+        }
+        acceptedTotalMinor = body.acceptedTotalMinor
+        return HttpResponse.json({
+          ...response,
+          status: 'checked_in',
+          stayId: '00000000-0000-4000-8000-000000000104',
+        })
+      },
+    ),
+  )
+
+  const priced = await store
+    .dispatch(
+      api.endpoints.reservationCheckInQuote.initiate({
+        id: reservationId,
+        version: 1,
+        arrivalDate: '2026-10-23',
+      }),
+    )
+    .unwrap()
+  expect(priced.priceSnapshot.totalMinor).toBe(60000)
+  const checkedIn = await store
+    .dispatch(
+      api.endpoints.reservationCheckIn.initiate({
+        id: reservationId,
+        version: 1,
+        arrivalDate: '2026-10-23',
+        acceptedTotalMinor: priced.priceSnapshot.totalMinor,
+        hasVehicle: false,
+        vehicleDescription: '',
+        licensePlate: '',
+        location: '',
+      }),
+    )
+    .unwrap()
+  expect(acceptedTotalMinor).toBe(60000)
+  expect(checkedIn).toMatchObject({
+    status: 'checked_in',
+    stayId: expect.any(String),
+  })
+})
+
 it('rechaza una respuesta que no cumple el contrato', async () => {
   server.use(
     http.get('*/api/camping', () => HttpResponse.json({ id: 1, name: null })),

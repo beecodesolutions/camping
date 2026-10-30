@@ -7,10 +7,36 @@ import { StayService } from './stays/stay.service'
 import { ExtraController } from './extras/extra.controller'
 import { ExtraService } from './extras/extra.service'
 import { DatabaseModule } from './database/database.module'
+import { AccommodationsController } from './accommodations/accommodations.controller'
+import { AccommodationsService } from './accommodations/accommodations.service'
+import { AvailabilityController } from './accommodations/availability.controller'
+import { AvailabilityService } from './accommodations/availability.service'
+import { ReservationController } from './reservations/reservation.controller'
+import { ReservationPaymentsController } from './reservations/reservation-payments.controller'
+import { ReservationService } from './reservations/reservation.service'
+import { ReservationPaymentsService } from './reservations/reservation-payments.service'
+import { ReservationCheckInService } from './reservations/reservation-checkin.service'
 
 @Module({
   imports: [DatabaseModule, AuthModule],
-  controllers: [CampingController, StayController, ExtraController],
-  providers: [CampingService, StayService, ExtraService],
+  controllers: [
+    CampingController,
+    StayController,
+    ExtraController,
+    AccommodationsController,
+    AvailabilityController,
+    ReservationController,
+    ReservationPaymentsController,
+  ],
+  providers: [
+    CampingService,
+    StayService,
+    ExtraService,
+    AccommodationsService,
+    AvailabilityService,
+    ReservationService,
+    ReservationPaymentsService,
+    ReservationCheckInService,
+  ],
 })
 export class AppModule {}

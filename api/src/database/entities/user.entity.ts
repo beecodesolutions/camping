@@ -10,6 +10,8 @@ import {
 import { CampingEntity } from './camping.entity'
 import { SessionEntity } from './session.entity'
 import { StayEntity } from './stay.entity'
+import { PaymentEntity } from './payment.entity'
+import { AuditLogEntity } from './audit-log.entity'
 
 @Entity({ name: 'users' })
 @Unique('uq_users_username', ['username'])
@@ -59,4 +61,13 @@ export class UserEntity {
 
   @OneToMany(() => StayEntity, (stay) => stay.createdBy)
   createdStays!: StayEntity[]
+
+  @OneToMany(() => PaymentEntity, (payment) => payment.recordedBy)
+  recordedPayments!: PaymentEntity[]
+
+  @OneToMany(() => PaymentEntity, (payment) => payment.voidedBy)
+  voidedPayments!: PaymentEntity[]
+
+  @OneToMany(() => AuditLogEntity, (auditLog) => auditLog.actor)
+  auditLogs!: AuditLogEntity[]
 }

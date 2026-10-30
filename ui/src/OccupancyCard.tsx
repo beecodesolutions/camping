@@ -1,91 +1,330 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Box, Paper, Stack, SvgIcon, Typography } from '@mui/material'
-import type { CampingProfile } from './services/api'
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Stack,
+  Typography,
+} from '@mui/material'
+import { Users } from 'lucide-react'
+import type { AccommodationType, CampingProfile } from '@camping/contracts'
+import LucideIcon from './components/LucideIcon'
+import DashboardWidget from './components/DashboardWidget'
+import AccommodationFilter from './AccommodationFilter'
+import { useAppDispatch, useAppSelector } from './app/hooks'
+import {
+  accommodationFilterChanged,
+  selectAccommodationFilter,
+} from './app/accommodationFilterSlice'
+import {
+  useAccommodationTypesQuery,
+  useAccommodationUnitsQuery,
+  useLazyReservationsQuery,
+  useLazyStaysQuery,
+} from './services/api'
+import { readAllPages } from './services/pagination'
+import {
+  summarizeOccupancy,
+  type OccupancyMetrics,
+  type OccupancySummary,
+} from './services/individualOccupancy'
 
-type OccupancyCardProps = Pick<
+type LiveProps = { profile: CampingProfile }
+type LegacyProps = Pick<
   CampingProfile,
   'activeGroups' | 'activePeople' | 'activeVehicles'
 >
+type Props = LiveProps | LegacyProps
+type State =
+  | { status: 'loading' }
+  | { status: 'ready'; data: OccupancySummary }
+  | { status: 'error' }
 
-export default function OccupancyCard({
+export default function OccupancyCard(props: Props) {
+  if ('profile' in props) return <LiveOccupancyCard profile={props.profile} />
+  return <LegacyOccupancyCard {...props} />
+}
+
+function LegacyOccupancyCard({
   activeGroups,
   activePeople,
   activeVehicles,
-}: OccupancyCardProps) {
+}: LegacyProps) {
   const { t } = useTranslation()
   return (
-    <Paper
-      component="section"
-      aria-labelledby="occupancy-title"
-      variant="outlined"
-      sx={{ p: 2, borderRadius: 2, height: '100%' }}
+    <DashboardWidget
+      titleId="occupancy-title"
+      title={t('home.occupancy')}
+      height="100%"
     >
-      <Stack spacing={2}>
+      <Stack direction="row" spacing={2}>
+        <Box>
+          <Typography component="p" variant="h3">
+            {activeGroups}
+          </Typography>
+          <Typography>{t('home.groups', { count: activeGroups })}</Typography>
+        </Box>
+        <Box>
+          <Typography>{activePeople}</Typography>
+          <Typography>{t('home.people', { count: activePeople })}</Typography>
+          <Typography>{activeVehicles}</Typography>
+          <Typography>
+            {t('home.vehicles', { count: activeVehicles })}
+          </Typography>
+        </Box>
+      </Stack>
+    </DashboardWidget>
+  )
+}
+
+function LiveOccupancyCard({ profile }: LiveProps) {
+  const { t } = useTranslation()
+  const types = useAccommodationTypesQuery()
+  const units = useAccommodationUnitsQuery()
+  const [readReservations] = useLazyReservationsQuery()
+  const [readStays] = useLazyStaysQuery()
+  const dispatch = useAppDispatch()
+  const filter = useAppSelector(selectAccommodationFilter)
+  const [attempt, setAttempt] = useState(0)
+  const [state, setState] = useState<State>({ status: 'loading' })
+  const retry = useCallback(() => {
+    setState({ status: 'loading' })
+    void types.refetch()
+    void units.refetch()
+    setAttempt((value) => value + 1)
+  }, [types, units])
+
+  useEffect(() => {
+    let active = true
+    void Promise.all([
+      readAllPages((page) =>
+        readReservations({
+          status: 'checked_in',
+          page,
+          pageSize: 100,
+        }).unwrap(),
+      ),
+      readAllPages((page) =>
+        readStays({ status: 'active', page, pageSize: 100 }).unwrap(),
+      ),
+    ])
+      .then(([reservations, stays]) => {
+        if (!active) return
+        setState({
+          status: 'ready',
+          data: summarizeOccupancy(
+            (types.data ?? []) as AccommodationType[],
+            units.data ?? [],
+            reservations,
+            stays,
+          ),
+        })
+      })
+      .catch(() => {
+        if (active) setState({ status: 'error' })
+      })
+    return () => {
+      active = false
+    }
+  }, [
+    attempt,
+    profile.activeGroups,
+    profile.activePeople,
+    profile.activeVehicles,
+    profile.pendingAmountMinor,
+    profile.timezone,
+    readReservations,
+    readStays,
+    types.data,
+    units.data,
+  ])
+
+  const selectedMetrics = useMemo<OccupancyMetrics | null>(() => {
+    if (state.status !== 'ready') return null
+    return state.data[filter]
+  }, [filter, state])
+  const loading =
+    state.status === 'loading' || types.isLoading || units.isLoading
+  const failed = state.status === 'error' || types.isError || units.isError
+
+  return (
+    <DashboardWidget
+      titleId="occupancy-title"
+      title={
+        <>
+          <LucideIcon icon={Users} color="primary" aria-hidden="true" />
+          {t('home.occupancy')}
+        </>
+      }
+      action={
+        <AccommodationFilter
+          value={filter}
+          onChange={(value) => dispatch(accommodationFilterChanged(value))}
+        />
+      }
+      height="100%"
+    >
+      {loading ? (
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <SvgIcon color="primary" aria-hidden="true">
-            <path d="M12 3 1 21h22L12 3Zm0 5 6.8 11H14v-6h-4v6H5.2L12 8Z" />
-          </SvgIcon>
-          <Typography
-            id="occupancy-title"
-            component="h2"
-            variant="subtitle1"
-            color="text.primary"
-            sx={{ fontWeight: 700 }}
-          >
-            {t('home.occupancy')}
+          <CircularProgress size={20} aria-label={t('common.loading')} />
+          <Typography color="text.secondary">
+            {t('home.occupancyLoading')}
           </Typography>
         </Stack>
+      ) : failed ? (
+        <Alert
+          severity="error"
+          action={<Button onClick={retry}>{t('common.retry')}</Button>}
+        >
+          {t('home.occupancyLoadError')}
+        </Alert>
+      ) : selectedMetrics ? (
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 2,
-            alignItems: 'center',
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              sm: 'minmax(0, 1.35fr) minmax(130px, 0.65fr)',
+            },
+            gap: { xs: 2, sm: 3 },
+            alignItems: 'start',
           }}
         >
-          <Box>
-            <Typography
-              component="p"
-              variant="h3"
-              sx={{ fontWeight: 650, color: 'primary.main' }}
+          <Box sx={{ minWidth: 0 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns:
+                  filter !== 'camping' &&
+                  state.status === 'ready' &&
+                  state.data.individualUnits.total > 0
+                    ? 'repeat(2, minmax(0, 1fr))'
+                    : 'minmax(0, 1fr)',
+                gap: { xs: 1.5, sm: 2 },
+                alignItems: 'start',
+              }}
             >
-              {activeGroups}
-            </Typography>
-            <Typography color="text.secondary">
-              {t('home.groups', { count: activeGroups })}
-            </Typography>
+              <Metric
+                value={selectedMetrics.groups}
+                label={t('home.groups', { count: selectedMetrics.groups })}
+                primary
+              />
+              {filter !== 'camping' && state.status === 'ready' && (
+                <Box sx={{ minWidth: 0 }}>
+                  {state.data.individualUnits.total === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      {t('home.individualOccupancyEmpty')}
+                    </Typography>
+                  ) : (
+                    <UnitMetric
+                      occupied={state.data.individualUnits.occupied}
+                      total={state.data.individualUnits.total}
+                    />
+                  )}
+                </Box>
+              )}
+            </Box>
           </Box>
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: 'max-content max-content',
+              gridTemplateColumns: {
+                xs: 'max-content max-content max-content max-content',
+                sm: 'max-content max-content',
+              },
+              justifyContent: { xs: 'start', sm: 'end' },
               alignItems: 'center',
-              justifyContent: 'start',
-              columnGap: 0.75,
+              columnGap: 1,
               rowGap: 0.5,
-              '& > .occupancy-count': {
-                fontWeight: 700,
-                fontSize: '1.5rem',
-                lineHeight: 1.2,
+              '& .occupancy-count': {
                 color: 'accent.main',
+                fontSize: '1.5rem',
+                fontWeight: 700,
+                lineHeight: 1.2,
                 fontVariantNumeric: 'tabular-nums',
                 textAlign: 'right',
               },
             }}
           >
-            <Typography className="occupancy-count">{activePeople}</Typography>
+            <Typography className="occupancy-count">
+              {selectedMetrics.people}
+            </Typography>
             <Typography color="text.secondary">
-              {t('home.people', { count: activePeople })}
+              {t('home.people', { count: selectedMetrics.people })}
             </Typography>
             <Typography className="occupancy-count">
-              {activeVehicles}
+              {selectedMetrics.vehicles}
             </Typography>
             <Typography color="text.secondary">
-              {t('home.vehicles', { count: activeVehicles })}
+              {t('home.vehicles', { count: selectedMetrics.vehicles })}
             </Typography>
           </Box>
         </Box>
+      ) : null}
+    </DashboardWidget>
+  )
+}
+
+function UnitMetric({ occupied, total }: { occupied: number; total: number }) {
+  const { t } = useTranslation()
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography
+        component="p"
+        variant="h3"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          fontWeight: 650,
+          color: 'primary.main',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {occupied}
+        <Box
+          component="span"
+          sx={{ fontSize: '0.65em', mx: '0.12em', lineHeight: 1 }}
+        >
+          /
+        </Box>
+        {total}
+      </Typography>
+      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+        <Typography color="text.secondary">
+          {t('home.individualOccupancyOccupiedLabel', { count: occupied })}
+        </Typography>
       </Stack>
-    </Paper>
+    </Box>
+  )
+}
+
+function Metric({
+  value,
+  label,
+  primary = false,
+}: {
+  value: number
+  label: string
+  primary?: boolean
+}) {
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography
+        component="p"
+        variant={primary ? 'h3' : 'h5'}
+        sx={{
+          fontWeight: primary ? 650 : 700,
+          color: primary ? 'primary.main' : 'accent.main',
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {value}
+      </Typography>
+      <Typography color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+        {label}
+      </Typography>
+    </Box>
   )
 }

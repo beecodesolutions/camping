@@ -1,150 +1,146 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
+import { BedDouble, CalendarDays, Ellipsis, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import {
-  Box,
-  Button,
-  IconButton,
-  Menu,
-  MenuItem,
-  Stack,
-  SvgIcon,
-  Typography,
-} from '@mui/material'
-
-export type WorkspaceSection = 'home' | 'stays' | 'settings'
-const sections = ['home', 'stays', 'settings'] as const
+import { alpha, Box, Button, Paper, Stack, Typography } from '@mui/material'
+import LucideIcon from './components/LucideIcon'
+import { workspaceHref, type WorkspaceSection } from './app/workspaceLocation'
 
 type Props = {
   section: WorkspaceSection
-  onNavigate: (section: WorkspaceSection) => void
-  onCheckIn: () => void
-  checkInDisabled: boolean
-  userName: string
-  onLogout: () => void
-  logoutPending: boolean
-  themeControl: ReactNode
+  campingName: string
 }
 
-export default function WorkspaceNavigation({
-  section,
-  onNavigate,
-  onCheckIn,
-  checkInDisabled,
-  userName,
-  onLogout,
-  logoutPending,
-  themeControl,
-}: Props) {
+const destinations = [
+  { section: 'home', icon: Sun },
+  { section: 'stays', icon: BedDouble },
+  { section: 'reservations', icon: CalendarDays },
+  { section: 'more', icon: Ellipsis },
+] as const
+
+export default function WorkspaceNavigation({ section, campingName }: Props) {
   const { t } = useTranslation()
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+  const activeSection = section === 'settings' ? 'more' : section
+  const [barVisible, setBarVisible] = useState(true)
+
+  useEffect(() => {
+    let previousY = window.scrollY
+    let travel = 0
+    const show = () => {
+      travel = 0
+      previousY = window.scrollY
+      setBarVisible(true)
+    }
+    const onScroll = () => {
+      const y = Math.max(0, window.scrollY)
+      const delta = y - previousY
+      previousY = y
+      const atBottom =
+        y + window.innerHeight >= document.documentElement.scrollHeight - 8
+      if (
+        y < 64 ||
+        atBottom ||
+        (document.activeElement?.closest('nav') &&
+          document.activeElement.matches(':focus-visible'))
+      ) {
+        travel = 0
+        setBarVisible(true)
+        return
+      }
+      travel = Math.sign(delta) === Math.sign(travel) ? travel + delta : delta
+      if (Math.abs(travel) >= 24) {
+        setBarVisible(travel < 0)
+        travel = 0
+      }
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Tab') show()
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('hashchange', show)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('hashchange', show)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
+
   return (
-    <Box
-      component="header"
+    <Paper
+      component="nav"
+      aria-label={t('home.sections')}
+      square
+      elevation={0}
       sx={{
-        borderBottom: 1,
+        position: 'fixed',
+        zIndex: (theme) => theme.zIndex.appBar,
+        bottom: 0,
+        left: 0,
+        right: { xs: 0, md: 'auto' },
+        top: { md: 0 },
+        width: { md: 208 },
+        borderTop: { xs: 1, md: 0 },
+        borderRight: { md: 1 },
         borderColor: 'divider',
-        bgcolor: 'background.paper',
-        mb: 3,
+        pb: { xs: 'env(safe-area-inset-bottom)', md: 0 },
+        px: { md: 1.5 },
+        transform: {
+          xs: barVisible ? 'translateY(0)' : 'translateY(100%)',
+          md: 'none',
+        },
+        visibility: { xs: barVisible ? 'visible' : 'hidden', md: 'visible' },
+        transition: barVisible
+          ? 'transform 180ms ease-out'
+          : 'transform 180ms ease-out, visibility 0s 180ms',
+        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
-      <Stack
-        direction="row"
-        sx={{
-          maxWidth: 1200,
-          mx: 'auto',
-          px: { xs: 2, sm: 3 },
-          py: 1,
-          gap: 1,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        <Box
-          component="nav"
-          aria-label={t('home.sections')}
-          sx={{ display: { xs: 'none', md: 'flex' }, gap: 0.5 }}
-        >
-          {sections.map((value) => (
-            <Button
-              key={value}
-              aria-current={section === value ? 'page' : undefined}
-              onClick={() => onNavigate(value)}
-              sx={{
-                bgcolor: section === value ? 'action.selected' : undefined,
-                color: section === value ? 'primary.main' : 'text.secondary',
-              }}
-            >
-              {t(`navigation.${value}`)}
-            </Button>
-          ))}
-        </Box>
-        <IconButton
-          aria-label={t('navigation.menu')}
-          aria-haspopup="menu"
-          aria-controls={anchor ? 'workspace-menu' : undefined}
-          aria-expanded={Boolean(anchor)}
-          onClick={(event) => setAnchor(event.currentTarget)}
-          sx={{ display: { xs: 'inline-flex', md: 'none' } }}
-        >
-          <SvgIcon>
-            <path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" />
-          </SvgIcon>
-        </IconButton>
-        <Menu
-          id="workspace-menu"
-          anchorEl={anchor}
-          open={Boolean(anchor)}
-          onClose={() => setAnchor(null)}
-        >
-          {sections.map((value) => (
-            <MenuItem
-              key={value}
-              selected={section === value}
-              aria-current={section === value ? 'page' : undefined}
-              onClick={() => {
-                onNavigate(value)
-                setAnchor(null)
-              }}
-            >
-              {t(`navigation.${value}`)}
-            </MenuItem>
-          ))}
-        </Menu>
-        <Button
-          variant="contained"
-          onClick={onCheckIn}
-          disabled={checkInDisabled}
-          sx={{
-            flexShrink: 0,
-            order: { xs: 2, sm: 0 },
-            width: { xs: '100%', sm: 'auto' },
-          }}
-        >
-          {t('checkIn.register')}
-        </Button>
-        <Stack
-          direction="row"
-          sx={{ ml: 'auto', alignItems: 'center', minWidth: 0, gap: 0.5 }}
-        >
-          <Typography
-            variant="body2"
-            noWrap
-            title={userName}
-            sx={{ maxWidth: { xs: 100, sm: 140 } }}
-          >
-            {userName}
-          </Typography>
+      <Box sx={{ display: { xs: 'none', md: 'block' }, px: 1.5, py: 3 }}>
+        <Typography variant="overline" color="primary.main">
+          {t('navigation.workspace')}
+        </Typography>
+        <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+          {campingName}
+        </Typography>
+      </Box>
+      <Stack direction={{ xs: 'row', md: 'column' }} spacing={{ md: 0.5 }}>
+        {destinations.map(({ section: value, icon }) => (
           <Button
-            size="small"
-            onClick={onLogout}
-            disabled={logoutPending}
-            sx={{ flexShrink: 0 }}
+            key={value}
+            href={workspaceHref(value)}
+            onClick={() =>
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+            }
+            aria-current={activeSection === value ? 'page' : undefined}
+            sx={{
+              flex: { xs: 1, md: 'initial' },
+              minWidth: 0,
+              minHeight: 64,
+              flexDirection: { xs: 'column', md: 'row' },
+              justifyContent: { md: 'flex-start' },
+              gap: { xs: 0.5, md: 1.5 },
+              px: { xs: 0.5, md: 1.5 },
+              py: 1,
+              borderRadius: { xs: 0, md: 2 },
+              textTransform: 'none',
+              bgcolor: (theme) =>
+                activeSection === value
+                  ? alpha(theme.palette.accent.main, 0.12)
+                  : undefined,
+              color: activeSection === value ? 'accent.main' : 'text.secondary',
+              '&:hover': {
+                bgcolor: (theme) => alpha(theme.palette.accent.main, 0.18),
+                color: 'accent.main',
+              },
+              fontWeight: activeSection === value ? 700 : 500,
+              fontSize: { xs: '0.75rem', md: '0.875rem' },
+            }}
           >
-            {t('auth.logout')}
+            <LucideIcon icon={icon} />
+            {t(`navigation.${value}`)}
           </Button>
-          {themeControl}
-        </Stack>
+        ))}
       </Stack>
-    </Box>
+    </Paper>
   )
 }

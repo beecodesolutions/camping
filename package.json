@@ -24,7 +24,9 @@
     "user": "pnpm --filter @camping/api user",
     "package:lambda": "bash scripts/package-lambda.sh",
     "runtime:provision": "pnpm --filter @camping/api runtime:provision",
-    "db:seed:demo": "pnpm contracts:build && pnpm --filter @camping/api seed:demo"
+    "db:seed:demo": "pnpm contracts:build && pnpm --filter @camping/api seed:demo",
+    "db:seed:reservations": "pnpm contracts:build && pnpm --filter @camping/api seed:reservations",
+    "api:openapi": "pnpm contracts:build && pnpm --filter @camping/api openapi:export"
   },
   "devDependencies": {
     "prettier": "^3.9.8"

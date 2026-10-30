@@ -10,6 +10,7 @@ it('interpreta las unidades menores de una moneda con centavos', () => {
     new Intl.NumberFormat('es-CL', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 0,
     }).format(4850),
   )
 })
@@ -21,4 +22,8 @@ it('cambia formato regional sin cambiar moneda ni unidades menores', () => {
       currency: 'CLP',
     }).format(485000),
   )
+})
+
+it('no oculta centavos históricos', () => {
+  expect(formatMoney(120050, 'MXN', 'en-US')).toBe('MX$1,200.50')
 })

@@ -5,14 +5,21 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
+  Relation,
 } from 'typeorm'
-import type { AgeRanges, Rates } from '@camping/contracts'
+import type {
+  AgeRanges,
+  Rates,
+  ReservationPriceSnapshot,
+} from '@camping/contracts'
 import { CampingEntity } from './camping.entity'
 import { UserEntity } from './user.entity'
 import { AppliedExtraEntity } from './applied-extra.entity'
 import { PaymentEntity } from './payment.entity'
 import { bigintNumberTransformer } from '../bigint.transformer'
+import { ReservationEntity } from './reservation.entity'
 
 @Entity({ name: 'stays' })
 @Index('idx_stays_camping_closed', ['campingId', 'closedAt'])
@@ -37,6 +44,22 @@ export class StayEntity {
   })
   @JoinColumn({ name: 'created_by_id' })
   createdBy!: UserEntity
+
+  @Column({ name: 'reservation_id', type: 'uuid', nullable: true })
+  reservationId!: string | null
+
+  @Column({
+    name: 'accommodation_price_snapshot',
+    type: 'jsonb',
+    nullable: true,
+  })
+  accommodationPriceSnapshot!: ReservationPriceSnapshot | null
+
+  @OneToOne(() => ReservationEntity, (reservation) => reservation.stay, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'reservation_id' })
+  reservation!: Relation<ReservationEntity> | null
 
   @Column({ name: 'responsible_name', type: 'text' })
   responsibleName!: string
@@ -80,6 +103,9 @@ export class StayEntity {
   @Column({ type: 'varchar', length: 3 })
   currency!: string
 
+  @Column({ name: 'money_decimals', type: 'smallint', nullable: true })
+  moneyDecimals!: 0 | null
+
   @Column({ name: 'age_ranges', type: 'jsonb' })
   ageRanges!: AgeRanges
 
@@ -102,6 +128,7 @@ export class StayEntity {
     accommodationMinor: number
     extrasMinor: number
     totalMinor: number
+    roundingMinor?: number
     version: number
     closedAt: string
     closedBy: string

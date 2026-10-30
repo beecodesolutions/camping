@@ -3,9 +3,11 @@ import { createTheme } from '@mui/material/styles'
 declare module '@mui/material/styles' {
   interface Palette {
     accent: { main: string; light: string }
+    selection: { main: string }
   }
   interface PaletteOptions {
     accent?: { main: string; light: string }
+    selection?: { main: string }
   }
 }
 
@@ -24,6 +26,7 @@ export const lightTheme = createTheme({
       contrastText: '#253C30',
     },
     accent: { main: '#963D5A', light: '#DDA5B6' },
+    selection: { main: '#245BDB' },
     background: { default: '#EDF2EF', paper: '#FFFFFF' },
     text: { primary: '#253C30', secondary: '#626D64' },
     divider: '#E1E5DB',
@@ -60,6 +63,7 @@ export const darkTheme = createTheme({
       contrastText: '#F5E7D0',
     },
     accent: { ...lightTheme.palette.accent, main: '#E86684' },
+    selection: { main: '#65A2FF' },
     background: { default: '#141C17', paper: '#1E2922' },
     text: { primary: '#E5EDE5', secondary: '#B2BEB3' },
     divider: '#3B4B3F',

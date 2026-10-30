@@ -5,18 +5,32 @@ import {
   type FetchArgs,
 } from '@reduxjs/toolkit/query/react'
 import {
+  accommodationTypeSchema,
+  accommodationUnitSchema,
+  availabilityResponseSchema,
   campingProfileSchema,
   extraTemplateSchema,
+  reservationPageSchema,
+  reservationQuoteSchema,
+  reservationResponseSchema,
   sessionUserSchema,
   stayPageSchema,
   stayQuoteSchema,
   staySchema,
 } from '@camping/contracts'
 import type {
+  AccommodationType,
+  AccommodationUnit,
+  AvailabilityQuery,
+  AvailabilityResponse,
   CampingProfile,
   CheckInRequest,
   ExtraTemplate,
   PaymentInput,
+  ReservationListQuery,
+  ReservationPage,
+  ReservationQuote,
+  ReservationResponse,
   SessionUser,
   Stay,
   StayPage,
@@ -60,7 +74,17 @@ const createStayResponseSchema = sessionUserSchema.pick({ id: true })
 
 export const apiSlice = createApi({
   reducerPath: 'api',
-  tagTypes: ['Session', 'Camping', 'Stays', 'Stay', 'Templates'],
+  tagTypes: [
+    'Session',
+    'Camping',
+    'Stays',
+    'Stay',
+    'Templates',
+    'Reservations',
+    'Reservation',
+    'Availability',
+    'Accommodations',
+  ],
   baseQuery,
   endpoints: (builder) => ({
     session: builder.query<SessionUser, void>({
@@ -90,6 +114,110 @@ export const apiSlice = createApi({
       transformResponse: (response) => parse(campingProfileSchema, response),
       providesTags: ['Camping'],
     }),
+    accommodationTypes: builder.query<AccommodationType[], void>({
+      query: () => '/accommodations/types',
+      transformResponse: (response) =>
+        parse(accommodationTypeSchema.array(), response),
+      providesTags: ['Accommodations'],
+    }),
+    accommodationUnits: builder.query<
+      AccommodationUnit[],
+      { typeId?: string } | void
+    >({
+      query: (arg) =>
+        arg?.typeId
+          ? `/accommodations/units?typeId=${encodeURIComponent(arg.typeId)}`
+          : '/accommodations/units',
+      transformResponse: (response) =>
+        parse(accommodationUnitSchema.array(), response),
+      providesTags: ['Accommodations'],
+    }),
+    availability: builder.query<AvailabilityResponse, AvailabilityQuery>({
+      query: ({ checkInDate, checkOutDate, typeId }) => {
+        const params = new URLSearchParams({ checkInDate, checkOutDate })
+        if (typeId) params.set('typeId', typeId)
+        return `/availability?${params.toString()}`
+      },
+      transformResponse: (response) =>
+        parse(availabilityResponseSchema, response),
+      providesTags: ['Availability'],
+    }),
+    reservations: builder.query<ReservationPage, ReservationListQuery>({
+      query: ({
+        status,
+        typeId,
+        checkInDate,
+        checkOutDate,
+        page = 1,
+        pageSize = 100,
+      }) => {
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(pageSize),
+        })
+        if (status) params.set('status', status)
+        if (typeId) params.set('typeId', typeId)
+        if (checkInDate) params.set('checkInDate', checkInDate)
+        if (checkOutDate) params.set('checkOutDate', checkOutDate)
+        return `/reservations?${params.toString()}`
+      },
+      transformResponse: (response) => parse(reservationPageSchema, response),
+      providesTags: (result) =>
+        result
+          ? [
+              { type: 'Reservations', id: 'LIST' },
+              ...result.items.map((reservation) => ({
+                type: 'Reservation' as const,
+                id: reservation.id,
+              })),
+            ]
+          : [{ type: 'Reservations', id: 'LIST' }],
+    }),
+    reservation: builder.query<ReservationResponse, string>({
+      query: (id) => `/reservations/${id}`,
+      transformResponse: (response) =>
+        parse(reservationResponseSchema, response),
+      providesTags: (_result, _error, id) => [{ type: 'Reservation', id }],
+    }),
+    reservationCheckInQuote: builder.mutation<
+      ReservationQuote,
+      { id: string; version: number; arrivalDate: string }
+    >({
+      query: ({ id, version, arrivalDate }) => ({
+        url: `/reservations/${id}/check-in/quote`,
+        method: 'POST',
+        body: { version, arrivalDate },
+      }),
+      transformResponse: (response) => parse(reservationQuoteSchema, response),
+    }),
+    reservationCheckIn: builder.mutation<
+      ReservationResponse,
+      {
+        id: string
+        version: number
+        arrivalDate: string
+        acceptedTotalMinor: number
+        hasVehicle: boolean
+        vehicleDescription: string
+        licensePlate: string
+        location: string
+      }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/reservations/${id}/check-in`,
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response) =>
+        parse(reservationResponseSchema, response),
+      invalidatesTags: (_result, _error, arg) => [
+        'Camping',
+        'Availability',
+        'Reservations',
+        { type: 'Reservation', id: arg.id },
+        { type: 'Stays', id: 'LIST' },
+      ],
+    }),
     stays: builder.query<
       StayPage,
       { status: 'active' | 'closed'; page: number; pageSize: number }
@@ -117,7 +245,12 @@ export const apiSlice = createApi({
       query: (body) => ({ url: '/stays', method: 'POST', body }),
       transformResponse: (response) =>
         parse(createStayResponseSchema, response),
-      invalidatesTags: ['Camping', { type: 'Stays', id: 'LIST' }],
+      invalidatesTags: [
+        'Camping',
+        'Availability',
+        'Reservations',
+        { type: 'Stays', id: 'LIST' },
+      ],
     }),
     quote: builder.mutation<StayQuote, { id: string; departureDate: string }>({
       query: ({ id, departureDate }) => ({
@@ -144,6 +277,8 @@ export const apiSlice = createApi({
       transformResponse: (response) => parse(staySchema, response),
       invalidatesTags: (_result, _error, arg) => [
         'Camping',
+        'Availability',
+        'Reservations',
         { type: 'Stay', id: arg.id },
         { type: 'Stays', id: 'LIST' },
       ],
@@ -157,6 +292,8 @@ export const apiSlice = createApi({
       transformResponse: (response) => parse(staySchema, response),
       invalidatesTags: (_result, _error, arg) => [
         'Camping',
+        'Availability',
+        'Reservations',
         { type: 'Stay', id: arg.id },
         { type: 'Stays', id: 'LIST' },
       ],
@@ -229,6 +366,18 @@ export const apiSlice = createApi({
         { type: 'Stays', id: 'LIST' },
       ],
     }),
+    updateMoneySettings: builder.mutation<
+      CampingProfile,
+      { moneyDecimals: 0 | null }
+    >({
+      query: (body) => ({
+        url: '/camping/money-settings',
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (response) => parse(campingProfileSchema, response),
+      invalidatesTags: ['Camping'],
+    }),
     updateRates: builder.mutation<CampingProfile, RateInput>({
       query: (body) => ({ url: '/camping/rates', method: 'PATCH', body }),
       transformResponse: (response) => parse(campingProfileSchema, response),
@@ -243,7 +392,17 @@ export const {
   useLoginMutation,
   useLogoutMutation,
   useCampingQuery,
+  useAccommodationTypesQuery,
+  useAccommodationUnitsQuery,
+  useAvailabilityQuery,
+  useLazyReservationsQuery,
+  useReservationsQuery,
+  useReservationQuery,
+  useLazyReservationQuery,
+  useReservationCheckInQuoteMutation,
+  useReservationCheckInMutation,
   useStaysQuery,
+  useLazyStaysQuery,
   useStayQuery,
   useCreateStayMutation,
   useQuoteMutation,
@@ -256,4 +415,5 @@ export const {
   useUpdateExtraMutation,
   useDeleteExtraMutation,
   useUpdateRatesMutation,
+  useUpdateMoneySettingsMutation,
 } = apiSlice

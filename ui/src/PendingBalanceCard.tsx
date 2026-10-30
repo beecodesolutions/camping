@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Box, Paper, Stack, SvgIcon, Typography } from '@mui/material'
+import { Box, Paper, Stack, Typography } from '@mui/material'
+import { PiggyBank } from 'lucide-react'
+import LucideIcon from './components/LucideIcon'
 import { formatMoney } from './services/money'
 
 type PendingBalanceCardProps = { pendingAmountMinor: number; currency: string }
@@ -18,9 +20,11 @@ export default function PendingBalanceCard({
     >
       <Stack spacing={2}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <SvgIcon sx={{ color: 'secondary.dark' }} aria-hidden="true">
-            <path d="M3 5h18v14H3V5Zm2 2v10h14V7H5Zm7 1a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z" />
-          </SvgIcon>
+          <LucideIcon
+            icon={PiggyBank}
+            sx={{ color: 'secondary.dark' }}
+            aria-hidden="true"
+          />
           <Typography
             id="balance-title"
             component="h2"

@@ -7,37 +7,32 @@ import { i18nReady } from './app/i18n'
 
 await i18nReady
 
-it.each(['home', 'stays', 'settings'] as const)(
-  'marks %s as current and keeps check-in available',
-  (section) => {
+it.each([
+  ['home', 'Hoy'],
+  ['stays', 'Estadías'],
+  ['reservations', 'Reservas'],
+  ['more', 'Más'],
+  ['settings', 'Más'],
+] as const)(
+  'marks the destination for %s and exposes four links',
+  (section, label) => {
     const markup = renderToStaticMarkup(
       <ThemeProvider theme={lightTheme}>
-        <WorkspaceNavigation
-          section={section}
-          onNavigate={() => {}}
-          onCheckIn={() => {}}
-          checkInDisabled={false}
-          userName="Lucía"
-          onLogout={() => {}}
-          logoutPending={false}
-          themeControl={null}
-        />
+        <WorkspaceNavigation section={section} campingName="Mi camping" />
       </ThemeProvider>,
     )
-    const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? []
-    const current = buttons.filter((button) =>
-      button.includes('aria-current="page"'),
-    )
+    const links = markup.match(/<a\b[^>]*>[\s\S]*?<\/a>/g) ?? []
+    expect(links).toHaveLength(4)
+    const current = links.filter((link) => link.includes('aria-current="page"'))
     expect(current).toHaveLength(1)
-    expect(current[0]).toContain(
-      { home: 'Inicio', stays: 'Estadías', settings: 'Configuración' }[section],
-    )
-    const checkIn = buttons.filter((button) =>
-      button.includes('Registrar ingreso'),
-    )
-    expect(checkIn).toHaveLength(1)
-    expect(checkIn[0]).not.toContain('disabled=""')
-    expect(markup).toContain('Abrir navegación')
-    expect(markup).toContain('Cerrar sesión')
+    expect(current[0]).toContain(label)
+    expect(links.map((link) => link.match(/href="([^"]+)"/)?.[1])).toEqual([
+      '#/hoy',
+      '#/estadias',
+      '#/reservas',
+      '#/mas',
+    ])
+    expect(markup).not.toContain('Registrar ingreso')
+    expect(markup).not.toContain('Cerrar sesión')
   },
 )
