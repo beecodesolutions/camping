@@ -1314,6 +1314,9 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   const [category, setCategory] = useState('')
   const [unitPriceMinor, setUnitPriceMinor] = useState(0)
   const [rates, setRates] = useState(profile.rates)
+  const [editingRate, setEditingRate] = useState<
+    keyof typeof profile.rates | null
+  >(null)
   const [moneyDecimals, setMoneyDecimals] = useState(profile.moneyDecimals)
   const [updateMoneySettings, moneyState] = useUpdateMoneySettingsMutation()
   const [error, setError] = useState('')
@@ -1334,7 +1337,9 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   }
   const saveRates = async () => {
     try {
+      setError('')
       await updateRates(rates).unwrap()
+      setEditingRate(null)
     } catch {
       setError(t('settings.saveError'))
     }
@@ -1388,32 +1393,102 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t('settings.ratesHelp')}
         </Typography>
-        <Box sx={formGridSx}>
+        <Stack spacing={2}>
           {(['adults', 'children', 'infants'] as const).map((category) => (
-            <MoneyField
+            <Stack
               key={category}
-              label={`${t(`checkIn.${category}`)} (${ageLabel(profile.ageRanges[category])})`}
-              currency={profile.currency}
-              moneyDecimals={profile.moneyDecimals}
-              valueMinor={rates[category]}
-              onChangeMinor={(value) =>
-                setRates({ ...rates, [category]: value === '' ? NaN : value })
-              }
-            />
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ alignItems: { sm: 'center' } }}
+            >
+              <Typography sx={{ flex: 1 }}>
+                {t(`checkIn.${category}`)} (
+                {ageLabel(profile.ageRanges[category])})
+              </Typography>
+              {editingRate === category ? (
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  sx={{ alignItems: { sm: 'center' } }}
+                >
+                  <MoneyField
+                    autoFocus
+                    size="small"
+                    label={`${t('stay.unitPrice')} (${profile.currency})`}
+                    helperText=""
+                    currency={profile.currency}
+                    moneyDecimals={profile.moneyDecimals}
+                    valueMinor={rates[category]}
+                    disabled={ratesState.isLoading}
+                    onChangeMinor={(value) =>
+                      setRates({
+                        ...rates,
+                        [category]: value === '' ? NaN : value,
+                      })
+                    }
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => void saveRates()}
+                      disabled={
+                        ratesState.isLoading ||
+                        !Number.isSafeInteger(rates[category]) ||
+                        rates[category] < 0
+                      }
+                    >
+                      {t('common.save')}
+                    </Button>
+                    <Button
+                      variant="text"
+                      color="error"
+                      sx={{ textDecoration: 'underline' }}
+                      disabled={ratesState.isLoading}
+                      onClick={() => {
+                        setEditingRate(null)
+                        setError('')
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </Stack>
+                </Stack>
+              ) : (
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{ alignItems: 'center' }}
+                >
+                  <Typography>
+                    {formatMoney(
+                      profile.rates[category],
+                      profile.currency,
+                      i18n.language,
+                    )}
+                  </Typography>
+                  <Tooltip title={t('settings.editRate')}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        aria-label={t('settings.editRate')}
+                        disabled={editingRate !== null || ratesState.isLoading}
+                        onClick={() => {
+                          setRates(profile.rates)
+                          setError('')
+                          setEditingRate(category)
+                        }}
+                      >
+                        <LucideIcon icon={Pencil} fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Stack>
+              )}
+            </Stack>
           ))}
-          <Button
-            variant="contained"
-            onClick={() => void saveRates()}
-            disabled={
-              ratesState.isLoading ||
-              Object.values(rates).some(
-                (value) => !Number.isSafeInteger(value) || value < 0,
-              )
-            }
-          >
-            {t('common.save')}
-          </Button>
-        </Box>
+        </Stack>
       </Paper>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6">{t('settings.templates')}</Typography>

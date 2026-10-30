@@ -108,8 +108,10 @@ const es = {
     useCents: 'Usar centavos',
     moneyHelp:
       'Sin centavos por defecto. El cambio se aplica a nuevas reservas y estadías; los importes anteriores se conservan.',
-    rates: 'Tarifas por noche',
-    ratesHelp: 'Las tarifas nuevas se aplican a los ingresos siguientes.',
+    rates: 'Tarifas de camping por noche',
+    ratesHelp:
+      'Precio por persona y noche para camping libre. Los cambios se aplican a nuevos ingresos.',
+    editRate: 'Editar tarifa',
     templates: 'Extras',
     createTemplate: 'Crear extra',
     deactivate: 'Desactivar',
