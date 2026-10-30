@@ -1557,6 +1557,8 @@ function TemplateRow({
           />
           <Stack direction="row" spacing={1}>
             <Button
+              variant="contained"
+              color="primary"
               disabled={
                 saving ||
                 !description.trim() ||
@@ -1574,6 +1576,9 @@ function TemplateRow({
               {t('common.save')}
             </Button>
             <Button
+              variant="text"
+              color="error"
+              sx={{ textDecoration: 'underline' }}
               disabled={saving}
               onClick={() => {
                 setEditing(false)
@@ -1612,6 +1617,8 @@ function TemplateRow({
             <Tooltip title={t('settings.editExtra')}>
               <span>
                 <IconButton
+                  size="small"
+                  color="primary"
                   aria-label={t('settings.editExtra')}
                   disabled={saving}
                   onClick={() => {
@@ -1622,7 +1629,7 @@ function TemplateRow({
                     setEditing(true)
                   }}
                 >
-                  <LucideIcon icon={Pencil} />
+                  <LucideIcon icon={Pencil} fontSize="small" />
                 </IconButton>
               </span>
             </Tooltip>
@@ -1633,6 +1640,8 @@ function TemplateRow({
             >
               <span>
                 <IconButton
+                  size="small"
+                  color={template.enabled ? 'error' : 'success'}
                   aria-label={t(
                     template.enabled
                       ? 'settings.deactivate'
@@ -1646,7 +1655,10 @@ function TemplateRow({
                     } else void save({ enabled: true })
                   }}
                 >
-                  <LucideIcon icon={template.enabled ? Trash2 : RotateCcw} />
+                  <LucideIcon
+                    icon={template.enabled ? Trash2 : RotateCcw}
+                    fontSize="small"
+                  />
                 </IconButton>
               </span>
             </Tooltip>
