@@ -1,3 +1,5 @@
+import { assertMoneyPrecision } from '../common/money'
+import { CampingEntity } from '../database/entities/camping.entity'
 import { Injectable } from '@nestjs/common'
 import { DataSource } from 'typeorm'
 import {
@@ -44,6 +46,14 @@ export class ExtraService {
   ): Promise<ExtraTemplate> {
     const parsed = extraTemplateInputSchema.safeParse(raw)
     if (!parsed.success) throw zodBadRequest(parsed.error)
+    const camping = await this.dataSource
+      .getRepository(CampingEntity)
+      .findOneByOrFail({ id: context.camping.id })
+    assertMoneyPrecision(
+      parsed.data.unitPriceMinor,
+      camping.currency,
+      camping.moneyDecimals,
+    )
     try {
       const template = await this.dataSource
         .getRepository(ExtraTemplateEntity)
@@ -78,6 +88,19 @@ export class ExtraService {
       where: { id, campingId: context.camping.id },
     })
     if (!template) throw notFound('Plantilla')
+    if (
+      parsed.data.unitPriceMinor !== undefined &&
+      parsed.data.unitPriceMinor !== template.unitPriceMinor
+    ) {
+      const camping = await this.dataSource
+        .getRepository(CampingEntity)
+        .findOneByOrFail({ id: context.camping.id })
+      assertMoneyPrecision(
+        parsed.data.unitPriceMinor,
+        camping.currency,
+        camping.moneyDecimals,
+      )
+    }
     try {
       Object.assign(template, parsed.data, { updatedAt: new Date() })
       await repository.save(template)
@@ -121,6 +144,12 @@ export class ExtraService {
               parsed.data.quantity,
             )
           : parsed.data
+      if (!('templateId' in parsed.data))
+        assertMoneyPrecision(
+          values.unitPriceMinor,
+          stay.currency,
+          stay.moneyDecimals,
+        )
       const extra = runner.manager.create(AppliedExtraEntity, {
         ...values,
         stayId,
@@ -166,6 +195,12 @@ export class ExtraService {
         where: { id: extraId, stayId },
       })
       if (!extra) throw notFound('Extra aplicado')
+      if (parsed.data.unitPriceMinor !== extra.unitPriceMinor)
+        assertMoneyPrecision(
+          parsed.data.unitPriceMinor,
+          stay.currency,
+          stay.moneyDecimals,
+        )
       Object.assign(extra, parsed.data)
       await manager.save(extra)
       stay.version += 1

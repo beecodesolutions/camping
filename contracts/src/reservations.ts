@@ -1,15 +1,12 @@
 import { z } from 'zod'
 import {
-  ageRangesSchema,
   countries,
   moneySchema,
   paymentMethodSchema,
-  ratesSchema,
   safeCount,
   safeSignedAmountSchema,
 } from './contract-primitives'
 import {
-  currencyCodeSchema,
   perPersonPriceSnapshotSchema,
   perUnitPriceSnapshotSchema,
   reservationPriceSnapshotSchema,

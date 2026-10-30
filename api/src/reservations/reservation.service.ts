@@ -568,6 +568,7 @@ export class ReservationService {
     return priceSnapshotFor({
       inventoryMode: current.basis === 'per_unit' ? 'individual' : 'unlimited',
       currency: current.currency,
+      moneyDecimals: current.moneyDecimals,
       baseNightlyPriceMinor:
         current.basis === 'per_unit'
           ? current.baseNightlyPriceMinor
@@ -743,6 +744,7 @@ export class ReservationService {
           ...input,
           inventoryMode: type.inventoryMode,
           currency: prior.currency,
+          moneyDecimals: prior.moneyDecimals,
           baseNightlyPriceMinor:
             prior.basis === 'per_unit'
               ? prior.baseNightlyPriceMinor
@@ -750,21 +752,15 @@ export class ReservationService {
           rates: prior.basis === 'per_person' ? prior.rates : undefined,
           ageRanges: prior.basis === 'per_person' ? prior.ageRanges : undefined,
         })
-      if (frozen.adjustmentMinor !== undefined) {
-        const totalMinor = frozen.baseTotalMinor + frozen.adjustmentMinor
-        if (!Number.isSafeInteger(totalMinor) || totalMinor < 0)
-          throw conflict(
-            'El ajuste ya no permite ese rango; indicá un nuevo total',
-            'PRICE_ADJUSTMENT_INVALID',
-          )
-        return { ...frozen, totalMinor }
-      }
       return frozen
     }
     const result = priceSnapshotFor({
       ...input,
       inventoryMode: type.inventoryMode,
       currency: camping.currency,
+      moneyDecimals: row
+        ? row.priceSnapshot.moneyDecimals
+        : camping.moneyDecimals,
       baseNightlyPriceMinor: type.baseNightlyPriceMinor,
       rates: camping.rates,
       ageRanges: camping.ageRanges,

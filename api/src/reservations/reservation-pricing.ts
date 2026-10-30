@@ -1,5 +1,8 @@
 import {
   reservationPriceSnapshotSchema,
+  roundMoneyMinor,
+  hasMoneyPrecision,
+  type MoneyDecimals,
   type AgeRanges,
   type Rates,
   type ReservationPriceSnapshot,
@@ -10,6 +13,7 @@ import { conflict } from '../common/errors'
 export type PricingInput = {
   inventoryMode: 'individual' | 'unlimited'
   currency: string
+  moneyDecimals?: MoneyDecimals
   baseNightlyPriceMinor?: number
   rates?: Rates
   ageRanges?: AgeRanges
@@ -93,6 +97,11 @@ export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
         'PRICE_ADJUSTMENT_INVALID',
       )
     totalMinor = safeInteger(input.agreedTotalMinor, 'agreedTotalMinor')
+    if (!hasMoneyPrecision(totalMinor, input.currency, input.moneyDecimals))
+      throw conflict(
+        'El total acordado no admite centavos',
+        'MONEY_PRECISION_INVALID',
+      )
     adjustmentMinor = safeSignedInteger(
       totalMinor - baseTotalMinor,
       'adjustmentMinor',
@@ -100,11 +109,25 @@ export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
     adjustmentReason = input.priceAdjustmentReason.trim()
   }
 
+  const roundedTotal = roundMoneyMinor(
+    totalMinor,
+    input.currency,
+    input.moneyDecimals,
+  )
+  const roundingMinor = roundedTotal - totalMinor
+  totalMinor = roundedTotal
+  const precision = {
+    ...(input.moneyDecimals === undefined
+      ? {}
+      : { moneyDecimals: input.moneyDecimals }),
+    ...(roundingMinor === 0 ? {} : { roundingMinor }),
+  }
   const snapshot =
     input.inventoryMode === 'individual'
       ? {
           basis: 'per_unit' as const,
           currency: input.currency,
+          ...precision,
           baseNightlyPriceMinor: safeInteger(
             input.baseNightlyPriceMinor ?? -1,
             'baseNightlyPriceMinor',
@@ -118,6 +141,7 @@ export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
       : {
           basis: 'per_person' as const,
           currency: input.currency,
+          ...precision,
           rates: input.rates!,
           ageRanges: input.ageRanges!,
           nights,
@@ -182,14 +206,22 @@ export function baseFromSnapshot(
           return multiplyMoney(nightly, nights)
         })()
   const adjustmentMinor = snapshot.adjustmentMinor
-  const totalMinor =
+  const unroundedTotal =
     adjustmentMinor === undefined
       ? baseTotalMinor
       : safeInteger(baseTotalMinor + adjustmentMinor, 'total')
+  const totalMinor = roundMoneyMinor(
+    unroundedTotal,
+    snapshot.currency,
+    snapshot.moneyDecimals,
+  )
+  const { roundingMinor: _previousRounding, ...frozen } = snapshot
+  const roundingMinor = totalMinor - unroundedTotal
   const validated = reservationPriceSnapshotSchema.parse({
-    ...snapshot,
+    ...frozen,
     nights,
     totalMinor,
+    ...(roundingMinor === 0 ? {} : { roundingMinor }),
   })
   return { ...validated, baseTotalMinor } as PriceSnapshot
 }

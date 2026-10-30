@@ -176,3 +176,29 @@ ruta de pagos de la reserva mientras la estadía vinculada esté abierta y la
 reserva siga en `checked_in`; la anulación incrementa ambas versiones. Los
 pagos de una estadía cerrada no se pueden anular. Las estadías creadas sin
 reserva mantienen el flujo directo anterior.
+
+## Precisión monetaria por camping
+
+`GET /camping` incluye `moneyDecimals`: `0` (valor predeterminado, importes
+enteros) o `null` (precisión nativa de la moneda, por ejemplo dos decimales
+para MXN; CLP sigue sin centavos). `PATCH /camping/money-settings` recibe
+exclusivamente `{ "moneyDecimals": 0 }` o `{ "moneyDecimals": null }`, exige
+sesión y Origin y registra el cambio en auditoría dentro de la transacción.
+
+Todos los contratos siguen usando **unidades menores enteras**. En MXN,
+escribir `1200` en la UI produce `120000` en `amountMinor`; en CLP produce
+`1200`. No se convierten monedas ni se cambia la escala de los datos.
+
+Las nuevas reservas y estadías congelan la preferencia. Si no admiten centavos,
+el total calculado se redondea una vez a la unidad monetaria más cercana
+(mitad hacia arriba); `roundingMinor` expone la diferencia frente a alojamiento
+más extras. Un total manual, precio nuevo o pago debe respetar la precisión
+permitida. Las plantillas antiguas conservan su precio: aplicarlas copia el
+importe exacto y el redondeo se realiza al calcular el total final.
+
+Las estadías anteriores conservan `moneyDecimals: null`. Los snapshots de
+reservas anteriores sin el campo mantienen la precisión original, incluido su
+check-in y sus recotizaciones. Cambiar la configuración no cambia precios,
+pagos, snapshots ni cierres existentes. La UI muestra los centavos históricos
+cuando existen y permite saldarlos exactamente, aunque el camping hoy opere
+sin centavos. Los importes enteros se muestran sin decimales artificiales.

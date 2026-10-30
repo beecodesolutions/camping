@@ -8,6 +8,8 @@ import {
   ratesSchema,
   safeCount,
 } from './contract-primitives'
+import { moneyDecimalsSchema } from './money'
+export * from './money'
 import { reservationPriceSnapshotSchema } from './reservation-pricing'
 export {
   ageRangesSchema,
@@ -84,6 +86,7 @@ export const campingProfileSchema = z.object({
   country: z.enum(countries),
   currency: z.string().regex(/^[A-Z]{3}$/),
   timezone: z.string(),
+  moneyDecimals: moneyDecimalsSchema.default(0),
   ageRanges: ageRangesSchema,
   rates: ratesSchema,
   activeGroups: safeCount,
@@ -175,6 +178,12 @@ export const closeRequestSchema = quoteRequestSchema.extend({
   payment: paymentInputSchema.optional(),
 })
 export const costBreakdownSchema = z.object({
+  roundingMinor: z
+    .number()
+    .int()
+    .min(-Number.MAX_SAFE_INTEGER)
+    .max(Number.MAX_SAFE_INTEGER)
+    .optional(),
   departureDate: z.iso.date(),
   nights: safeCount.min(1),
   accommodationMinor: moneySchema,
@@ -194,6 +203,7 @@ export const closureSchema = costBreakdownSchema.extend({
 export const staySchema = z.object({
   id: z.string(),
   reservationId: z.uuid().nullable().default(null),
+  moneyDecimals: moneyDecimalsSchema.default(null),
   accommodationPriceSnapshot: reservationPriceSnapshotSchema
     .nullable()
     .default(null),

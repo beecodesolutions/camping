@@ -15,8 +15,20 @@ const es = {
     darkTheme: 'Cambiar a tema oscuro',
   },
   navigation: {
-    home: 'Inicio',
+    home: 'Hoy',
     stays: 'Estadías',
+    reservations: 'Reservas',
+    more: 'Más',
+    workspace: 'Recepción',
+    inProgress: 'En curso',
+    allStays: 'Ver todas las estadías',
+    account: 'Cuenta',
+    appearance: 'Apariencia',
+    campingSettings: 'Tu camping',
+    settingsHelp: 'Administrá las tarifas y los extras del camping.',
+    reservationsHelp:
+      'Consultá la disponibilidad y las reservas por fecha y alojamiento.',
+    backToMore: 'Volver a Más',
     settings: 'Configuración',
     menu: 'Abrir navegación',
     stayViews: 'Estado de las estadías',
@@ -94,6 +106,10 @@ const es = {
   },
   settings: {
     title: 'Configuración',
+    money: 'Importes',
+    useCents: 'Usar centavos',
+    moneyHelp:
+      'Sin centavos por defecto. El cambio se aplica a nuevas reservas y estadías; los importes anteriores se conservan.',
     rates: 'Tarifas por noche',
     ratesHelp: 'Las tarifas nuevas se aplican a los ingresos siguientes.',
     templates: 'Plantillas de extras',
@@ -167,6 +183,7 @@ const es = {
     nights: 'Noches',
     accommodation: 'Alojamiento',
     extrasTotal: 'Extras',
+    rounding: 'Redondeo',
     total: 'Total',
     totalCalculated: 'Total calculado; los pagos se registran por separado.',
     account: 'Cuenta',
@@ -248,6 +265,8 @@ const es = {
       'No pudimos registrar el ingreso. Tus datos siguen acá; intentá de nuevo.',
   },
   validation: {
+    money:
+      'Ingresá un importe válido en {{currency}} con la precisión permitida.',
     invalid: 'Revisá este campo.',
     nationality: 'Seleccioná un país de la lista.',
     phoneCountryCode: 'Seleccioná el país del teléfono.',

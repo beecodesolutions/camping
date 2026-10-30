@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Alert,
@@ -9,6 +9,9 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  Fab,
+  FormControlLabel,
+  Switch,
   IconButton,
   MenuItem,
   Paper,
@@ -18,6 +21,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { Plus } from 'lucide-react'
+import LucideIcon from './components/LucideIcon'
+import MoneyField from './components/MoneyField'
 import { paymentInputSchema } from '@camping/contracts'
 import type {
   CampingProfile,
@@ -26,9 +32,13 @@ import type {
   ExtraTemplate,
   SessionUser,
   Stay,
+  ReservationResponse,
 } from '@camping/contracts'
 import { formatMoney } from './services/money'
 import {
+  useAccommodationTypesQuery,
+  useAccommodationUnitsQuery,
+  useLazyReservationQuery,
   useAddExtraMutation,
   useAddPaymentMutation,
   useCampingQuery,
@@ -43,19 +53,25 @@ import {
   useUpdateExtraMutation,
   useUpdateExtraTemplateMutation,
   useUpdateRatesMutation,
+  useUpdateMoneySettingsMutation,
 } from './services/api'
 import CheckInDialog from './CheckInDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
-import WorkspaceNavigation, {
-  type WorkspaceSection,
-} from './WorkspaceNavigation'
+import WorkspaceNavigation from './WorkspaceNavigation'
+import { useWorkspaceSection, workspaceHref } from './app/workspaceLocation'
 import PendingBalanceCard from './PendingBalanceCard'
 import { useTimeOfDay } from './app/timeOfDay'
 import AvailabilityCalendar from './AvailabilityCalendar'
 import DashboardToday from './DashboardToday'
+import { createUuid } from './services/uuid'
+import {
+  useWorkspaceDialog,
+  openWorkspaceDialog,
+  closeWorkspaceDialog,
+} from './app/workspaceDialog'
 
 type WorkspaceProps = { user: SessionUser; themeControl: ReactNode }
 const pageSize = 8
@@ -85,13 +101,15 @@ export default function CampingWorkspace({
 }: WorkspaceProps) {
   const { t } = useTranslation()
   const { greeting } = useTimeOfDay()
-  const [section, setSection] = useState<WorkspaceSection>('home')
-  const [homeView, setHomeView] = useState<'today' | 'calendar'>('today')
+  const section = useWorkspaceSection()
   const [stayStatus, setStayStatus] = useState<'active' | 'closed'>('active')
   const [page, setPage] = useState(1)
-  const [selection, setSelection] = useState<StaySelection | null>(null)
+  const dialog = useWorkspaceDialog()
+  const selection = dialog?.kind === 'stay' ? dialog : null
+  const setSelection = (value: StaySelection) =>
+    openWorkspaceDialog({ kind: 'stay', ...value })
   const [todayRefreshKey, setTodayRefreshKey] = useState(0)
-  const [checkInOpen, setCheckInOpen] = useState(false)
+  const checkInOpen = dialog?.kind === 'check-in'
   const [registeredName, setRegisteredName] = useState<string | null>(null)
   const camping = useCampingQuery()
   const stays = useStaysQuery(
@@ -124,174 +142,314 @@ export default function CampingWorkspace({
         <CheckInDialog
           ageRanges={profile.ageRanges}
           timezone={profile.timezone}
-          onClose={() => setCheckInOpen(false)}
+          onClose={() => closeWorkspaceDialog()}
           onSuccess={(name) => {
-            setCheckInOpen(false)
+            closeWorkspaceDialog()
             setRegisteredName(name)
+            setTodayRefreshKey((value) => value + 1)
           }}
         />
       )}
       <WorkspaceNavigation
         section={section}
-        onNavigate={setSection}
-        onCheckIn={() => setCheckInOpen(true)}
-        checkInDisabled={!profile}
-        userName={user.name}
-        onLogout={() => void logout()}
-        logoutPending={logoutState.isLoading}
-        themeControl={themeControl}
+        campingName={profile?.name ?? t('common.appName')}
       />
-      <Box
-        component="main"
-        sx={{ maxWidth: 980, mx: 'auto', px: { xs: 2, sm: 3 }, pb: 5 }}
-      >
-        {logoutState.isError && (
-          <Alert severity="error">{t('auth.logoutError')}</Alert>
-        )}
-        {registeredName && (
-          <Alert severity="success" onClose={() => setRegisteredName(null)}>
-            {t('checkIn.success', { name: registeredName })}
-          </Alert>
-        )}
-        {profile && (
-          <HomeHeader
-            name={profile.name}
-            greeting={t(greeting)}
-            userName={user.name}
-            showCheckIn={false}
-          />
-        )}
-        {section === 'home' &&
-          (profile ? (
-            <>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: 'minmax(0, 1fr)',
-                    sm: 'repeat(2, minmax(0, 1fr))',
-                    lg: 'repeat(3, minmax(0, 1fr))',
-                  },
-                  gap: 2,
-                  mt: 2,
-                  mb: 2,
-                }}
+      <Box sx={{ ml: { md: '208px' } }}>
+        <Box
+          component="main"
+          sx={{
+            maxWidth: 980,
+            mx: 'auto',
+            px: { xs: 2, sm: 3 },
+            pt: { xs: 2, md: 3 },
+            pb: { xs: 'calc(160px + env(safe-area-inset-bottom))', md: 14 },
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              mb: 3,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                variant="overline"
+                color="primary.main"
+                sx={{ overflowWrap: 'anywhere' }}
               >
+                {profile?.name ?? t('common.appName')}
+              </Typography>
+              <Typography component="h1" variant="h5" sx={{ fontWeight: 700 }}>
+                {t(`navigation.${section}`)}
+              </Typography>
+            </Box>
+          </Stack>
+          {logoutState.isError && (
+            <Alert severity="error">{t('auth.logoutError')}</Alert>
+          )}
+          {registeredName && (
+            <Alert severity="success" onClose={() => setRegisteredName(null)}>
+              {t('checkIn.success', { name: registeredName })}
+            </Alert>
+          )}
+          {profile && section === 'home' && (
+            <HomeHeader
+              name={profile.name}
+              greeting={t(greeting)}
+              userName={user.name}
+              showCheckIn={false}
+            />
+          )}
+          {section === 'home' &&
+            (profile ? (
+              <>
                 <Box
                   sx={{
-                    minWidth: 0,
-                    gridColumn: { sm: 'span 2', lg: 'span 2' },
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: 'minmax(0, 1fr)',
+                      sm: 'repeat(2, minmax(0, 1fr))',
+                      lg: 'repeat(3, minmax(0, 1fr))',
+                    },
+                    gap: 2,
+                    mt: 2,
+                    mb: 2,
                   }}
                 >
-                  <OccupancyCard profile={profile} />
+                  <Box
+                    sx={{
+                      minWidth: 0,
+                      gridColumn: { sm: 'span 2', lg: 'span 2' },
+                    }}
+                  >
+                    <OccupancyCard profile={profile} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <PendingBalanceCard
+                      pendingAmountMinor={profile.pendingAmountMinor}
+                      currency={profile.currency}
+                    />
+                  </Box>
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <PendingBalanceCard
-                    pendingAmountMinor={profile.pendingAmountMinor}
-                    currency={profile.currency}
-                  />
-                </Box>
-              </Box>
-              <Tabs
-                value={homeView}
-                onChange={(_, value: 'today' | 'calendar') =>
-                  setHomeView(value)
-                }
-                aria-label={t('home.views')}
-                sx={{ mt: 1 }}
-              >
-                <Tab value="today" label={t('home.todayTab')} />
-                <Tab value="calendar" label={t('home.calendarTab')} />
-              </Tabs>
-              {homeView === 'today' ? (
                 <Box sx={{ mt: 2 }}>
                   <DashboardToday
                     profile={profile}
                     onSelect={setSelection}
                     refreshKey={todayRefreshKey}
                   />
+                  <Button href={workspaceHref('stays')} sx={{ mt: 2 }}>
+                    {t('navigation.allStays')}
+                  </Button>
                 </Box>
-              ) : (
-                <Box sx={{ mt: 2 }}>
-                  <AvailabilityCalendar profile={profile} />
+              </>
+            ) : (
+              <LoadingPanel />
+            ))}
+          {section === 'reservations' &&
+            (profile ? (
+              <Stack spacing={2}>
+                <Box>
+                  <Typography component="h2" variant="h6">
+                    {t('calendar.title')}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    {t('navigation.reservationsHelp')}
+                  </Typography>
                 </Box>
-              )}
-            </>
-          ) : (
-            <LoadingPanel />
-          ))}
-        {section === 'settings' ? (
-          profile ? (
-            <SettingsPanel profile={profile} />
-          ) : (
-            <LoadingPanel />
-          )
-        ) : section === 'stays' ? (
-          <Stack spacing={2} sx={{ mt: 2 }}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1}
-              sx={{
-                justifyContent: 'space-between',
-                alignItems: { xs: 'stretch', sm: 'center' },
-              }}
-            >
-              <Typography component="h2" variant="h5" sx={{ fontWeight: 700 }}>
-                {t('navigation.stays')}
-              </Typography>
-            </Stack>
-            <Tabs
-              value={stayStatus}
-              onChange={(_, value: 'active' | 'closed') => {
-                setStayStatus(value)
-                setPage(1)
-              }}
-              aria-label={t('navigation.stayViews')}
-            >
-              <Tab value="active" label={t('home.activeStays')} />
-              <Tab value="closed" label={t('home.closedStays')} />
-            </Tabs>
-            {stays.isFetching && (
-              <Typography color="text.secondary">
-                {t('home.loading')}
-              </Typography>
-            )}
-            {stays.isError && (
-              <Alert severity="error">
-                {t('home.loadError')}{' '}
-                <Button onClick={() => void stays.refetch()}>
-                  {t('common.retry')}
+                <AvailabilityCalendar profile={profile} />
+              </Stack>
+            ) : (
+              <LoadingPanel />
+            ))}
+          {section === 'more' && (
+            <Stack spacing={2}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography component="h2" variant="h6">
+                  {t('navigation.campingSettings')}
+                </Typography>
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                  {t('navigation.settingsHelp')}
+                </Typography>
+                <Button variant="outlined" href={workspaceHref('settings')}>
+                  {t('navigation.settings')}
                 </Button>
-              </Alert>
-            )}
-            {stays.currentData && profile && (
-              <StayList
-                items={stays.currentData.items}
-                timezone={profile.timezone}
-                onSelect={setSelection}
-              />
-            )}
-            {stays.currentData && (
-              <Pagination
-                page={stays.currentData.page}
-                pageSize={stays.currentData.pageSize}
-                total={stays.currentData.total}
-                onPage={setPage}
-              />
-            )}
-          </Stack>
-        ) : null}
+              </Paper>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography component="h2" variant="h6">
+                  {t('navigation.account')}
+                </Typography>
+                <Typography sx={{ mb: 2, overflowWrap: 'anywhere' }}>
+                  {user.name}
+                </Typography>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: 'center' }}
+                >
+                  {themeControl}
+                  <Typography>{t('navigation.appearance')}</Typography>
+                </Stack>
+                <Button
+                  onClick={() => void logout()}
+                  disabled={logoutState.isLoading}
+                  sx={{ mt: 2 }}
+                >
+                  {t('auth.logout')}
+                </Button>
+              </Paper>
+            </Stack>
+          )}
+          {section === 'settings' ? (
+            profile ? (
+              <>
+                <Button href={workspaceHref('more')} sx={{ mb: 2 }}>
+                  {t('navigation.backToMore')}
+                </Button>
+                <SettingsPanel profile={profile} />
+              </>
+            ) : (
+              <LoadingPanel />
+            )
+          ) : section === 'stays' ? (
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              <Tabs
+                value={stayStatus}
+                onChange={(_, value: 'active' | 'closed') => {
+                  setStayStatus(value)
+                  setPage(1)
+                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+                }}
+                aria-label={t('navigation.stayViews')}
+              >
+                <Tab value="active" label={t('navigation.inProgress')} />
+                <Tab value="closed" label={t('home.closedStays')} />
+              </Tabs>
+              {stays.isFetching && (
+                <Typography color="text.secondary">
+                  {t('home.loading')}
+                </Typography>
+              )}
+              {stays.isError && (
+                <Alert severity="error">
+                  {t('home.loadError')}{' '}
+                  <Button onClick={() => void stays.refetch()}>
+                    {t('common.retry')}
+                  </Button>
+                </Alert>
+              )}
+              {stays.currentData && profile && (
+                <EnrichedStayList
+                  items={stays.currentData.items}
+                  timezone={profile.timezone}
+                  onSelect={setSelection}
+                />
+              )}
+              {stays.currentData && (
+                <Pagination
+                  page={stays.currentData.page}
+                  pageSize={stays.currentData.pageSize}
+                  total={stays.currentData.total}
+                  onPage={setPage}
+                />
+              )}
+            </Stack>
+          ) : null}
+        </Box>
       </Box>
+      {(section === 'home' || section === 'stays') && (
+        <Fab
+          color="primary"
+          variant="extended"
+          disabled={!profile}
+          onClick={() => openWorkspaceDialog({ kind: 'check-in' })}
+          sx={{
+            position: 'fixed',
+            right: { xs: 16, md: 32 },
+            bottom: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 24 },
+            gap: 1,
+            zIndex: (theme) => theme.zIndex.appBar,
+          }}
+        >
+          <LucideIcon icon={Plus} />
+          {t('checkIn.register')}
+        </Fab>
+      )}
       {selection && profile && (
         <StayDetail
           id={selection.id}
           action={selection.action}
           timezone={profile.timezone}
-          onClose={() => setSelection(null)}
+          onClose={closeWorkspaceDialog}
           onChanged={() => setTodayRefreshKey((value) => value + 1)}
         />
       )}
     </>
+  )
+}
+
+function EnrichedStayList({
+  items,
+  timezone,
+  onSelect,
+}: {
+  items: Stay[]
+  timezone: string
+  onSelect: (selection: StaySelection) => void
+}) {
+  const types = useAccommodationTypesQuery()
+  const units = useAccommodationUnitsQuery()
+  const [readReservation] = useLazyReservationQuery()
+  const [reservations, setReservations] = useState<ReservationResponse[]>([])
+  useEffect(() => {
+    let active = true
+    const ids = [
+      ...new Set(
+        items.flatMap((stay) =>
+          stay.reservationId ? [stay.reservationId] : [],
+        ),
+      ),
+    ]
+    void Promise.all(
+      ids.map((id) =>
+        readReservation(id, true)
+          .unwrap()
+          .catch(() => null),
+      ),
+    ).then((values) => {
+      if (active)
+        setReservations(
+          values.filter(
+            (value): value is ReservationResponse => value !== null,
+          ),
+        )
+    })
+    return () => {
+      active = false
+    }
+  }, [items, readReservation])
+  return (
+    <StayList
+      items={items}
+      timezone={timezone}
+      onSelect={onSelect}
+      typeNames={
+        new Map((types.data ?? []).map((type) => [type.id, type.name]))
+      }
+      typeModes={
+        new Map((types.data ?? []).map((type) => [type.id, type.inventoryMode]))
+      }
+      unitNames={
+        new Map((units.data ?? []).map((unit) => [unit.id, unit.name]))
+      }
+      reservationsById={
+        new Map(
+          reservations.map((reservation) => [reservation.id, reservation]),
+        )
+      }
+    />
   )
 }
 
@@ -372,7 +530,7 @@ function StayDetail({
     useState<PaymentInput['method']>('cash')
   const [paymentDate, setPaymentDate] = useState('')
   const [paymentNote, setPaymentNote] = useState('')
-  const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID())
+  const [paymentKey, setPaymentKey] = useState(createUuid)
   const [error, setError] = useState('')
   const stay = stayQuery.data
   const editable = !!stay && !stay.closure
@@ -432,7 +590,7 @@ function StayDetail({
       setPaymentAmountMinor(
         result.account.balanceMinor > 0 ? result.account.balanceMinor : '',
       )
-      setPaymentKey(crypto.randomUUID())
+      setPaymentKey(createUuid())
     } catch (e) {
       setPreview(null)
       setError(
@@ -463,8 +621,9 @@ function StayDetail({
       setPaymentAmountMinor(
         updated.account.balanceMinor > 0 ? updated.account.balanceMinor : '',
       )
-      setPaymentKey(crypto.randomUUID())
+      setPaymentKey(createUuid())
       setPreview(null)
+      onChanged?.()
       if (action === 'payment') onClose()
     } catch (e) {
       setError(
@@ -581,6 +740,16 @@ function StayDetail({
                   i18n.language,
                 )}
               />
+              {preview.roundingMinor !== undefined && (
+                <Info
+                  label={t('stay.rounding')}
+                  value={formatMoney(
+                    preview.roundingMinor,
+                    stay.currency,
+                    i18n.language,
+                  )}
+                />
+              )}
               <Typography variant="h6">
                 {t('stay.total')}:{' '}
                 {formatMoney(preview.totalMinor, stay.currency, i18n.language)}
@@ -819,15 +988,14 @@ function StayDetail({
                     ))}
                   <Stack spacing={1} sx={{ mt: 2 }}>
                     <Box sx={formGridSx}>
-                      <TextField
-                        type="number"
+                      <MoneyField
                         label={t('stay.paymentAmount')}
-                        value={effectivePaymentAmount}
-                        onChange={(e) => {
-                          setPaymentAmountMinor(
-                            e.target.value === '' ? '' : Number(e.target.value),
-                          )
-                          setPaymentKey(crypto.randomUUID())
+                        currency={stay.currency}
+                        moneyDecimals={stay.moneyDecimals}
+                        valueMinor={effectivePaymentAmount}
+                        onChangeMinor={(value) => {
+                          setPaymentAmountMinor(value)
+                          setPaymentKey(createUuid())
                         }}
                         disabled={
                           paymentAmountMinor === '' &&
@@ -852,7 +1020,7 @@ function StayDetail({
                           setPaymentMethod(
                             e.target.value as PaymentInput['method'],
                           )
-                          setPaymentKey(crypto.randomUUID())
+                          setPaymentKey(createUuid())
                         }}
                         disabled={
                           stay.closure !== null &&
@@ -875,7 +1043,7 @@ function StayDetail({
                         value={paymentDate || todayInTimezone(timezone)}
                         onChange={(e) => {
                           setPaymentDate(e.target.value)
-                          setPaymentKey(crypto.randomUUID())
+                          setPaymentKey(createUuid())
                         }}
                         slotProps={{
                           inputLabel: { shrink: true },
@@ -892,7 +1060,7 @@ function StayDetail({
                       value={paymentNote}
                       onChange={(e) => {
                         setPaymentNote(e.target.value)
-                        setPaymentKey(crypto.randomUUID())
+                        setPaymentKey(createUuid())
                       }}
                       slotProps={{ htmlInput: { maxLength: 200 } }}
                       disabled={
@@ -979,12 +1147,13 @@ function StayDetail({
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
                         />
-                        <TextField
-                          type="number"
+                        <MoneyField
                           label={t('stay.unitPrice')}
-                          value={unitPriceMinor}
-                          onChange={(e) =>
-                            setUnitPriceMinor(Number(e.target.value))
+                          currency={stay.currency}
+                          moneyDecimals={stay.moneyDecimals}
+                          valueMinor={unitPriceMinor}
+                          onChangeMinor={(value) =>
+                            setUnitPriceMinor(value === '' ? NaN : value)
                           }
                         />
                       </>
@@ -1000,7 +1169,15 @@ function StayDetail({
                     <Button
                       variant="outlined"
                       onClick={() => void submitExtra()}
-                      disabled={addState.isLoading}
+                      disabled={
+                        addState.isLoading ||
+                        !Number.isSafeInteger(quantity) ||
+                        quantity < 1 ||
+                        (!selectedTemplate &&
+                          (!description.trim() ||
+                            !Number.isSafeInteger(unitPriceMinor) ||
+                            unitPriceMinor < 0))
+                      }
                     >
                       {t('stay.addExtra')}
                     </Button>
@@ -1106,13 +1283,14 @@ function ExtraRow({
         disabled={!editable || saving}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <TextField
+      <MoneyField
         size="small"
-        type="number"
         label={t('stay.unitPrice')}
-        value={price}
+        currency={stay.currency}
+        moneyDecimals={stay.moneyDecimals}
+        valueMinor={price}
+        onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
         disabled={!editable || saving}
-        onChange={(e) => setPrice(Number(e.target.value))}
       />
       <TextField
         size="small"
@@ -1138,7 +1316,11 @@ function ExtraRow({
         {error && <Typography color="error">{t('stay.extraError')}</Typography>}
         {editable && (
           <>
-            <Button size="small" onClick={() => void save()} disabled={saving}>
+            <Button
+              size="small"
+              onClick={() => void save()}
+              disabled={saving || !Number.isSafeInteger(price) || price < 0}
+            >
               {t('common.save')}
             </Button>
             <IconButton
@@ -1165,6 +1347,8 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   const [category, setCategory] = useState('')
   const [unitPriceMinor, setUnitPriceMinor] = useState(0)
   const [rates, setRates] = useState(profile.rates)
+  const [moneyDecimals, setMoneyDecimals] = useState(profile.moneyDecimals)
+  const [updateMoneySettings, moneyState] = useUpdateMoneySettingsMutation()
   const [error, setError] = useState('')
   const saveTemplate = async () => {
     if (!description.trim()) return
@@ -1190,9 +1374,37 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   }
   return (
     <Stack spacing={3} sx={{ mt: 3 }}>
-      <Typography component="h2" variant="h5" sx={{ fontWeight: 700 }}>
-        {t('settings.title')}
-      </Typography>
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="h6">{t('settings.money')}</Typography>
+        <Typography color="text.secondary">
+          {t('settings.moneyHelp')}
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={moneyDecimals === null}
+              onChange={(_, checked) => setMoneyDecimals(checked ? null : 0)}
+            />
+          }
+          label={t('settings.useCents')}
+        />
+        <Box>
+          <Button
+            disabled={
+              moneyState.isLoading || moneyDecimals === profile.moneyDecimals
+            }
+            onClick={async () => {
+              try {
+                await updateMoneySettings({ moneyDecimals }).unwrap()
+              } catch {
+                setError(t('settings.saveError'))
+              }
+            }}
+          >
+            {t('common.save')}
+          </Button>
+        </Box>
+      </Paper>
       {error && <Alert severity="error">{error}</Alert>}
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6">{t('settings.rates')}</Typography>
@@ -1201,23 +1413,26 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
         </Typography>
         <Box sx={formGridSx}>
           {(['adults', 'children', 'infants'] as const).map((category) => (
-            <TextField
+            <MoneyField
               key={category}
-              type="number"
               label={`${t(`checkIn.${category}`)} (${ageLabel(profile.ageRanges[category])})`}
-              value={rates[category]}
-              onChange={(e) =>
-                setRates({
-                  ...rates,
-                  [category]: Math.max(0, Number(e.target.value)),
-                })
+              currency={profile.currency}
+              moneyDecimals={profile.moneyDecimals}
+              valueMinor={rates[category]}
+              onChangeMinor={(value) =>
+                setRates({ ...rates, [category]: value === '' ? NaN : value })
               }
             />
           ))}
           <Button
             variant="contained"
             onClick={() => void saveRates()}
-            disabled={ratesState.isLoading}
+            disabled={
+              ratesState.isLoading ||
+              Object.values(rates).some(
+                (value) => !Number.isSafeInteger(value) || value < 0,
+              )
+            }
           >
             {t('common.save')}
           </Button>
@@ -1234,6 +1449,7 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
               key={template.id}
               template={template}
               currency={profile.currency}
+              moneyDecimals={profile.moneyDecimals}
               onSave={update}
             />
           ))}
@@ -1250,16 +1466,24 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <TextField
-            type="number"
+          <MoneyField
             label={t('stay.unitPrice')}
-            value={unitPriceMinor}
-            onChange={(e) => setUnitPriceMinor(Number(e.target.value))}
+            currency={profile.currency}
+            moneyDecimals={profile.moneyDecimals}
+            valueMinor={unitPriceMinor}
+            onChangeMinor={(value) =>
+              setUnitPriceMinor(value === '' ? NaN : value)
+            }
           />
           <Button
             variant="outlined"
             onClick={() => void saveTemplate()}
-            disabled={createState.isLoading}
+            disabled={
+              createState.isLoading ||
+              !description.trim() ||
+              !Number.isSafeInteger(unitPriceMinor) ||
+              unitPriceMinor < 0
+            }
           >
             {t('settings.createTemplate')}
           </Button>
@@ -1271,10 +1495,12 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
 function TemplateRow({
   template,
   currency,
+  moneyDecimals,
   onSave,
 }: {
   template: ExtraTemplate
   currency: string
+  moneyDecimals: 0 | null
   onSave: ReturnType<typeof useUpdateExtraTemplateMutation>[0]
 }) {
   const { t, i18n } = useTranslation()
@@ -1315,12 +1541,13 @@ function TemplateRow({
         onChange={(e) => setDescription(e.target.value)}
         disabled={saving}
       />
-      <TextField
+      <MoneyField
         size="small"
-        type="number"
         label={t('stay.unitPrice')}
-        value={price}
-        onChange={(e) => setPrice(Number(e.target.value))}
+        currency={currency}
+        moneyDecimals={moneyDecimals}
+        valueMinor={price}
+        onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
         disabled={saving}
       />
       <Stack
@@ -1344,7 +1571,7 @@ function TemplateRow({
           onClick={() =>
             void save({ category, description, unitPriceMinor: price })
           }
-          disabled={saving}
+          disabled={saving || !Number.isSafeInteger(price) || price < 0}
         >
           {t('common.save')}
         </Button>

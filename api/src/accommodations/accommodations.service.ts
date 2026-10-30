@@ -1,3 +1,5 @@
+import { CampingEntity } from '../database/entities/camping.entity'
+import { assertMoneyPrecision } from '../common/money'
 import { Injectable } from '@nestjs/common'
 import { DataSource, In, LessThan, MoreThan, type EntityManager } from 'typeorm'
 import {
@@ -145,6 +147,14 @@ export class AccommodationsService {
         this.dataSource,
         contextFor(context),
         async (manager) => {
+          const camping = await manager.findOneByOrFail(CampingEntity, {
+            id: context.camping.id,
+          })
+          assertMoneyPrecision(
+            parsed.data.baseNightlyPriceMinor,
+            camping.currency,
+            camping.moneyDecimals,
+          )
           const row = manager.create(AccommodationTypeEntity, {
             ...parsed.data,
             campingId: context.camping.id,
@@ -191,6 +201,19 @@ export class AccommodationsService {
             lock: { mode: 'pessimistic_write' },
           })
           if (!row) throw notFound('Tipo de alojamiento')
+          if (
+            parsed.data.baseNightlyPriceMinor !== undefined &&
+            parsed.data.baseNightlyPriceMinor !== row.baseNightlyPriceMinor
+          ) {
+            const camping = await manager.findOneByOrFail(CampingEntity, {
+              id: context.camping.id,
+            })
+            assertMoneyPrecision(
+              parsed.data.baseNightlyPriceMinor,
+              camping.currency,
+              camping.moneyDecimals,
+            )
+          }
           const merged = accommodationTypeCreateSchema.safeParse({
             name: parsed.data.name ?? row.name,
             inventoryMode: parsed.data.inventoryMode ?? row.inventoryMode,

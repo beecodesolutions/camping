@@ -12,6 +12,7 @@ import {
   loginSchema,
   quoteRequestSchema,
   ratesSchema,
+  moneySettingsSchema,
   todayInTimezone,
 } from '@camping/contracts'
 import type {
@@ -20,6 +21,7 @@ import type {
   Stay,
   StayAccount,
 } from '@camping/contracts'
+import { createUuid } from '../services/uuid'
 
 const user = { id: 'demo-user', username: 'demo', name: 'Lucía' }
 let loggedIn = true
@@ -30,6 +32,7 @@ const freshProfile = (): CampingProfile => ({
   activePeople: 0,
   activeVehicles: 0,
   pendingAmountMinor: 0,
+  moneyDecimals: 0,
 })
 let profile: CampingProfile = freshProfile()
 let stays: Stay[] = []
@@ -182,6 +185,7 @@ export const handlers = [
       reservationId: null,
       accommodationPriceSnapshot: null,
       currency: profile.currency,
+      moneyDecimals: profile.moneyDecimals,
       ageRanges: structuredClone(profile.ageRanges),
       rates: structuredClone(profile.rates),
       version: 1,
@@ -240,7 +244,7 @@ export const handlers = [
         paymentKeys.set(stay.id, keys)
         stay.payments.push({
           ...payment,
-          id: crypto.randomUUID(),
+          id: createUuid(),
           reservationId: null,
           createdAt: new Date().toISOString(),
           recordedBy: user.id,
@@ -279,7 +283,7 @@ export const handlers = [
     paymentKeys.set(stay.id, keys)
     stay.payments.push({
       ...result.data,
-      id: crypto.randomUUID(),
+      id: createUuid(),
       reservationId: null,
       createdAt: new Date().toISOString(),
       recordedBy: user.id,
@@ -359,6 +363,13 @@ export const handlers = [
     stay.extras = stay.extras.filter((extra) => extra.id !== params.extraId)
     stay.version += 1
     return HttpResponse.json(stay)
+  }),
+  http.patch('*/api/camping/money-settings', async ({ request }) => {
+    if (!loggedIn) return jsonError(401)
+    const parsed = moneySettingsSchema.safeParse(await request.json())
+    if (!parsed.success) return jsonError(400)
+    profile.moneyDecimals = parsed.data.moneyDecimals
+    return HttpResponse.json(profile)
   }),
   http.patch('*/api/camping/rates', async ({ request }) => {
     const result = ratesSchema.safeParse(await request.json())

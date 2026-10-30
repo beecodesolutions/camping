@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { DataSource, IsNull, Not, type EntityManager } from 'typeorm'
 import {
+  roundMoneyMinor,
+  hasMoneyPrecision,
   checkInSchemaForTimezone,
   closeRequestSchema,
   paymentInputSchema,
@@ -65,6 +67,7 @@ export class StayService {
       createdById: context.user.id,
       estimatedDeparture: parsed.data.estimatedDeparture || null,
       currency: camping.currency,
+      moneyDecimals: camping.moneyDecimals,
       ageRanges: camping.ageRanges,
       rates: camping.rates,
       version: 1,
@@ -350,12 +353,20 @@ export class StayService {
         0,
       ),
     )
+    const unroundedTotal = ensureSafeMoney(accommodationMinor + extrasMinor)
+    const totalMinor = roundMoneyMinor(
+      unroundedTotal,
+      stay.currency,
+      stay.moneyDecimals,
+    )
+    const roundingMinor = totalMinor - unroundedTotal
     return {
       departureDate,
       nights,
       accommodationMinor,
       extrasMinor,
-      totalMinor: ensureSafeMoney(accommodationMinor + extrasMinor),
+      totalMinor,
+      ...(roundingMinor === 0 ? {} : { roundingMinor }),
       version: stay.version,
     }
   }
@@ -410,6 +421,7 @@ export class StayService {
       licensePlate: stay.licensePlate,
       location: stay.location,
       currency: stay.currency,
+      moneyDecimals: stay.moneyDecimals ?? null,
       ageRanges: stay.ageRanges as AgeRanges,
       rates: stay.rates as Rates,
       version: stay.version,
@@ -491,6 +503,12 @@ export class StayService {
       this.assertSamePayment(existing, stay.id, input)
       return { payment: existing, created: false }
     }
+    if (
+      !hasMoneyPrecision(input.amountMinor, stay.currency, stay.moneyDecimals)
+    )
+      throw new BadRequestException(
+        'Esta estadía no admite centavos en los pagos',
+      )
     if (stay.closure) {
       const balance = this.account(stay, context.camping.timezone).balanceMinor
       if (balance <= 0 || input.amountMinor > balance)

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { DataSource, type EntityManager } from 'typeorm'
 import {
+  hasMoneyPrecision,
   reservationPaymentInputSchema,
   reservationPaymentVoidSchema,
   type ReservationPaymentInput,
@@ -109,6 +110,17 @@ export class ReservationPaymentsService {
           method: input.method,
           paidOn: input.paidOn,
         }
+        if (
+          !hasMoneyPrecision(
+            input.amountMinor,
+            reservation.priceSnapshot.currency,
+            reservation.priceSnapshot.moneyDecimals,
+          )
+        )
+          throw conflict(
+            'Esta reserva no admite centavos en los pagos',
+            'MONEY_PRECISION_INVALID',
+          )
         this.assertAccountSafe(reservation, payments, input.amountMinor)
 
         const payment = manager.create(PaymentEntity, {

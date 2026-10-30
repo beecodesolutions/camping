@@ -254,6 +254,7 @@ export class ReservationCheckInService {
           licensePlate: input.licensePlate,
           location,
           currency: snapshot.currency,
+          moneyDecimals: snapshot.moneyDecimals ?? null,
           ageRanges:
             snapshot.basis === 'per_person'
               ? snapshot.ageRanges

@@ -196,6 +196,11 @@ before(async () => {
       `reservation-stays-${ids.foreignCamping}`,
     ],
   )
+  // This suite exercises fractional NIO extras; explicitly opt in to cents.
+  await dataSource.query(
+    'UPDATE camping_private.campings SET money_decimals = NULL WHERE id = $1',
+    [ids.camping],
+  )
   await dataSource.query(
     `INSERT INTO camping_private.users
       (id, camping_id, username, name, password_hash, enabled, password_changed_at)

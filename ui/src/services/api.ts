@@ -366,6 +366,18 @@ export const apiSlice = createApi({
         { type: 'Stays', id: 'LIST' },
       ],
     }),
+    updateMoneySettings: builder.mutation<
+      CampingProfile,
+      { moneyDecimals: 0 | null }
+    >({
+      query: (body) => ({
+        url: '/camping/money-settings',
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (response) => parse(campingProfileSchema, response),
+      invalidatesTags: ['Camping'],
+    }),
     updateRates: builder.mutation<CampingProfile, RateInput>({
       query: (body) => ({ url: '/camping/rates', method: 'PATCH', body }),
       transformResponse: (response) => parse(campingProfileSchema, response),
@@ -386,6 +398,7 @@ export const {
   useLazyReservationsQuery,
   useReservationsQuery,
   useReservationQuery,
+  useLazyReservationQuery,
   useReservationCheckInQuoteMutation,
   useReservationCheckInMutation,
   useStaysQuery,
@@ -402,4 +415,5 @@ export const {
   useUpdateExtraMutation,
   useDeleteExtraMutation,
   useUpdateRatesMutation,
+  useUpdateMoneySettingsMutation,
 } = apiSlice

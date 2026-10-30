@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { moneyDecimalsSchema } from './money'
 import {
   ageRangesSchema,
   moneySchema,
@@ -14,6 +15,8 @@ const postgresIntMax = 2_147_483_647
 const reservationCount = safeCount.max(postgresIntMax)
 
 const priceSnapshotCommon = {
+  moneyDecimals: moneyDecimalsSchema.optional(),
+  roundingMinor: safeSignedAmountSchema.optional(),
   currency: currencyCodeSchema,
   totalMinor: moneySchema,
   /** Signed to support either a surcharge or a negotiated discount. */

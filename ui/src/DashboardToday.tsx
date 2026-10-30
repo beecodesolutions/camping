@@ -34,6 +34,11 @@ import {
 } from './services/accommodationIdentity'
 import StayList, { type StaySelection } from './StayList'
 import ReservationCheckInDialog from './ReservationCheckInDialog'
+import {
+  useWorkspaceDialog,
+  openWorkspaceDialog,
+  closeWorkspaceDialog,
+} from './app/workspaceDialog'
 import LucideIcon from './components/LucideIcon'
 import DashboardWidget from './components/DashboardWidget'
 import AccommodationFilter from './AccommodationFilter'
@@ -361,9 +366,12 @@ export default function DashboardToday({
   const query = useTodayData(profile, refreshKey)
   const dispatch = useAppDispatch()
   const activeFilter = useAppSelector(selectAccommodationFilter)
-  const [checkInReservation, setCheckInReservation] =
-    useState<ReservationResponse | null>(null)
+  const dialog = useWorkspaceDialog()
   const dashboard = query.status === 'ready' ? query.data : null
+  const checkInReservation =
+    dialog?.kind === 'reservation-check-in'
+      ? dashboard?.arrivals.find((reservation) => reservation.id === dialog.id)
+      : null
   const types = useAccommodationTypesQuery()
   const units = useAccommodationUnitsQuery()
   const typeNames = useMemo(
@@ -511,7 +519,12 @@ export default function DashboardToday({
                     typeModes={typeModes}
                     unitNames={unitNames}
                     language={i18n.language}
-                    onCheckIn={() => setCheckInReservation(reservation)}
+                    onCheckIn={() =>
+                      openWorkspaceDialog({
+                        kind: 'reservation-check-in',
+                        id: reservation.id,
+                      })
+                    }
                   />
                 ))}
               </List>
@@ -597,9 +610,9 @@ export default function DashboardToday({
         <ReservationCheckInDialog
           reservation={checkInReservation}
           timezone={profile.timezone}
-          onClose={() => setCheckInReservation(null)}
+          onClose={() => closeWorkspaceDialog()}
           onSuccess={() => {
-            setCheckInReservation(null)
+            closeWorkspaceDialog()
             query.retry()
           }}
         />

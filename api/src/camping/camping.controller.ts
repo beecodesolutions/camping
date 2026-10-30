@@ -26,6 +26,20 @@ export class CampingController {
     return this.campingService.profile(request.auth!)
   }
 
+  @Patch('money-settings')
+  @ApiEndpoint({
+    operationId: 'campingUpdateMoneySettings',
+    summary: 'Configurar centavos para nuevas reservas y estadías',
+    status: 200,
+    body: openApiRef('MoneySettings'),
+    response: openApiRef('CampingProfile'),
+    errors: [400, 401, 403, 404, 413, 500],
+  })
+  updateMoneySettings(@Req() request: AuthenticatedRequest) {
+    assertAllowedOrigin(request)
+    return this.campingService.updateMoneySettings(request.auth!, request.body)
+  }
+
   @Patch('rates')
   @ApiEndpoint({
     operationId: 'campingUpdateRates',

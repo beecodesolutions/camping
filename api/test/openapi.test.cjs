@@ -10,6 +10,7 @@ const expectedRoutes = [
   'POST /api/auth/logout',
   'GET /api/camping',
   'PATCH /api/camping/rates',
+  'PATCH /api/camping/money-settings',
   'POST /api/stays',
   'GET /api/stays',
   'GET /api/stays/{id}',

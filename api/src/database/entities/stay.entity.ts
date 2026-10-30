@@ -103,6 +103,9 @@ export class StayEntity {
   @Column({ type: 'varchar', length: 3 })
   currency!: string
 
+  @Column({ name: 'money_decimals', type: 'smallint', nullable: true })
+  moneyDecimals!: 0 | null
+
   @Column({ name: 'age_ranges', type: 'jsonb' })
   ageRanges!: AgeRanges
 
@@ -125,6 +128,7 @@ export class StayEntity {
     accommodationMinor: number
     extrasMinor: number
     totalMinor: number
+    roundingMinor?: number
     version: number
     closedAt: string
     closedBy: string

@@ -32,6 +32,14 @@ export class CampingEntity {
   @Column({ type: 'varchar', length: 3 })
   currency!: string
 
+  @Column({
+    name: 'money_decimals',
+    type: 'smallint',
+    nullable: true,
+    default: 0,
+  })
+  moneyDecimals!: 0 | null
+
   @Column({ type: 'varchar', length: 64 })
   timezone!: string
 

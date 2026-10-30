@@ -1,4 +1,5 @@
 import 'reflect-metadata'
+import { MoneyPrecision1760000005000 } from './migrations/1760000005000-MoneyPrecision'
 import { DataSource } from 'typeorm'
 import { CampingEntity } from './entities/camping.entity'
 import { UserEntity } from './entities/user.entity'
@@ -72,6 +73,7 @@ export function createDataSource() {
       AccommodationPersistence1760000002000,
       ReservationCreationHash1760000003000,
       ReservationStayPricing1760000004000,
+      MoneyPrecision1760000005000,
     ],
     synchronize: false,
     migrationsRun: false,
