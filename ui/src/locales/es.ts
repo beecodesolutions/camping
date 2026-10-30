@@ -18,7 +18,6 @@ const es = {
     home: 'Hoy',
     stays: 'Estadías',
     reservations: 'Reservas',
-    more: 'Más',
     workspace: 'Recepción',
     inProgress: 'En curso',
     allStays: 'Ver todas las estadías',
@@ -28,7 +27,6 @@ const es = {
     settingsHelp: 'Administrá las tarifas y los extras del camping.',
     reservationsHelp:
       'Consultá la disponibilidad y las reservas por fecha y alojamiento.',
-    backToMore: 'Volver a Más',
     settings: 'Configuración',
     menu: 'Abrir navegación',
     stayViews: 'Estado de las estadías',

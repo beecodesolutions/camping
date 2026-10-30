@@ -252,54 +252,25 @@ export default function CampingWorkspace({
           ) : (
             <LoadingPanel />
           ))}
-        {section === 'more' && (
-          <Stack spacing={2}>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography component="h2" variant="h6">
-                {t('navigation.campingSettings')}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mb: 2 }}>
-                {t('navigation.settingsHelp')}
-              </Typography>
-              <Button variant="outlined" href={workspaceHref('settings')}>
-                {t('navigation.settings')}
-              </Button>
-            </Paper>
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography component="h2" variant="h6">
-                {t('navigation.account')}
-              </Typography>
-              <Typography sx={{ mb: 2, overflowWrap: 'anywhere' }}>
-                {user.name}
-              </Typography>
+        {section === 'settings' ? (
+          profile ? (
+            <>
+              <SettingsPanel profile={profile} />
               <Stack
                 direction="row"
                 spacing={1}
                 sx={{
-                  alignItems: 'center',
                   display: { xs: 'flex', md: 'none' },
+                  alignItems: 'center',
+                  mt: 3,
                 }}
               >
                 {themeControl}
-                <Typography>{t('navigation.appearance')}</Typography>
+                <WorkspaceUserMenu
+                  onLogout={() => void logout()}
+                  logoutPending={logoutState.isLoading}
+                />
               </Stack>
-              <Button
-                onClick={() => void logout()}
-                disabled={logoutState.isLoading}
-                sx={{ mt: 2 }}
-              >
-                {t('auth.logout')}
-              </Button>
-            </Paper>
-          </Stack>
-        )}
-        {section === 'settings' ? (
-          profile ? (
-            <>
-              <Button href={workspaceHref('more')} sx={{ mb: 2 }}>
-                {t('navigation.backToMore')}
-              </Button>
-              <SettingsPanel profile={profile} />
             </>
           ) : (
             <LoadingPanel />

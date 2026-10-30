@@ -1,7 +1,7 @@
 import { workspaceSpacing } from './app/workspaceSpacing'
 import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
-import { BedDouble, CalendarDays, Ellipsis, Sun } from 'lucide-react'
+import { BedDouble, CalendarDays, Settings, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { alpha, Box, Button, Paper, Stack, Typography } from '@mui/material'
 import LucideIcon from './components/LucideIcon'
@@ -16,12 +16,12 @@ const destinations = [
   { section: 'home', icon: Sun },
   { section: 'stays', icon: BedDouble },
   { section: 'reservations', icon: CalendarDays },
-  { section: 'more', icon: Ellipsis },
+  { section: 'settings', icon: Settings },
 ] as const
 
 export default function WorkspaceNavigation({ section, controls }: Props) {
   const { t } = useTranslation()
-  const activeSection = section === 'settings' ? 'more' : section
+  const activeSection = section
   const [barVisible, setBarVisible] = useState(true)
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
                 xs: theme.spacing(workspaceSpacing.mobileNavigationHeight),
                 md: theme.spacing(workspaceSpacing.desktopNavigationHeight),
               }),
-              ml: { md: value === 'more' ? 'auto !important' : undefined },
+              ml: { md: value === 'settings' ? 'auto !important' : undefined },
               flexDirection: { xs: 'column', md: 'row' },
               justifyContent: 'center',
               gap: { xs: 0.5, md: 1.5 },
