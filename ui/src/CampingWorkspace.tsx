@@ -1,3 +1,4 @@
+import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -62,6 +63,7 @@ import WorkspaceLayout from './WorkspaceLayout'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
 import WorkspaceNavigation from './WorkspaceNavigation'
+import WorkspaceUserMenu from './WorkspaceUserMenu'
 import { useWorkspaceSection, workspaceHref } from './app/workspaceLocation'
 import PendingBalanceCard from './PendingBalanceCard'
 import { useTimeOfDay } from './app/timeOfDay'
@@ -151,7 +153,18 @@ export default function CampingWorkspace({
           }}
         />
       )}
-      <WorkspaceNavigation section={section} />
+      <WorkspaceNavigation
+        section={section}
+        controls={
+          <>
+            {themeControl}
+            <WorkspaceUserMenu
+              onLogout={() => void logout()}
+              logoutPending={logoutState.isLoading}
+            />
+          </>
+        }
+      />
       <WorkspaceLayout
         notices={
           <>
@@ -258,7 +271,14 @@ export default function CampingWorkspace({
               <Typography sx={{ mb: 2, overflowWrap: 'anywhere' }}>
                 {user.name}
               </Typography>
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                  display: { xs: 'flex', md: 'none' },
+                }}
+              >
                 {themeControl}
                 <Typography>{t('navigation.appearance')}</Typography>
               </Stack>
@@ -290,7 +310,7 @@ export default function CampingWorkspace({
               onChange={(_, value: 'active' | 'closed') => {
                 setStayStatus(value)
                 setPage(1)
-                window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+                scrollWorkspaceToTop()
               }}
               aria-label={t('navigation.stayViews')}
             >

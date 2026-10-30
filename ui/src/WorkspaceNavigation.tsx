@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { scrollWorkspaceToTop } from './app/workspaceScroll'
+import { useEffect, useState, type ReactNode } from 'react'
 import { BedDouble, CalendarDays, Ellipsis, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { alpha, Box, Button, Paper, Stack, Typography } from '@mui/material'
@@ -7,6 +8,7 @@ import { workspaceHref, type WorkspaceSection } from './app/workspaceLocation'
 
 type Props = {
   section: WorkspaceSection
+  controls?: ReactNode
 }
 
 const destinations = [
@@ -16,7 +18,7 @@ const destinations = [
   { section: 'more', icon: Ellipsis },
 ] as const
 
-export default function WorkspaceNavigation({ section }: Props) {
+export default function WorkspaceNavigation({ section, controls }: Props) {
   const { t } = useTranslation()
   const activeSection = section === 'settings' ? 'more' : section
   const [barVisible, setBarVisible] = useState(true)
@@ -113,9 +115,7 @@ export default function WorkspaceNavigation({ section }: Props) {
           <Button
             key={value}
             href={workspaceHref(value)}
-            onClick={() =>
-              window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-            }
+            onClick={() => scrollWorkspaceToTop()}
             aria-current={activeSection === value ? 'page' : undefined}
             sx={{
               flex: { xs: 1, md: 'initial' },
@@ -153,6 +153,13 @@ export default function WorkspaceNavigation({ section }: Props) {
             {t(`navigation.${value}`)}
           </Button>
         ))}
+      </Stack>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}
+      >
+        {controls}
       </Stack>
     </Paper>
   )

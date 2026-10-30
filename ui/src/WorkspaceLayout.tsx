@@ -9,7 +9,17 @@ type Props = {
 
 export default function WorkspaceLayout({ header, notices, children }: Props) {
   return (
-    <Box sx={{ pt: { md: '72px' } }}>
+    <Box
+      id="workspace-scroll"
+      sx={{
+        position: { md: 'fixed' },
+        top: { md: 72 },
+        bottom: { md: 0 },
+        left: { md: 0 },
+        right: { md: 0 },
+        overflowY: { md: 'auto' },
+      }}
+    >
       <Box
         component="main"
         sx={{
@@ -17,7 +27,7 @@ export default function WorkspaceLayout({ header, notices, children }: Props) {
           mx: 'auto',
           px: { xs: 2, sm: 3 },
           pt: { xs: 3, md: 5 },
-          pb: { xs: 'calc(160px + env(safe-area-inset-bottom))', md: 14 },
+          pb: { xs: 'calc(160px + env(safe-area-inset-bottom))', md: 4 },
         }}
       >
         <Stack spacing={3}>
