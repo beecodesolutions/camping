@@ -18,7 +18,7 @@ it.each([
   (section, label) => {
     const markup = renderToStaticMarkup(
       <ThemeProvider theme={lightTheme}>
-        <WorkspaceNavigation section={section} campingName="Mi camping" />
+        <WorkspaceNavigation section={section} />
       </ThemeProvider>,
     )
     const links = markup.match(/<a\b[^>]*>[\s\S]*?<\/a>/g) ?? []

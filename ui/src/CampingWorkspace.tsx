@@ -58,6 +58,7 @@ import {
 import CheckInDialog from './CheckInDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
+import WorkspaceLayout from './WorkspaceLayout'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
 import WorkspaceNavigation from './WorkspaceNavigation'
@@ -150,30 +151,22 @@ export default function CampingWorkspace({
           }}
         />
       )}
-      <WorkspaceNavigation
-        section={section}
-        campingName={profile?.name ?? t('common.appName')}
-      />
-      <Box sx={{ ml: { md: '208px' } }}>
-        <Box
-          component="main"
-          sx={{
-            maxWidth: 980,
-            mx: 'auto',
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 2, md: 3 },
-            pb: { xs: 'calc(160px + env(safe-area-inset-bottom))', md: 14 },
-          }}
-        >
-          {logoutState.isError && (
-            <Alert severity="error">{t('auth.logoutError')}</Alert>
-          )}
-          {registeredName && (
-            <Alert severity="success" onClose={() => setRegisteredName(null)}>
-              {t('checkIn.success', { name: registeredName })}
-            </Alert>
-          )}
-          {profile && (
+      <WorkspaceNavigation section={section} />
+      <WorkspaceLayout
+        notices={
+          <>
+            {logoutState.isError && (
+              <Alert severity="error">{t('auth.logoutError')}</Alert>
+            )}
+            {registeredName && (
+              <Alert severity="success" onClose={() => setRegisteredName(null)}>
+                {t('checkIn.success', { name: registeredName })}
+              </Alert>
+            )}
+          </>
+        }
+        header={
+          profile && (
             <HomeHeader
               name={profile.name}
               greeting={
@@ -182,163 +175,159 @@ export default function CampingWorkspace({
               userName={section === 'home' ? user.name : undefined}
               showCheckIn={false}
             />
-          )}
-          {section === 'home' &&
-            (profile ? (
-              <>
+          )
+        }
+      >
+        {section === 'home' &&
+          (profile ? (
+            <>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0, 1fr)',
+                    sm: 'repeat(2, minmax(0, 1fr))',
+                    lg: 'repeat(3, minmax(0, 1fr))',
+                  },
+                  gap: 2,
+                  mb: 2,
+                }}
+              >
                 <Box
                   sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: 'minmax(0, 1fr)',
-                      sm: 'repeat(2, minmax(0, 1fr))',
-                      lg: 'repeat(3, minmax(0, 1fr))',
-                    },
-                    gap: 2,
-                    mt: 2,
-                    mb: 2,
+                    minWidth: 0,
+                    gridColumn: { sm: 'span 2', lg: 'span 2' },
                   }}
                 >
-                  <Box
-                    sx={{
-                      minWidth: 0,
-                      gridColumn: { sm: 'span 2', lg: 'span 2' },
-                    }}
-                  >
-                    <OccupancyCard profile={profile} />
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <PendingBalanceCard
-                      pendingAmountMinor={profile.pendingAmountMinor}
-                      currency={profile.currency}
-                    />
-                  </Box>
+                  <OccupancyCard profile={profile} />
                 </Box>
-                <Box sx={{ mt: 2 }}>
-                  <DashboardToday
-                    profile={profile}
-                    onSelect={setSelection}
-                    refreshKey={todayRefreshKey}
+                <Box sx={{ minWidth: 0 }}>
+                  <PendingBalanceCard
+                    pendingAmountMinor={profile.pendingAmountMinor}
+                    currency={profile.currency}
                   />
-                  <Button href={workspaceHref('stays')} sx={{ mt: 2 }}>
-                    {t('navigation.allStays')}
-                  </Button>
                 </Box>
-              </>
-            ) : (
-              <LoadingPanel />
-            ))}
-          {section === 'reservations' &&
-            (profile ? (
-              <Stack spacing={2}>
-                <Box>
-                  <Typography component="h2" variant="h6">
-                    {t('calendar.title')}
-                  </Typography>
-                  <Typography color="text.secondary">
-                    {t('navigation.reservationsHelp')}
-                  </Typography>
-                </Box>
-                <AvailabilityCalendar profile={profile} />
-              </Stack>
-            ) : (
-              <LoadingPanel />
-            ))}
-          {section === 'more' && (
-            <Stack spacing={2}>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography component="h2" variant="h6">
-                  {t('navigation.campingSettings')}
-                </Typography>
-                <Typography color="text.secondary" sx={{ mb: 2 }}>
-                  {t('navigation.settingsHelp')}
-                </Typography>
-                <Button variant="outlined" href={workspaceHref('settings')}>
-                  {t('navigation.settings')}
-                </Button>
-              </Paper>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography component="h2" variant="h6">
-                  {t('navigation.account')}
-                </Typography>
-                <Typography sx={{ mb: 2, overflowWrap: 'anywhere' }}>
-                  {user.name}
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: 'center' }}
-                >
-                  {themeControl}
-                  <Typography>{t('navigation.appearance')}</Typography>
-                </Stack>
-                <Button
-                  onClick={() => void logout()}
-                  disabled={logoutState.isLoading}
-                  sx={{ mt: 2 }}
-                >
-                  {t('auth.logout')}
-                </Button>
-              </Paper>
-            </Stack>
-          )}
-          {section === 'settings' ? (
-            profile ? (
-              <>
-                <Button href={workspaceHref('more')} sx={{ mb: 2 }}>
-                  {t('navigation.backToMore')}
-                </Button>
-                <SettingsPanel profile={profile} />
-              </>
-            ) : (
-              <LoadingPanel />
-            )
-          ) : section === 'stays' ? (
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              <Tabs
-                value={stayStatus}
-                onChange={(_, value: 'active' | 'closed') => {
-                  setStayStatus(value)
-                  setPage(1)
-                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-                }}
-                aria-label={t('navigation.stayViews')}
-              >
-                <Tab value="active" label={t('navigation.inProgress')} />
-                <Tab value="closed" label={t('home.closedStays')} />
-              </Tabs>
-              {stays.isFetching && (
-                <Typography color="text.secondary">
-                  {t('home.loading')}
-                </Typography>
-              )}
-              {stays.isError && (
-                <Alert severity="error">
-                  {t('home.loadError')}{' '}
-                  <Button onClick={() => void stays.refetch()}>
-                    {t('common.retry')}
-                  </Button>
-                </Alert>
-              )}
-              {stays.currentData && profile && (
-                <EnrichedStayList
-                  items={stays.currentData.items}
-                  timezone={profile.timezone}
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <DashboardToday
+                  profile={profile}
                   onSelect={setSelection}
+                  refreshKey={todayRefreshKey}
                 />
-              )}
-              {stays.currentData && (
-                <Pagination
-                  page={stays.currentData.page}
-                  pageSize={stays.currentData.pageSize}
-                  total={stays.currentData.total}
-                  onPage={setPage}
-                />
-              )}
+                <Button href={workspaceHref('stays')} sx={{ mt: 2 }}>
+                  {t('navigation.allStays')}
+                </Button>
+              </Box>
+            </>
+          ) : (
+            <LoadingPanel />
+          ))}
+        {section === 'reservations' &&
+          (profile ? (
+            <Stack spacing={2}>
+              <Box>
+                <Typography component="h2" variant="h6">
+                  {t('calendar.title')}
+                </Typography>
+                <Typography color="text.secondary">
+                  {t('navigation.reservationsHelp')}
+                </Typography>
+              </Box>
+              <AvailabilityCalendar profile={profile} />
             </Stack>
-          ) : null}
-        </Box>
-      </Box>
+          ) : (
+            <LoadingPanel />
+          ))}
+        {section === 'more' && (
+          <Stack spacing={2}>
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography component="h2" variant="h6">
+                {t('navigation.campingSettings')}
+              </Typography>
+              <Typography color="text.secondary" sx={{ mb: 2 }}>
+                {t('navigation.settingsHelp')}
+              </Typography>
+              <Button variant="outlined" href={workspaceHref('settings')}>
+                {t('navigation.settings')}
+              </Button>
+            </Paper>
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography component="h2" variant="h6">
+                {t('navigation.account')}
+              </Typography>
+              <Typography sx={{ mb: 2, overflowWrap: 'anywhere' }}>
+                {user.name}
+              </Typography>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                {themeControl}
+                <Typography>{t('navigation.appearance')}</Typography>
+              </Stack>
+              <Button
+                onClick={() => void logout()}
+                disabled={logoutState.isLoading}
+                sx={{ mt: 2 }}
+              >
+                {t('auth.logout')}
+              </Button>
+            </Paper>
+          </Stack>
+        )}
+        {section === 'settings' ? (
+          profile ? (
+            <>
+              <Button href={workspaceHref('more')} sx={{ mb: 2 }}>
+                {t('navigation.backToMore')}
+              </Button>
+              <SettingsPanel profile={profile} />
+            </>
+          ) : (
+            <LoadingPanel />
+          )
+        ) : section === 'stays' ? (
+          <Stack spacing={2}>
+            <Tabs
+              value={stayStatus}
+              onChange={(_, value: 'active' | 'closed') => {
+                setStayStatus(value)
+                setPage(1)
+                window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+              }}
+              aria-label={t('navigation.stayViews')}
+            >
+              <Tab value="active" label={t('navigation.inProgress')} />
+              <Tab value="closed" label={t('home.closedStays')} />
+            </Tabs>
+            {stays.isFetching && (
+              <Typography color="text.secondary">
+                {t('home.loading')}
+              </Typography>
+            )}
+            {stays.isError && (
+              <Alert severity="error">
+                {t('home.loadError')}{' '}
+                <Button onClick={() => void stays.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              </Alert>
+            )}
+            {stays.currentData && profile && (
+              <EnrichedStayList
+                items={stays.currentData.items}
+                timezone={profile.timezone}
+                onSelect={setSelection}
+              />
+            )}
+            {stays.currentData && (
+              <Pagination
+                page={stays.currentData.page}
+                pageSize={stays.currentData.pageSize}
+                total={stays.currentData.total}
+                onPage={setPage}
+              />
+            )}
+          </Stack>
+        ) : null}
+      </WorkspaceLayout>
       {(section === 'home' || section === 'stays') && (
         <Fab
           color="primary"

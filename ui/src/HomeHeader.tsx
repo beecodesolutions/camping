@@ -25,8 +25,6 @@ export default function HomeHeader({
       component="header"
       sx={{
         color: 'text.primary',
-        pt: 0,
-        pb: 1,
         display: 'flex',
         alignItems: 'center',
         gap: 2,

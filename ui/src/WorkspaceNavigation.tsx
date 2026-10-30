@@ -7,7 +7,6 @@ import { workspaceHref, type WorkspaceSection } from './app/workspaceLocation'
 
 type Props = {
   section: WorkspaceSection
-  campingName: string
 }
 
 const destinations = [
@@ -17,7 +16,7 @@ const destinations = [
   { section: 'more', icon: Ellipsis },
 ] as const
 
-export default function WorkspaceNavigation({ section, campingName }: Props) {
+export default function WorkspaceNavigation({ section }: Props) {
   const { t } = useTranslation()
   const activeSection = section === 'settings' ? 'more' : section
   const [barVisible, setBarVisible] = useState(true)
@@ -74,16 +73,19 @@ export default function WorkspaceNavigation({ section, campingName }: Props) {
       sx={{
         position: 'fixed',
         zIndex: (theme) => theme.zIndex.appBar,
-        bottom: 0,
+        bottom: { xs: 0, md: 'auto' },
         left: 0,
-        right: { xs: 0, md: 'auto' },
+        right: 0,
         top: { md: 0 },
-        width: { md: 208 },
+        height: { md: 72 },
+        display: { md: 'flex' },
+        alignItems: { md: 'center' },
+        gap: { md: 4 },
         borderTop: { xs: 1, md: 0 },
-        borderRight: { md: 1 },
+        borderBottom: { md: 1 },
         borderColor: 'divider',
         pb: { xs: 'env(safe-area-inset-bottom)', md: 0 },
-        px: { md: 1.5 },
+        px: { md: 3 },
         transform: {
           xs: barVisible ? 'translateY(0)' : 'translateY(100%)',
           md: 'none',
@@ -95,15 +97,18 @@ export default function WorkspaceNavigation({ section, campingName }: Props) {
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
-      <Box sx={{ display: { xs: 'none', md: 'block' }, px: 1.5, py: 3 }}>
-        <Typography variant="overline" color="primary.main">
-          {t('navigation.workspace')}
-        </Typography>
-        <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
-          {campingName}
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'block' },
+          minWidth: 0,
+          maxWidth: '35%',
+        }}
+      >
+        <Typography noWrap sx={{ fontWeight: 700, color: 'primary.main' }}>
+          Maytu
         </Typography>
       </Box>
-      <Stack direction={{ xs: 'row', md: 'column' }} spacing={{ md: 0.5 }}>
+      <Stack direction="row" spacing={{ md: 1 }} sx={{ flex: 1 }}>
         {destinations.map(({ section: value, icon }) => (
           <Button
             key={value}
@@ -115,17 +120,25 @@ export default function WorkspaceNavigation({ section, campingName }: Props) {
             sx={{
               flex: { xs: 1, md: 'initial' },
               minWidth: 0,
-              minHeight: 64,
+              minHeight: { xs: 64, md: 72 },
+              ml: { md: value === 'more' ? 'auto !important' : undefined },
               flexDirection: { xs: 'column', md: 'row' },
-              justifyContent: { md: 'flex-start' },
+              justifyContent: 'center',
               gap: { xs: 0.5, md: 1.5 },
               px: { xs: 0.5, md: 1.5 },
               py: 1,
-              borderRadius: { xs: 0, md: 2 },
+              borderRadius: 0,
+              borderBottom: { md: '3px solid' },
+              borderBottomColor: {
+                md: activeSection === value ? 'accent.main' : 'transparent',
+              },
               textTransform: 'none',
               bgcolor: (theme) =>
                 activeSection === value
-                  ? alpha(theme.palette.accent.main, 0.12)
+                  ? {
+                      xs: alpha(theme.palette.accent.main, 0.12),
+                      md: 'transparent',
+                    }
                   : undefined,
               color: activeSection === value ? 'accent.main' : 'text.secondary',
               '&:hover': {
