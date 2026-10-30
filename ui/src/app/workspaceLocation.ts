@@ -4,7 +4,6 @@ const sectionPaths = {
   home: '/hoy',
   stays: '/estadias',
   reservations: '/reservas',
-  more: '/mas',
   settings: '/configuracion',
 } as const
 
@@ -15,6 +14,7 @@ export function workspaceHref(section: WorkspaceSection) {
 }
 
 export function workspaceSectionFromHash(hash: string): WorkspaceSection {
+  if (hash === '#/mas') return 'settings'
   for (const section of Object.keys(sectionPaths) as WorkspaceSection[]) {
     if (workspaceHref(section) === hash) return section
   }

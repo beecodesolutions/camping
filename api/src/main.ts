@@ -57,7 +57,7 @@ export async function createNestApp() {
 async function main() {
   const app = await createNestApp()
   await app.listen(
-    Number(process.env.PORT ?? 3000),
+    Number(process.env.PORT ?? 3010),
     process.env.HOST ?? '127.0.0.1',
   )
 }

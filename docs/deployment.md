@@ -1,9 +1,9 @@
 # Camping production
 
-Frontend: https://camping-theta-rose.vercel.app
+Frontend: https://www.maytu.app (`https://maytu.app` redirects to the canonical `www` origin).
 
 - Vercel project `camping`, root directory `ui`, Hobby plan. Production `VITE_ENABLE_MOCKS=false`; API defaults to `/api`.
-- `ui/vercel.json` proxies `/api` to API Gateway and falls back to the SPA. Login requires the canonical frontend origin above.
+- `ui/vercel.json` proxies `/api` to API Gateway and falls back to the SPA. Login requires the canonical frontend origin above; set CloudFormation `AllowedOrigin=https://www.maytu.app` so Lambda origin validation and API Gateway CORS agree.
 - AWS account `048834125079`, region `us-east-1`, CloudFormation stack `camping-production`. Use named CLI profile `camping`; never the workstation default profile.
 - Supabase Free project `xpnleaxbatypnbbwzeku`, region `us-east-1`. Private schema `camping_private`; TLS enforced. Runtime uses restricted `camping_runtime` through transaction pooler port 6543; administration uses session pooler port 5432.
 - Database URL is in AWS Secrets Manager `camping/production/database`, never Vercel or Git. Public database CA is bundled in Lambda; see `api/certs/README.md`.

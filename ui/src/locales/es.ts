@@ -18,7 +18,6 @@ const es = {
     home: 'Hoy',
     stays: 'Estadías',
     reservations: 'Reservas',
-    more: 'Más',
     workspace: 'Recepción',
     inProgress: 'En curso',
     allStays: 'Ver todas las estadías',
@@ -28,7 +27,6 @@ const es = {
     settingsHelp: 'Administrá las tarifas y los extras del camping.',
     reservationsHelp:
       'Consultá la disponibilidad y las reservas por fecha y alojamiento.',
-    backToMore: 'Volver a Más',
     settings: 'Configuración',
     menu: 'Abrir navegación',
     stayViews: 'Estado de las estadías',
@@ -110,14 +108,22 @@ const es = {
     useCents: 'Usar centavos',
     moneyHelp:
       'Sin centavos por defecto. El cambio se aplica a nuevas reservas y estadías; los importes anteriores se conservan.',
-    rates: 'Tarifas por noche',
-    ratesHelp: 'Las tarifas nuevas se aplican a los ingresos siguientes.',
-    templates: 'Plantillas de extras',
-    createTemplate: 'Crear plantilla',
+    rates: 'Tarifas de camping por noche',
+    ratesHelp:
+      'Precio por persona y noche para camping libre. Los cambios se aplican a nuevos ingresos.',
+    editRate: 'Editar tarifa',
+    templates: 'Extras',
+    createTemplate: 'Crear extra',
     deactivate: 'Desactivar',
     activate: 'Activar',
     saveError: 'No pudimos guardar los cambios.',
-    loadError: 'No pudimos cargar las plantillas.',
+    loadError: 'No pudimos cargar los extras.',
+    uncategorized: 'Sin categoría',
+    editExtra: 'Editar extra',
+    inactive: 'Desactivado',
+    deactivateExtra: 'Desactivar extra',
+    deactivateHelp:
+      '“{{name}}” dejará de estar disponible para nuevos cargos. Su historial se conserva y podés reactivarlo después.',
   },
   calendar: {
     title: 'Disponibilidad',

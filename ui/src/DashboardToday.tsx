@@ -272,14 +272,12 @@ function DepartureRow({
   typeNames,
   typeModes,
   unitNames,
-  language,
   onCheckOut,
 }: {
   stay: DepartureItem
   typeNames: Map<string, string>
   typeModes: Map<string, string>
   unitNames: Map<string, string>
-  language: string
   onCheckOut: () => void
 }) {
   const { t } = useTranslation()
@@ -345,13 +343,6 @@ function DepartureRow({
             </IconButton>
           </Tooltip>
         )}
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: { xs: 'none', sm: 'block' } }}
-        >
-          {formatDate(stay.estimatedDeparture, language)}
-        </Typography>
       </Stack>
     </ListItem>
   )
@@ -558,7 +549,6 @@ export default function DashboardToday({
                     typeNames={typeNames}
                     typeModes={typeModes}
                     unitNames={unitNames}
-                    language={i18n.language}
                     onCheckOut={() =>
                       onSelect({ id: stay.id, action: 'close' })
                     }
@@ -595,7 +585,6 @@ export default function DashboardToday({
                     typeNames={typeNames}
                     typeModes={typeModes}
                     unitNames={unitNames}
-                    language={i18n.language}
                     onCheckOut={() =>
                       onSelect({ id: stay.id, action: 'close' })
                     }

@@ -1,3 +1,5 @@
+import { workspaceSpacing } from './app/workspaceSpacing'
+import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -19,9 +21,10 @@ import {
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
-import { Plus } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
 import MoneyField from './components/MoneyField'
 import { paymentInputSchema } from '@camping/contracts'
@@ -58,9 +61,11 @@ import {
 import CheckInDialog from './CheckInDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
+import WorkspaceLayout from './WorkspaceLayout'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
 import WorkspaceNavigation from './WorkspaceNavigation'
+import WorkspaceUserMenu from './WorkspaceUserMenu'
 import { useWorkspaceSection, workspaceHref } from './app/workspaceLocation'
 import PendingBalanceCard from './PendingBalanceCard'
 import { useTimeOfDay } from './app/timeOfDay'
@@ -152,213 +157,170 @@ export default function CampingWorkspace({
       )}
       <WorkspaceNavigation
         section={section}
-        campingName={profile?.name ?? t('common.appName')}
+        controls={
+          <>
+            {themeControl}
+            <WorkspaceUserMenu
+              onLogout={() => void logout()}
+              logoutPending={logoutState.isLoading}
+            />
+          </>
+        }
       />
-      <Box sx={{ ml: { md: '208px' } }}>
-        <Box
-          component="main"
-          sx={{
-            maxWidth: 980,
-            mx: 'auto',
-            px: { xs: 2, sm: 3 },
-            pt: { xs: 2, md: 3 },
-            pb: { xs: 'calc(160px + env(safe-area-inset-bottom))', md: 14 },
-          }}
-        >
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{
-              mb: 3,
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="overline"
-                color="primary.main"
-                sx={{ overflowWrap: 'anywhere' }}
-              >
-                {profile?.name ?? t('common.appName')}
-              </Typography>
-              <Typography component="h1" variant="h5" sx={{ fontWeight: 700 }}>
-                {t(`navigation.${section}`)}
-              </Typography>
-            </Box>
-          </Stack>
-          {logoutState.isError && (
-            <Alert severity="error">{t('auth.logoutError')}</Alert>
-          )}
-          {registeredName && (
-            <Alert severity="success" onClose={() => setRegisteredName(null)}>
-              {t('checkIn.success', { name: registeredName })}
-            </Alert>
-          )}
-          {profile && section === 'home' && (
+      <WorkspaceLayout
+        notices={
+          <>
+            {logoutState.isError && (
+              <Alert severity="error">{t('auth.logoutError')}</Alert>
+            )}
+            {registeredName && (
+              <Alert severity="success" onClose={() => setRegisteredName(null)}>
+                {t('checkIn.success', { name: registeredName })}
+              </Alert>
+            )}
+          </>
+        }
+        header={
+          profile && (
             <HomeHeader
               name={profile.name}
-              greeting={t(greeting)}
-              userName={user.name}
+              greeting={
+                section === 'home' ? t(greeting) : t(`navigation.${section}`)
+              }
+              userName={section === 'home' ? user.name : undefined}
               showCheckIn={false}
             />
-          )}
-          {section === 'home' &&
-            (profile ? (
-              <>
+          )
+        }
+      >
+        {section === 'home' &&
+          (profile ? (
+            <>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0, 1fr)',
+                    sm: 'repeat(2, minmax(0, 1fr))',
+                    lg: 'repeat(3, minmax(0, 1fr))',
+                  },
+                  gap: 2,
+                  mb: 2,
+                }}
+              >
                 <Box
                   sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: 'minmax(0, 1fr)',
-                      sm: 'repeat(2, minmax(0, 1fr))',
-                      lg: 'repeat(3, minmax(0, 1fr))',
-                    },
-                    gap: 2,
-                    mt: 2,
-                    mb: 2,
+                    minWidth: 0,
+                    gridColumn: { sm: 'span 2', lg: 'span 2' },
                   }}
                 >
-                  <Box
-                    sx={{
-                      minWidth: 0,
-                      gridColumn: { sm: 'span 2', lg: 'span 2' },
-                    }}
-                  >
-                    <OccupancyCard profile={profile} />
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <PendingBalanceCard
-                      pendingAmountMinor={profile.pendingAmountMinor}
-                      currency={profile.currency}
-                    />
-                  </Box>
+                  <OccupancyCard profile={profile} />
                 </Box>
-                <Box sx={{ mt: 2 }}>
-                  <DashboardToday
-                    profile={profile}
-                    onSelect={setSelection}
-                    refreshKey={todayRefreshKey}
+                <Box sx={{ minWidth: 0 }}>
+                  <PendingBalanceCard
+                    pendingAmountMinor={profile.pendingAmountMinor}
+                    currency={profile.currency}
                   />
-                  <Button href={workspaceHref('stays')} sx={{ mt: 2 }}>
-                    {t('navigation.allStays')}
-                  </Button>
                 </Box>
-              </>
-            ) : (
-              <LoadingPanel />
-            ))}
-          {section === 'reservations' &&
-            (profile ? (
-              <Stack spacing={2}>
-                <Box>
-                  <Typography component="h2" variant="h6">
-                    {t('calendar.title')}
-                  </Typography>
-                  <Typography color="text.secondary">
-                    {t('navigation.reservationsHelp')}
-                  </Typography>
-                </Box>
-                <AvailabilityCalendar profile={profile} />
-              </Stack>
-            ) : (
-              <LoadingPanel />
-            ))}
-          {section === 'more' && (
-            <Stack spacing={2}>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography component="h2" variant="h6">
-                  {t('navigation.campingSettings')}
-                </Typography>
-                <Typography color="text.secondary" sx={{ mb: 2 }}>
-                  {t('navigation.settingsHelp')}
-                </Typography>
-                <Button variant="outlined" href={workspaceHref('settings')}>
-                  {t('navigation.settings')}
-                </Button>
-              </Paper>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography component="h2" variant="h6">
-                  {t('navigation.account')}
-                </Typography>
-                <Typography sx={{ mb: 2, overflowWrap: 'anywhere' }}>
-                  {user.name}
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{ alignItems: 'center' }}
-                >
-                  {themeControl}
-                  <Typography>{t('navigation.appearance')}</Typography>
-                </Stack>
-                <Button
-                  onClick={() => void logout()}
-                  disabled={logoutState.isLoading}
-                  sx={{ mt: 2 }}
-                >
-                  {t('auth.logout')}
-                </Button>
-              </Paper>
-            </Stack>
-          )}
-          {section === 'settings' ? (
-            profile ? (
-              <>
-                <Button href={workspaceHref('more')} sx={{ mb: 2 }}>
-                  {t('navigation.backToMore')}
-                </Button>
-                <SettingsPanel profile={profile} />
-              </>
-            ) : (
-              <LoadingPanel />
-            )
-          ) : section === 'stays' ? (
-            <Stack spacing={2} sx={{ mt: 2 }}>
-              <Tabs
-                value={stayStatus}
-                onChange={(_, value: 'active' | 'closed') => {
-                  setStayStatus(value)
-                  setPage(1)
-                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-                }}
-                aria-label={t('navigation.stayViews')}
-              >
-                <Tab value="active" label={t('navigation.inProgress')} />
-                <Tab value="closed" label={t('home.closedStays')} />
-              </Tabs>
-              {stays.isFetching && (
-                <Typography color="text.secondary">
-                  {t('home.loading')}
-                </Typography>
-              )}
-              {stays.isError && (
-                <Alert severity="error">
-                  {t('home.loadError')}{' '}
-                  <Button onClick={() => void stays.refetch()}>
-                    {t('common.retry')}
-                  </Button>
-                </Alert>
-              )}
-              {stays.currentData && profile && (
-                <EnrichedStayList
-                  items={stays.currentData.items}
-                  timezone={profile.timezone}
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <DashboardToday
+                  profile={profile}
                   onSelect={setSelection}
+                  refreshKey={todayRefreshKey}
                 />
-              )}
-              {stays.currentData && (
-                <Pagination
-                  page={stays.currentData.page}
-                  pageSize={stays.currentData.pageSize}
-                  total={stays.currentData.total}
-                  onPage={setPage}
-                />
-              )}
+                <Button href={workspaceHref('stays')} sx={{ mt: 2 }}>
+                  {t('navigation.allStays')}
+                </Button>
+              </Box>
+            </>
+          ) : (
+            <LoadingPanel />
+          ))}
+        {section === 'reservations' &&
+          (profile ? (
+            <Stack spacing={2}>
+              <Box>
+                <Typography component="h2" variant="h6">
+                  {t('calendar.title')}
+                </Typography>
+                <Typography color="text.secondary">
+                  {t('navigation.reservationsHelp')}
+                </Typography>
+              </Box>
+              <AvailabilityCalendar profile={profile} />
             </Stack>
-          ) : null}
-        </Box>
-      </Box>
+          ) : (
+            <LoadingPanel />
+          ))}
+        {section === 'settings' ? (
+          profile ? (
+            <>
+              <SettingsPanel profile={profile} />
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  display: { xs: 'flex', md: 'none' },
+                  alignItems: 'center',
+                  mt: 3,
+                }}
+              >
+                {themeControl}
+                <WorkspaceUserMenu
+                  onLogout={() => void logout()}
+                  logoutPending={logoutState.isLoading}
+                />
+              </Stack>
+            </>
+          ) : (
+            <LoadingPanel />
+          )
+        ) : section === 'stays' ? (
+          <Stack spacing={2}>
+            <Tabs
+              value={stayStatus}
+              onChange={(_, value: 'active' | 'closed') => {
+                setStayStatus(value)
+                setPage(1)
+                scrollWorkspaceToTop()
+              }}
+              aria-label={t('navigation.stayViews')}
+            >
+              <Tab value="active" label={t('navigation.inProgress')} />
+              <Tab value="closed" label={t('home.closedStays')} />
+            </Tabs>
+            {stays.isFetching && (
+              <Typography color="text.secondary">
+                {t('home.loading')}
+              </Typography>
+            )}
+            {stays.isError && (
+              <Alert severity="error">
+                {t('home.loadError')}{' '}
+                <Button onClick={() => void stays.refetch()}>
+                  {t('common.retry')}
+                </Button>
+              </Alert>
+            )}
+            {stays.currentData && profile && (
+              <EnrichedStayList
+                items={stays.currentData.items}
+                timezone={profile.timezone}
+                onSelect={setSelection}
+              />
+            )}
+            {stays.currentData && (
+              <Pagination
+                page={stays.currentData.page}
+                pageSize={stays.currentData.pageSize}
+                total={stays.currentData.total}
+                onPage={setPage}
+              />
+            )}
+          </Stack>
+        ) : null}
+      </WorkspaceLayout>
       {(section === 'home' || section === 'stays') && (
         <Fab
           color="primary"
@@ -367,8 +329,13 @@ export default function CampingWorkspace({
           onClick={() => openWorkspaceDialog({ kind: 'check-in' })}
           sx={{
             position: 'fixed',
-            right: { xs: 16, md: 32 },
-            bottom: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 24 },
+            right: (theme) => ({ xs: theme.spacing(2), md: theme.spacing(4) }),
+            bottom: (theme) => ({
+              xs: `calc(${theme.spacing(workspaceSpacing.mobileNavigationHeight + workspaceSpacing.floatingActionGap)} + env(safe-area-inset-bottom))`,
+              md: theme.spacing(3),
+            }),
+            minHeight: (theme) =>
+              theme.spacing(workspaceSpacing.floatingActionHeight),
             gap: 1,
             zIndex: (theme) => theme.zIndex.appBar,
           }}
@@ -1338,7 +1305,7 @@ function ExtraRow({
 }
 
 function SettingsPanel({ profile }: { profile: CampingProfile }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const templates = useExtraTemplatesQuery()
   const [create, createState] = useCreateExtraTemplateMutation()
   const [update] = useUpdateExtraTemplateMutation()
@@ -1347,6 +1314,9 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   const [category, setCategory] = useState('')
   const [unitPriceMinor, setUnitPriceMinor] = useState(0)
   const [rates, setRates] = useState(profile.rates)
+  const [editingRate, setEditingRate] = useState<
+    keyof typeof profile.rates | null
+  >(null)
   const [moneyDecimals, setMoneyDecimals] = useState(profile.moneyDecimals)
   const [updateMoneySettings, moneyState] = useUpdateMoneySettingsMutation()
   const [error, setError] = useState('')
@@ -1367,11 +1337,23 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   }
   const saveRates = async () => {
     try {
+      setError('')
       await updateRates(rates).unwrap()
+      setEditingRate(null)
     } catch {
       setError(t('settings.saveError'))
     }
   }
+  const extrasByCategory = new Map<string, ExtraTemplate[]>()
+  for (const template of templates.data ?? []) {
+    const key = template.category?.trim() ?? ''
+    const items = extrasByCategory.get(key) ?? []
+    items.push(template)
+    extrasByCategory.set(key, items)
+  }
+  const categories = [...extrasByCategory.keys()].sort((a, b) =>
+    a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, i18n.language),
+  )
   return (
     <Stack spacing={3} sx={{ mt: 3 }}>
       <Paper variant="outlined" sx={{ p: 2 }}>
@@ -1411,32 +1393,102 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t('settings.ratesHelp')}
         </Typography>
-        <Box sx={formGridSx}>
+        <Stack spacing={2}>
           {(['adults', 'children', 'infants'] as const).map((category) => (
-            <MoneyField
+            <Stack
               key={category}
-              label={`${t(`checkIn.${category}`)} (${ageLabel(profile.ageRanges[category])})`}
-              currency={profile.currency}
-              moneyDecimals={profile.moneyDecimals}
-              valueMinor={rates[category]}
-              onChangeMinor={(value) =>
-                setRates({ ...rates, [category]: value === '' ? NaN : value })
-              }
-            />
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ alignItems: { sm: 'center' } }}
+            >
+              <Typography sx={{ flex: 1 }}>
+                {t(`checkIn.${category}`)} (
+                {ageLabel(profile.ageRanges[category])})
+              </Typography>
+              {editingRate === category ? (
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1}
+                  sx={{ alignItems: { sm: 'center' } }}
+                >
+                  <MoneyField
+                    autoFocus
+                    size="small"
+                    label={`${t('stay.unitPrice')} (${profile.currency})`}
+                    helperText=""
+                    currency={profile.currency}
+                    moneyDecimals={profile.moneyDecimals}
+                    valueMinor={rates[category]}
+                    disabled={ratesState.isLoading}
+                    onChangeMinor={(value) =>
+                      setRates({
+                        ...rates,
+                        [category]: value === '' ? NaN : value,
+                      })
+                    }
+                  />
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => void saveRates()}
+                      disabled={
+                        ratesState.isLoading ||
+                        !Number.isSafeInteger(rates[category]) ||
+                        rates[category] < 0
+                      }
+                    >
+                      {t('common.save')}
+                    </Button>
+                    <Button
+                      variant="text"
+                      color="error"
+                      sx={{ textDecoration: 'underline' }}
+                      disabled={ratesState.isLoading}
+                      onClick={() => {
+                        setEditingRate(null)
+                        setError('')
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </Stack>
+                </Stack>
+              ) : (
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{ alignItems: 'center' }}
+                >
+                  <Typography>
+                    {formatMoney(
+                      profile.rates[category],
+                      profile.currency,
+                      i18n.language,
+                    )}
+                  </Typography>
+                  <Tooltip title={t('settings.editRate')}>
+                    <span>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        aria-label={t('settings.editRate')}
+                        disabled={editingRate !== null || ratesState.isLoading}
+                        onClick={() => {
+                          setRates(profile.rates)
+                          setError('')
+                          setEditingRate(category)
+                        }}
+                      >
+                        <LucideIcon icon={Pencil} fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Stack>
+              )}
+            </Stack>
           ))}
-          <Button
-            variant="contained"
-            onClick={() => void saveRates()}
-            disabled={
-              ratesState.isLoading ||
-              Object.values(rates).some(
-                (value) => !Number.isSafeInteger(value) || value < 0,
-              )
-            }
-          >
-            {t('common.save')}
-          </Button>
-        </Box>
+        </Stack>
       </Paper>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6">{t('settings.templates')}</Typography>
@@ -1444,14 +1496,25 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
           {templates.isError && (
             <Alert severity="error">{t('settings.loadError')}</Alert>
           )}
-          {(templates.data ?? []).map((template) => (
-            <TemplateRow
-              key={template.id}
-              template={template}
-              currency={profile.currency}
-              moneyDecimals={profile.moneyDecimals}
-              onSave={update}
-            />
+          {categories.map((category) => (
+            <Stack key={category} spacing={2}>
+              <Typography
+                component="h3"
+                variant="subtitle1"
+                sx={{ fontWeight: 700 }}
+              >
+                {category || t('settings.uncategorized')}
+              </Typography>
+              {extrasByCategory.get(category)?.map((template) => (
+                <TemplateRow
+                  key={template.id}
+                  template={template}
+                  currency={profile.currency}
+                  moneyDecimals={profile.moneyDecimals}
+                  onSave={update}
+                />
+              ))}
+            </Stack>
           ))}
         </Stack>
         <Divider sx={{ my: 2 }} />
@@ -1504,6 +1567,8 @@ function TemplateRow({
   onSave: ReturnType<typeof useUpdateExtraTemplateMutation>[0]
 }) {
   const { t, i18n } = useTranslation()
+  const [editing, setEditing] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const [description, setDescription] = useState(template.description)
   const [category, setCategory] = useState(template.category ?? '')
   const [price, setPrice] = useState(template.unitPriceMinor)
@@ -1519,6 +1584,8 @@ function TemplateRow({
     setError(false)
     try {
       await onSave({ id: template.id, patch }).unwrap()
+      setEditing(false)
+      setConfirmRemove(false)
     } catch {
       setError(true)
     } finally {
@@ -1526,66 +1593,194 @@ function TemplateRow({
     }
   }
   return (
-    <Box sx={formGridSx}>
-      <TextField
-        size="small"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        label={t('stay.category')}
-        disabled={saving}
-      />
-      <TextField
-        size="small"
-        label={t('stay.description')}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        disabled={saving}
-      />
-      <MoneyField
-        size="small"
-        label={t('stay.unitPrice')}
-        currency={currency}
-        moneyDecimals={moneyDecimals}
-        valueMinor={price}
-        onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
-        disabled={saving}
-      />
-      <Stack
-        direction="row"
-        useFlexGap
-        sx={{
-          gridColumn: '1 / -1',
-          gap: 1,
-          alignItems: 'center',
-          flexWrap: 'wrap',
+    <Box>
+      {editing ? (
+        <Box
+          sx={{
+            ...formGridSx,
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr) auto',
+            },
+          }}
+        >
+          <TextField
+            size="small"
+            label={t('stay.category')}
+            value={category}
+            disabled={saving}
+            onChange={(event) => setCategory(event.target.value)}
+          />
+          <TextField
+            autoFocus
+            size="small"
+            label={t('stay.description')}
+            value={description}
+            disabled={saving}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+          <MoneyField
+            size="small"
+            label={`${t('stay.unitPrice')} (${currency})`}
+            helperText=""
+            currency={currency}
+            moneyDecimals={moneyDecimals}
+            valueMinor={price}
+            disabled={saving}
+            onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
+          />
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              color="primary"
+              disabled={
+                saving ||
+                !description.trim() ||
+                !Number.isSafeInteger(price) ||
+                price < 0
+              }
+              onClick={() =>
+                void save({
+                  category: category.trim(),
+                  description: description.trim(),
+                  unitPriceMinor: price,
+                })
+              }
+            >
+              {t('common.save')}
+            </Button>
+            <Button
+              variant="text"
+              color="error"
+              sx={{ textDecoration: 'underline' }}
+              disabled={saving}
+              onClick={() => {
+                setEditing(false)
+                setError(false)
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+          </Stack>
+        </Box>
+      ) : (
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: 'center', minWidth: 0 }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                overflowWrap: 'anywhere',
+                color: template.enabled ? 'text.primary' : 'text.secondary',
+              }}
+            >
+              {template.description}
+            </Typography>
+            {!template.enabled && (
+              <Typography variant="caption" color="text.secondary">
+                {t('settings.inactive')}
+              </Typography>
+            )}
+          </Box>
+          <Typography sx={{ whiteSpace: 'nowrap' }}>
+            {formatMoney(template.unitPriceMinor, currency, i18n.language)}
+          </Typography>
+          <Stack direction="row">
+            <Tooltip title={t('settings.editExtra')}>
+              <span>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  aria-label={t('settings.editExtra')}
+                  disabled={saving}
+                  onClick={() => {
+                    setDescription(template.description)
+                    setCategory(template.category ?? '')
+                    setPrice(template.unitPriceMinor)
+                    setError(false)
+                    setEditing(true)
+                  }}
+                >
+                  <LucideIcon icon={Pencil} fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip
+              title={t(
+                template.enabled ? 'settings.deactivate' : 'settings.activate',
+              )}
+            >
+              <span>
+                <IconButton
+                  size="small"
+                  color={template.enabled ? 'error' : 'success'}
+                  aria-label={t(
+                    template.enabled
+                      ? 'settings.deactivate'
+                      : 'settings.activate',
+                  )}
+                  disabled={saving}
+                  onClick={() => {
+                    if (template.enabled) {
+                      setError(false)
+                      setConfirmRemove(true)
+                    } else void save({ enabled: true })
+                  }}
+                >
+                  <LucideIcon
+                    icon={template.enabled ? Trash2 : RotateCcw}
+                    fontSize="small"
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        </Stack>
+      )}
+      {error && !confirmRemove && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {t('settings.saveError')}
+        </Alert>
+      )}
+      <Dialog
+        open={confirmRemove}
+        onClose={() => {
+          if (!saving) setConfirmRemove(false)
         }}
+        fullWidth
+        maxWidth="xs"
       >
-        <Typography sx={{ mr: 'auto', overflowWrap: 'anywhere' }}>
-          {formatMoney(price, currency, i18n.language)}
-        </Typography>
-        {error && (
-          <Typography color="error">{t('settings.saveError')}</Typography>
-        )}
-        <Button
-          size="small"
-          onClick={() =>
-            void save({ category, description, unitPriceMinor: price })
-          }
-          disabled={saving || !Number.isSafeInteger(price) || price < 0}
-        >
-          {t('common.save')}
-        </Button>
-        <Button
-          size="small"
-          onClick={() => void save({ enabled: !template.enabled })}
-          disabled={saving}
-        >
-          {template.enabled ? t('settings.deactivate') : t('settings.activate')}
-        </Button>
-      </Stack>
+        <DialogTitle>{t('settings.deactivateExtra')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('settings.deactivateHelp', { name: template.description })}
+          </Typography>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {t('settings.saveError')}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={saving} onClick={() => setConfirmRemove(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            disabled={saving}
+            color="error"
+            onClick={() => void save({ enabled: false })}
+          >
+            {t('settings.deactivate')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
+
 function formatDate(value: string, locale: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString(locale, {
     day: 'numeric',

@@ -11,14 +11,13 @@ it.each([
   ['home', 'Hoy'],
   ['stays', 'Estadías'],
   ['reservations', 'Reservas'],
-  ['more', 'Más'],
-  ['settings', 'Más'],
+  ['settings', 'Configuración'],
 ] as const)(
   'marks the destination for %s and exposes four links',
   (section, label) => {
     const markup = renderToStaticMarkup(
       <ThemeProvider theme={lightTheme}>
-        <WorkspaceNavigation section={section} campingName="Mi camping" />
+        <WorkspaceNavigation section={section} />
       </ThemeProvider>,
     )
     const links = markup.match(/<a\b[^>]*>[\s\S]*?<\/a>/g) ?? []
@@ -30,7 +29,7 @@ it.each([
       '#/hoy',
       '#/estadias',
       '#/reservas',
-      '#/mas',
+      '#/configuracion',
     ])
     expect(markup).not.toContain('Registrar ingreso')
     expect(markup).not.toContain('Cerrar sesión')

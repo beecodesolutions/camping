@@ -25,8 +25,6 @@ export default function HomeHeader({
       component="header"
       sx={{
         color: 'text.primary',
-        pt: 0,
-        pb: 1,
         display: 'flex',
         alignItems: 'center',
         gap: 2,
@@ -58,7 +56,7 @@ export default function HomeHeader({
             {name}
           </Typography>
           <Typography
-            component="h2"
+            component="h1"
             variant="h4"
             sx={{
               fontWeight: 650,

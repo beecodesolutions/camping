@@ -23,8 +23,8 @@ total and physical arrival details. The response is the canonical
 
 When trying authenticated calls from Swagger UI during local development,
 include the UI origin in `ALLOWED_ORIGIN` (for example,
-`ALLOWED_ORIGIN=http://localhost:3000,http://localhost:5173` when opening
-Swagger at port 3000), or supply an existing session cookie. Mutating routes
+`ALLOWED_ORIGIN=http://localhost:3010,http://localhost:5173` when opening
+Swagger at port 3010), or supply an existing session cookie. Mutating routes
 require an allowed `Origin` header by design.
 
 Production does not expose the documentation unless `OPENAPI_ENABLED=true` is

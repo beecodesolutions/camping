@@ -18,7 +18,9 @@ pnpm db:seed
 pnpm dev
 ```
 
-PostgreSQL escucha solo en `127.0.0.1:5434`, base `camping`. API en puerto 3000; Vite anuncia URL del frontend y envía `/api` por proxy. Credenciales de PostgreSQL en Compose son únicamente locales. `CAMPING_DB_PORT` permite cambiar puerto; actualizar URL de API también.
+PostgreSQL escucha solo en `127.0.0.1:5434`, base `camping`. API en puerto 3010; Vite anuncia URL del frontend y envía `/api` por proxy. Credenciales de PostgreSQL en Compose son únicamente locales. `CAMPING_DB_PORT` permite cambiar puerto; actualizar URL de API también.
+
+`ui/.env.development` configura `DEV_HOST=0.0.0.0` para acceder desde la red local con `pnpm dev`. Para limitarlo a esta computadora, usar `DEV_HOST=localhost` en `ui/.env.development.local`. Para iniciar sesión desde otro dispositivo, agregar su URL de acceso al frontend (por ejemplo, `http://192.168.1.82:5173`) a `ALLOWED_ORIGIN` en `api/.env` y reiniciar API. Usar el servidor de desarrollo solo en redes de confianza.
 
 `pnpm db:down` detiene base sin borrar volumen. No usar `docker compose down -v` si se quieren conservar datos.
 
