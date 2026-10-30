@@ -2,6 +2,7 @@ const es = {
   common: {
     save: 'Guardar',
     delete: 'Eliminar',
+    loadMore: 'Cargar más',
     previous: 'Anterior',
     next: 'Siguiente',
     appName: 'Camping',

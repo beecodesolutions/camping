@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { DataSource, IsNull, Not, type EntityManager } from 'typeorm'
+import { DataSource, type EntityManager } from 'typeorm'
 import {
   roundMoneyMinor,
   hasMoneyPrecision,
@@ -89,6 +89,7 @@ export class StayService {
     status: string | undefined,
     pageRaw: string | undefined,
     pageSizeRaw: string | undefined,
+    accommodation?: string,
   ): Promise<StayPage> {
     const page = this.pageNumber(pageRaw, 1)
     const pageSize = Math.min(this.pageNumber(pageSizeRaw, 25), 100)
@@ -96,19 +97,40 @@ export class StayService {
       throw new BadRequestException('Paginación inválida')
     if (status && status !== 'active' && status !== 'closed')
       throw new BadRequestException('Estado inválido')
-    const where =
-      status === 'closed'
-        ? { campingId: context.camping.id, closedAt: Not(IsNull()) }
-        : { campingId: context.camping.id, closedAt: IsNull() }
-    const [items, total] = await this.dataSource
+    if (
+      accommodation &&
+      !['total', 'camping', 'individual'].includes(accommodation)
+    )
+      throw new BadRequestException('Alojamiento inválido')
+    const query = this.dataSource
       .getRepository(StayEntity)
-      .findAndCount({
-        where,
-        order: { createdAt: 'DESC', id: 'DESC' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        relations: { extras: true, payments: true, reservation: true },
-      })
+      .createQueryBuilder('stay')
+      .leftJoinAndSelect('stay.extras', 'extras')
+      .leftJoinAndSelect('stay.payments', 'payments')
+      .leftJoinAndSelect('stay.reservation', 'reservation')
+      .leftJoin('reservation.accommodationType', 'accommodationType')
+      .where('stay.campingId = :campingId', { campingId: context.camping.id })
+      .andWhere(
+        status === 'closed'
+          ? 'stay.closedAt IS NOT NULL'
+          : 'stay.closedAt IS NULL',
+      )
+    if (accommodation === 'individual')
+      query.andWhere(
+        '(reservation.unitId IS NOT NULL OR accommodationType.inventoryMode = :mode)',
+        { mode: 'individual' },
+      )
+    if (accommodation === 'camping')
+      query.andWhere(
+        '(stay.reservationId IS NULL OR (reservation.unitId IS NULL AND accommodationType.inventoryMode = :mode))',
+        { mode: 'unlimited' },
+      )
+    const [items, total] = await query
+      .orderBy('stay.createdAt', 'DESC')
+      .addOrderBy('stay.id', 'DESC')
+      .skip((page - 1) * pageSize)
+      .take(pageSize)
+      .getManyAndCount()
     return {
       items: items.map((stay) => this.toStay(stay, context.camping.timezone)),
       total,

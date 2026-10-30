@@ -118,6 +118,8 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
           <Button
             key={value}
             href={workspaceHref(value)}
+            aria-label={t(`navigation.${value}`)}
+            title={value === 'settings' ? t('navigation.settings') : undefined}
             onClick={() => scrollWorkspaceToTop()}
             aria-current={activeSection === value ? 'page' : undefined}
             sx={{
@@ -156,7 +158,17 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
             }}
           >
             <LucideIcon icon={icon} />
-            {t(`navigation.${value}`)}
+            <Box
+              component="span"
+              sx={{
+                display:
+                  value === 'settings'
+                    ? { xs: 'inline', md: 'none' }
+                    : 'inline',
+              }}
+            >
+              {t(`navigation.${value}`)}
+            </Box>
           </Button>
         ))}
       </Stack>

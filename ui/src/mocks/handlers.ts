@@ -156,8 +156,14 @@ export const handlers = [
       url.searchParams.get('status') === 'closed' ? 'closed' : 'active'
     const page = Math.max(1, Number(url.searchParams.get('page') ?? 1))
     const pageSize = Math.max(1, Number(url.searchParams.get('pageSize') ?? 8))
+    const accommodation = url.searchParams.get('accommodation')
+    // Demo stays are walk-ins without an individual accommodation reservation.
     const filtered = stays.filter((stay) =>
-      status === 'closed' ? !!stay.closure : !stay.closure,
+      accommodation === 'individual'
+        ? false
+        : status === 'closed'
+          ? !!stay.closure
+          : !stay.closure,
     )
     return HttpResponse.json({
       items: filtered.slice((page - 1) * pageSize, page * pageSize),

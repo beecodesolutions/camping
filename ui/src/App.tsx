@@ -51,7 +51,13 @@ export default function App() {
       ) : session.isError ? (
         <SessionError error={session.error} />
       ) : session.data ? (
-        <CampingWorkspace user={session.data} themeControl={themeControl} />
+        <CampingWorkspace
+          user={session.data}
+          themeMode={mode}
+          onToggleTheme={() =>
+            setManualMode(mode === 'dark' ? 'light' : 'dark')
+          }
+        />
       ) : (
         <LoginScreen />
       )}
