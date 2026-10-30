@@ -1,3 +1,4 @@
+import { workspaceSpacing } from './app/workspaceSpacing'
 import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -356,8 +357,13 @@ export default function CampingWorkspace({
           onClick={() => openWorkspaceDialog({ kind: 'check-in' })}
           sx={{
             position: 'fixed',
-            right: { xs: 16, md: 32 },
-            bottom: { xs: 'calc(80px + env(safe-area-inset-bottom))', md: 24 },
+            right: (theme) => ({ xs: theme.spacing(2), md: theme.spacing(4) }),
+            bottom: (theme) => ({
+              xs: `calc(${theme.spacing(workspaceSpacing.mobileNavigationHeight + workspaceSpacing.floatingActionGap)} + env(safe-area-inset-bottom))`,
+              md: theme.spacing(3),
+            }),
+            minHeight: (theme) =>
+              theme.spacing(workspaceSpacing.floatingActionHeight),
             gap: 1,
             zIndex: (theme) => theme.zIndex.appBar,
           }}

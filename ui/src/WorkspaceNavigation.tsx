@@ -1,3 +1,4 @@
+import { workspaceSpacing } from './app/workspaceSpacing'
 import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { BedDouble, CalendarDays, Ellipsis, Sun } from 'lucide-react'
@@ -79,7 +80,9 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
         left: 0,
         right: 0,
         top: { md: 0 },
-        height: { md: 72 },
+        height: (theme) => ({
+          md: theme.spacing(workspaceSpacing.desktopNavigationHeight),
+        }),
         display: { md: 'flex' },
         alignItems: { md: 'center' },
         gap: { md: 4 },
@@ -120,7 +123,10 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
             sx={{
               flex: { xs: 1, md: 'initial' },
               minWidth: 0,
-              minHeight: { xs: 64, md: 72 },
+              minHeight: (theme) => ({
+                xs: theme.spacing(workspaceSpacing.mobileNavigationHeight),
+                md: theme.spacing(workspaceSpacing.desktopNavigationHeight),
+              }),
               ml: { md: value === 'more' ? 'auto !important' : undefined },
               flexDirection: { xs: 'column', md: 'row' },
               justifyContent: 'center',
