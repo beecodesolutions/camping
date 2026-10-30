@@ -117,8 +117,11 @@ const es = {
     saveError: 'No pudimos guardar los cambios.',
     loadError: 'No pudimos cargar los extras.',
     uncategorized: 'Sin categoría',
-    changeCategory: 'Cambiar categoría',
-    extraActions: 'Acciones de {{name}}',
+    editExtra: 'Editar extra',
+    inactive: 'Desactivado',
+    deactivateExtra: 'Desactivar extra',
+    deactivateHelp:
+      '“{{name}}” dejará de estar disponible para nuevos cargos. Su historial se conserva y podés reactivarlo después.',
   },
   calendar: {
     title: 'Disponibilidad',

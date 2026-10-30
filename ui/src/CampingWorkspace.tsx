@@ -15,16 +15,16 @@ import {
   FormControlLabel,
   Switch,
   IconButton,
-  Menu,
   MenuItem,
   Paper,
   Stack,
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
-import { Ellipsis, Plus } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
 import MoneyField from './components/MoneyField'
 import { paymentInputSchema } from '@camping/contracts'
@@ -1491,11 +1491,11 @@ function TemplateRow({
   moneyDecimals: 0 | null
   onSave: ReturnType<typeof useUpdateExtraTemplateMutation>[0]
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const [editing, setEditing] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
   const [description, setDescription] = useState(template.description)
   const [category, setCategory] = useState(template.category ?? '')
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
-  const [editingCategory, setEditingCategory] = useState(false)
   const [price, setPrice] = useState(template.unitPriceMinor)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
@@ -1509,114 +1509,168 @@ function TemplateRow({
     setError(false)
     try {
       await onSave({ id: template.id, patch }).unwrap()
-      return true
+      setEditing(false)
+      setConfirmRemove(false)
     } catch {
       setError(true)
-      return false
     } finally {
       setSaving(false)
     }
   }
   return (
-    <Box
-      sx={{
-        ...formGridSx,
-        gridTemplateColumns: {
-          xs: 'minmax(0, 1fr)',
-          sm: 'repeat(2, minmax(0, 1fr))',
-          md: 'minmax(0, 2fr) minmax(0, 1fr) auto',
-        },
-        alignItems: 'start',
-      }}
-    >
-      <TextField
-        size="small"
-        label={t('stay.description')}
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        disabled={saving}
-      />
-      <MoneyField
-        size="small"
-        label={`${t('stay.unitPrice')} (${currency})`}
-        helperText=""
-        currency={currency}
-        moneyDecimals={moneyDecimals}
-        valueMinor={price}
-        onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
-        disabled={saving}
-      />
-      <Stack
-        direction="row"
-        useFlexGap
-        sx={{
-          gridColumn: { xs: '1 / -1', md: 'auto' },
-          minHeight: (theme) => theme.spacing(5),
-          gap: 1,
-          alignItems: 'center',
-          flexWrap: { xs: 'wrap', md: 'nowrap' },
-        }}
-      >
-        <Button
-          size="small"
-          onClick={() => void save({ description, unitPriceMinor: price })}
-          disabled={saving || !Number.isSafeInteger(price) || price < 0}
-        >
-          {t('common.save')}
-        </Button>
-        <Button
-          size="small"
-          onClick={() => void save({ enabled: !template.enabled })}
-          disabled={saving}
-        >
-          {template.enabled ? t('settings.deactivate') : t('settings.activate')}
-        </Button>
-        <IconButton
-          aria-label={t('settings.extraActions', {
-            name: template.description,
-          })}
-          disabled={saving}
-          aria-haspopup="menu"
-          aria-expanded={Boolean(menuAnchor)}
-          onClick={(event) => setMenuAnchor(event.currentTarget)}
-        >
-          <LucideIcon icon={Ellipsis} />
-        </IconButton>
-      </Stack>
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={() => setMenuAnchor(null)}
-      >
-        <MenuItem
-          onClick={() => {
-            setMenuAnchor(null)
-            setCategory(template.category ?? '')
-            setEditingCategory(true)
+    <Box>
+      {editing ? (
+        <Box
+          sx={{
+            ...formGridSx,
+            gridTemplateColumns: {
+              xs: 'minmax(0, 1fr)',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              md: 'minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr) auto',
+            },
           }}
         >
-          {t('settings.changeCategory')}
-        </MenuItem>
-      </Menu>
-      <Dialog
-        open={editingCategory}
-        onClose={() => {
-          if (!saving) setEditingCategory(false)
-        }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>{t('settings.changeCategory')}</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mb: 2 }}>{template.description}</Typography>
           <TextField
-            autoFocus
-            fullWidth
+            size="small"
             label={t('stay.category')}
             value={category}
             disabled={saving}
             onChange={(event) => setCategory(event.target.value)}
           />
+          <TextField
+            autoFocus
+            size="small"
+            label={t('stay.description')}
+            value={description}
+            disabled={saving}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+          <MoneyField
+            size="small"
+            label={`${t('stay.unitPrice')} (${currency})`}
+            helperText=""
+            currency={currency}
+            moneyDecimals={moneyDecimals}
+            valueMinor={price}
+            disabled={saving}
+            onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
+          />
+          <Stack direction="row" spacing={1}>
+            <Button
+              disabled={
+                saving ||
+                !description.trim() ||
+                !Number.isSafeInteger(price) ||
+                price < 0
+              }
+              onClick={() =>
+                void save({
+                  category: category.trim(),
+                  description: description.trim(),
+                  unitPriceMinor: price,
+                })
+              }
+            >
+              {t('common.save')}
+            </Button>
+            <Button
+              disabled={saving}
+              onClick={() => {
+                setEditing(false)
+                setError(false)
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+          </Stack>
+        </Box>
+      ) : (
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ alignItems: 'center', minWidth: 0 }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                overflowWrap: 'anywhere',
+                color: template.enabled ? 'text.primary' : 'text.secondary',
+              }}
+            >
+              {template.description}
+            </Typography>
+            {!template.enabled && (
+              <Typography variant="caption" color="text.secondary">
+                {t('settings.inactive')}
+              </Typography>
+            )}
+          </Box>
+          <Typography sx={{ whiteSpace: 'nowrap' }}>
+            {formatMoney(template.unitPriceMinor, currency, i18n.language)}
+          </Typography>
+          <Stack direction="row">
+            <Tooltip title={t('settings.editExtra')}>
+              <span>
+                <IconButton
+                  aria-label={t('settings.editExtra')}
+                  disabled={saving}
+                  onClick={() => {
+                    setDescription(template.description)
+                    setCategory(template.category ?? '')
+                    setPrice(template.unitPriceMinor)
+                    setError(false)
+                    setEditing(true)
+                  }}
+                >
+                  <LucideIcon icon={Pencil} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip
+              title={t(
+                template.enabled ? 'settings.deactivate' : 'settings.activate',
+              )}
+            >
+              <span>
+                <IconButton
+                  aria-label={t(
+                    template.enabled
+                      ? 'settings.deactivate'
+                      : 'settings.activate',
+                  )}
+                  disabled={saving}
+                  onClick={() => {
+                    if (template.enabled) {
+                      setError(false)
+                      setConfirmRemove(true)
+                    } else void save({ enabled: true })
+                  }}
+                >
+                  <LucideIcon icon={template.enabled ? Trash2 : RotateCcw} />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        </Stack>
+      )}
+      {error && !confirmRemove && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {t('settings.saveError')}
+        </Alert>
+      )}
+      <Dialog
+        open={confirmRemove}
+        onClose={() => {
+          if (!saving) setConfirmRemove(false)
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t('settings.deactivateExtra')}</DialogTitle>
+        <DialogContent>
+          <Typography>
+            {t('settings.deactivateHelp', { name: template.description })}
+          </Typography>
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {t('settings.saveError')}
@@ -1624,28 +1678,22 @@ function TemplateRow({
           )}
         </DialogContent>
         <DialogActions>
-          <Button disabled={saving} onClick={() => setEditingCategory(false)}>
+          <Button disabled={saving} onClick={() => setConfirmRemove(false)}>
             {t('common.cancel')}
           </Button>
           <Button
             disabled={saving}
-            onClick={async () => {
-              if (await save({ category: category.trim() }))
-                setEditingCategory(false)
-            }}
+            color="error"
+            onClick={() => void save({ enabled: false })}
           >
-            {t('common.save')}
+            {t('settings.deactivate')}
           </Button>
         </DialogActions>
       </Dialog>
-      {error && (
-        <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>
-          {t('settings.saveError')}
-        </Alert>
-      )}
     </Box>
   )
 }
+
 function formatDate(value: string, locale: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString(locale, {
     day: 'numeric',
