@@ -277,7 +277,12 @@ export default function CampingWorkspace({
             <LoadingPanel />
           )
         ) : section === 'stays' ? (
-          <Stack spacing={2}>
+          <Stack
+            component={Paper}
+            variant="outlined"
+            spacing={2}
+            sx={{ p: 2, borderRadius: 2 }}
+          >
             <Tabs
               value={stayStatus}
               onChange={(_, value: 'active' | 'closed') => {
