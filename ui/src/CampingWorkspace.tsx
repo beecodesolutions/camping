@@ -1,6 +1,12 @@
+import AccommodationFilter from './AccommodationFilter'
+import { useAppDispatch, useAppSelector } from './app/hooks'
+import {
+  accommodationFilterChanged,
+  selectAccommodationFilter,
+} from './app/accommodationFilterSlice'
 import { workspaceSpacing } from './app/workspaceSpacing'
 import { scrollWorkspaceToTop } from './app/workspaceScroll'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Alert,
@@ -17,6 +23,7 @@ import {
   IconButton,
   MenuItem,
   Paper,
+  Skeleton,
   Stack,
   Tab,
   Tabs,
@@ -52,7 +59,7 @@ import {
   useLogoutMutation,
   useQuoteMutation,
   useStayQuery,
-  useStaysQuery,
+  useInfiniteStaysInfiniteQuery,
   useUpdateExtraMutation,
   useUpdateExtraTemplateMutation,
   useUpdateRatesMutation,
@@ -78,8 +85,11 @@ import {
   closeWorkspaceDialog,
 } from './app/workspaceDialog'
 
-type WorkspaceProps = { user: SessionUser; themeControl: ReactNode }
-const pageSize = 8
+type WorkspaceProps = {
+  user: SessionUser
+  themeMode: 'light' | 'dark'
+  onToggleTheme: () => void
+}
 const formGridSx = {
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
@@ -102,13 +112,15 @@ function errorStatus(error: unknown) {
 
 export default function CampingWorkspace({
   user,
-  themeControl,
+  themeMode,
+  onToggleTheme,
 }: WorkspaceProps) {
   const { t } = useTranslation()
   const { greeting } = useTimeOfDay()
   const section = useWorkspaceSection()
   const [stayStatus, setStayStatus] = useState<'active' | 'closed'>('active')
-  const [page, setPage] = useState(1)
+  const dispatch = useAppDispatch()
+  const accommodation = useAppSelector(selectAccommodationFilter)
   const dialog = useWorkspaceDialog()
   const selection = dialog?.kind === 'stay' ? dialog : null
   const setSelection = (value: StaySelection) =>
@@ -117,8 +129,8 @@ export default function CampingWorkspace({
   const checkInOpen = dialog?.kind === 'check-in'
   const [registeredName, setRegisteredName] = useState<string | null>(null)
   const camping = useCampingQuery()
-  const stays = useStaysQuery(
-    { status: stayStatus, page, pageSize },
+  const stays = useInfiniteStaysInfiniteQuery(
+    { status: stayStatus, accommodation },
     { skip: section !== 'stays' },
   )
   const [logout, logoutState] = useLogoutMutation()
@@ -159,14 +171,36 @@ export default function CampingWorkspace({
         section={section}
         controls={
           <>
-            {themeControl}
             <WorkspaceUserMenu
+              themeMode={themeMode}
+              onToggleTheme={onToggleTheme}
               onLogout={() => void logout()}
               logoutPending={logoutState.isLoading}
             />
           </>
         }
       />
+      <Paper
+        elevation={3}
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          position: 'fixed',
+          top: 'calc(8px + env(safe-area-inset-top))',
+          right: 16,
+          borderRadius: '50%',
+          zIndex: (theme) => theme.zIndex.appBar,
+          border: 1,
+          borderColor: 'divider',
+          '& .MuiIconButton-root': { width: 44, height: 44 },
+        }}
+      >
+        <WorkspaceUserMenu
+          themeMode={themeMode}
+          onToggleTheme={onToggleTheme}
+          onLogout={() => void logout()}
+          logoutPending={logoutState.isLoading}
+        />
+      </Paper>
       <WorkspaceLayout
         notices={
           <>
@@ -255,69 +289,101 @@ export default function CampingWorkspace({
           ))}
         {section === 'settings' ? (
           profile ? (
-            <>
-              <SettingsPanel profile={profile} />
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{
-                  display: { xs: 'flex', md: 'none' },
-                  alignItems: 'center',
-                  mt: 3,
-                }}
-              >
-                {themeControl}
-                <WorkspaceUserMenu
-                  onLogout={() => void logout()}
-                  logoutPending={logoutState.isLoading}
-                />
-              </Stack>
-            </>
+            <SettingsPanel profile={profile} />
           ) : (
             <LoadingPanel />
           )
         ) : section === 'stays' ? (
-          <Stack spacing={2}>
-            <Tabs
-              value={stayStatus}
-              onChange={(_, value: 'active' | 'closed') => {
-                setStayStatus(value)
-                setPage(1)
-                scrollWorkspaceToTop()
-              }}
-              aria-label={t('navigation.stayViews')}
+          <Stack
+            component={Paper}
+            variant="outlined"
+            spacing={2}
+            sx={{ p: 2, borderRadius: 2 }}
+          >
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ alignItems: 'center', justifyContent: 'space-between' }}
             >
-              <Tab value="active" label={t('navigation.inProgress')} />
-              <Tab value="closed" label={t('home.closedStays')} />
-            </Tabs>
-            {stays.isFetching && (
-              <Typography color="text.secondary">
-                {t('home.loading')}
-              </Typography>
-            )}
+              <Tabs
+                value={stayStatus}
+                onChange={(_, value: 'active' | 'closed') => {
+                  setStayStatus(value)
+                  scrollWorkspaceToTop()
+                }}
+                variant="scrollable"
+                scrollButtons={false}
+                sx={{
+                  minWidth: 0,
+                  '& .MuiTab-root': { minWidth: 0, px: { xs: 1, sm: 2 } },
+                }}
+                aria-label={t('navigation.stayViews')}
+              >
+                <Tab value="active" label={t('navigation.inProgress')} />
+                <Tab value="closed" label={t('home.closedStays')} />
+              </Tabs>
+              <AccommodationFilter
+                value={accommodation}
+                onChange={(value) => {
+                  dispatch(accommodationFilterChanged(value))
+                  scrollWorkspaceToTop()
+                }}
+              />
+            </Stack>
             {stays.isError && (
               <Alert severity="error">
                 {t('home.loadError')}{' '}
-                <Button onClick={() => void stays.refetch()}>
+                <Button
+                  onClick={() =>
+                    void (stays.currentData && stays.hasNextPage
+                      ? stays.fetchNextPage()
+                      : stays.refetch())
+                  }
+                >
                   {t('common.retry')}
                 </Button>
               </Alert>
             )}
             {stays.currentData && profile && (
               <EnrichedStayList
-                items={stays.currentData.items}
+                items={stays.currentData.pages.flatMap((page) => page.items)}
                 timezone={profile.timezone}
                 onSelect={setSelection}
               />
             )}
-            {stays.currentData && (
-              <Pagination
-                page={stays.currentData.page}
-                pageSize={stays.currentData.pageSize}
-                total={stays.currentData.total}
-                onPage={setPage}
-              />
+            {stays.isFetching && (
+              <Stack role="status" aria-label={t('home.loading')} spacing={2}>
+                {Array.from(
+                  { length: stays.currentData ? 2 : 4 },
+                  (_, index) => (
+                    <Stack
+                      key={index}
+                      direction="row"
+                      spacing={2}
+                      sx={{ alignItems: 'center', py: 1 }}
+                    >
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Skeleton variant="text" width="45%" height={28} />
+                        <Skeleton variant="text" width="70%" height={22} />
+                      </Box>
+                      <Skeleton
+                        variant="text"
+                        width={100}
+                        height={32}
+                        sx={{ display: { xs: 'none', sm: 'block' } }}
+                      />
+                      <Skeleton variant="rounded" width={44} height={44} />
+                    </Stack>
+                  ),
+                )}
+              </Stack>
             )}
+            <InfiniteStayLoader
+              hasMore={Boolean(stays.hasNextPage)}
+              loading={stays.isFetching}
+              failed={stays.isError}
+              onLoad={() => void stays.fetchNextPage()}
+            />
           </Stack>
         ) : null}
       </WorkspaceLayout>
@@ -428,36 +494,39 @@ function LoadingPanel() {
   )
 }
 
-function Pagination({
-  page,
-  pageSize,
-  total,
-  onPage,
+function InfiniteStayLoader({
+  hasMore,
+  loading,
+  failed,
+  onLoad,
 }: {
-  page: number
-  pageSize: number
-  total: number
-  onPage: (page: number) => void
+  hasMore: boolean
+  loading: boolean
+  failed: boolean
+  onLoad: () => void
 }) {
   const { t } = useTranslation()
-  const max = Math.max(1, Math.ceil(total / pageSize))
-  if (max <= 1) return null
+  const sentinel = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const element = sentinel.current
+    if (!element || !hasMore || loading || failed) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) onLoad()
+      },
+      { rootMargin: '200px' },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [hasMore, loading, failed, onLoad])
   return (
-    <Stack
-      direction="row"
-      spacing={2}
-      sx={{ justifyContent: 'center', alignItems: 'center' }}
-    >
-      <Button disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        {t('common.previous')}
-      </Button>
-      <Typography variant="body2">
-        {page} / {max}
-      </Typography>
-      <Button disabled={page >= max} onClick={() => onPage(page + 1)}>
-        {t('common.next')}
-      </Button>
-    </Stack>
+    <Box ref={sentinel} sx={{ textAlign: 'center', minHeight: 1 }}>
+      {hasMore && !loading && (
+        <Button disabled={loading} onClick={onLoad}>
+          {t('common.loadMore')}
+        </Button>
+      )}
+    </Box>
   )
 }
 

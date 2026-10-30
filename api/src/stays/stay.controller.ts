@@ -50,6 +50,11 @@ export class StayController {
     response: openApiRef('StayPage'),
     errors: [400, 401, 500],
   })
+  @ApiQuery({
+    name: 'accommodation',
+    required: false,
+    enum: ['total', 'camping', 'individual'],
+  })
   @ApiQuery({ name: 'status', required: false, enum: ['active', 'closed'] })
   @ApiQuery({
     name: 'page',
@@ -70,8 +75,15 @@ export class StayController {
     @Query('status') status?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('accommodation') accommodation?: string,
   ) {
-    return this.stayService.list(request.auth!, status, page, pageSize)
+    return this.stayService.list(
+      request.auth!,
+      status,
+      page,
+      pageSize,
+      accommodation,
+    )
   }
 
   @Get(':id')

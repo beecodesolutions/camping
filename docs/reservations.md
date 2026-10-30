@@ -2,10 +2,10 @@
 
 ## Alcance acordado
 
-Backend y contratos; la UI se diseña por separado. Una reserva corresponde a una cabaña, habitación completa o grupo de camping libre. No hay ítems de reserva, camas individuales ni agrupaciones de reservas en esta entrega.
+Backend y contratos; la UI se diseña por separado. Una reserva corresponde a una cabaña, habitación completa o grupo de camping. No hay ítems de reserva, camas individuales ni agrupaciones de reservas en esta entrega.
 
 - Inventario `individual`: una unidad concreta por reserva, disponible durante todo el rango.
-- Inventario `unlimited`: camping libre sin unidad ni límite de cupos; registrar llegada prevista y anticipos no garantiza capacidad cuantificada.
+- Inventario `unlimited`: camping sin unidad ni límite de cupos; registrar llegada prevista y anticipos no garantiza capacidad cuantificada.
 - Un camping mantiene su moneda y zona horaria; la sesión determina el camping autorizado.
 - No agregar roles, organizaciones, procesadores de pago ni conectividad OTA.
 
@@ -67,7 +67,7 @@ La respuesta separa los tipos por `inventoryMode`:
   rango solicitado. La misma modalidad sirve para cabañas, habitaciones y
   parcelas identificadas como `A1`, `A2`, etc.; no existe una validación
   especial limitada a un tipo de alojamiento.
-- `unlimited` representa camping libre sin cupo cuantificado. Cada noche
+- `unlimited` representa camping sin cupo cuantificado. Cada noche
   incluye la cantidad de `reservations` y los conteos de `adults`, `children` e
   `infants`; no devuelve conteos de capacidad ni unidades.
 
@@ -92,7 +92,7 @@ disponibilidad; nunca desplaza silenciosamente otra reserva.
 
 ## Precios, pagos y transición
 
-Espacios cerrados: tarifa por unidad/noche y total acordado editable explícitamente. Camping libre: tarifa por persona/noche conservando rangos infantiles del piloto. El snapshot guarda la base de cálculo y el importe acordado; cambiar configuración no altera reservas existentes. Modificaciones de fechas o alojamiento requieren aceptar un nuevo presupuesto.
+Espacios cerrados: tarifa por unidad/noche y total acordado editable explícitamente. Camping: tarifa por persona/noche conservando rangos infantiles del piloto. El snapshot guarda la base de cálculo y el importe acordado; cambiar configuración no altera reservas existentes. Modificaciones de fechas o alojamiento requieren aceptar un nuevo presupuesto.
 
 Cada reserva admite múltiples pagos en efectivo, transferencia o tarjeta. En la
 En la etapa 3 el pago queda vinculado a la reserva. Al ingresar, el mismo
@@ -129,7 +129,7 @@ Devuelve `priceSnapshot` y valida inventario sin crear una retención. `POST
 transacción y devuelve `409 PRICE_CHANGED` cuando el importe aceptado no
 coincide. Nunca se acepta `clientPriceSnapshot`.
 
-El precio individual es por unidad y noche. Camping libre es por persona y
+El precio individual es por unidad y noche. Camping es por persona y
 noche, usando `camping.rates` y `ageRanges`. El snapshot conserva moneda,
 tarifas o rangos y la base de cálculo, además del total y del ajuste final.
 Un total manual exige motivo no vacío de hasta 500 caracteres; el par solo

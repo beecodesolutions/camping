@@ -236,6 +236,26 @@ export const apiSlice = createApi({
             ]
           : [{ type: 'Stays', id: 'LIST' }],
     }),
+    infiniteStays: builder.infiniteQuery<
+      StayPage,
+      {
+        status: 'active' | 'closed'
+        accommodation: 'total' | 'camping' | 'individual'
+      },
+      number
+    >({
+      infiniteQueryOptions: {
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) =>
+          lastPage.page * lastPage.pageSize < lastPage.total
+            ? lastPage.page + 1
+            : undefined,
+      },
+      query: ({ queryArg, pageParam }) =>
+        `/stays?status=${queryArg.status}&accommodation=${queryArg.accommodation}&page=${pageParam}&pageSize=8`,
+      transformResponse: (response) => parse(stayPageSchema, response),
+      providesTags: [{ type: 'Stays', id: 'LIST' }],
+    }),
     stay: builder.query<Stay, string>({
       query: (id) => `/stays/${id}`,
       transformResponse: (response) => parse(staySchema, response),
@@ -402,6 +422,7 @@ export const {
   useReservationCheckInQuoteMutation,
   useReservationCheckInMutation,
   useStaysQuery,
+  useInfiniteStaysInfiniteQuery,
   useLazyStaysQuery,
   useStayQuery,
   useCreateStayMutation,

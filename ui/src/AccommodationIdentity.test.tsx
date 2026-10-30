@@ -6,7 +6,7 @@ import {
 
 const labels = {
   accommodation: 'Alojamiento',
-  freeCamping: 'Camping libre',
+  freeCamping: 'Camping',
   unknownUnit: 'Unidad sin nombre',
 }
 
@@ -49,14 +49,14 @@ describe('accommodation identity', () => {
           accommodationTypeId: 'camp-type',
           unitId: null,
         },
-        typeNames: new Map([['camp-type', 'Camping libre']]),
+        typeNames: new Map([['camp-type', 'Camping']]),
         typeModes: new Map([['camp-type', 'unlimited']]),
         labels,
       }),
     ).toEqual({
       kind: 'camping',
-      label: 'Camping libre',
-      compactLabel: 'Camping libre',
+      label: 'Camping',
+      compactLabel: 'Camping',
     })
     expect(
       buildAccommodationIdentity({
@@ -65,7 +65,7 @@ describe('accommodation identity', () => {
       }),
     ).toEqual({
       kind: 'camping',
-      label: 'Camping libre · Pino 1',
+      label: 'Camping · Pino 1',
       compactLabel: 'Pino 1',
     })
     expect(
@@ -77,8 +77,8 @@ describe('accommodation identity', () => {
     })
     expect(buildAccommodationIdentity({ labels })).toEqual({
       kind: 'camping',
-      label: 'Camping libre',
-      compactLabel: 'Camping libre',
+      label: 'Camping',
+      compactLabel: 'Camping',
     })
   })
 })

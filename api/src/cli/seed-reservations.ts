@@ -313,13 +313,7 @@ async function ensureAccommodation(
       45000,
       'room',
     )
-    const free = await findOrCreateType(
-      'Camping libre',
-      'unlimited',
-      null,
-      0,
-      'free',
-    )
+    const free = await findOrCreateType('Camping', 'unlimited', null, 0, 'free')
     const units = new Map<string, AccommodationUnitEntity>()
     for (const name of ['Habitación 1', 'Habitación 2', 'Habitación 3']) {
       let unit = await unitRepository.findOne({

@@ -408,3 +408,59 @@ it('rechaza ingreso inválido sin alterar ocupación', async () => {
     store.dispatch(api.endpoints.camping.initiate()).unwrap(),
   ).resolves.toMatchObject({ activeGroups: 0 })
 })
+
+it('acumula páginas de estadías, reintenta y separa filtros y estados', async () => {
+  const requests: string[] = []
+  let failNextPage = true
+  server.use(
+    http.get('*/api/stays', ({ request }) => {
+      const url = new URL(request.url)
+      const page = Number(url.searchParams.get('page'))
+      requests.push(
+        `${url.searchParams.get('status')}/${url.searchParams.get('accommodation')}/${page}`,
+      )
+      if (page === 2 && failNextPage) {
+        failNextPage = false
+        return new HttpResponse(null, { status: 503 })
+      }
+      return HttpResponse.json({ items: [], total: 9, page, pageSize: 8 })
+    }),
+  )
+  const arg = { status: 'active', accommodation: 'camping' } as const
+  const first = store.dispatch(api.endpoints.infiniteStays.initiate(arg))
+  expect((await first.unwrap()).pageParams).toEqual([1])
+  const next = () =>
+    store.dispatch(
+      api.endpoints.infiniteStays.initiate(arg, { direction: 'forward' }),
+    )
+  await expect(next().unwrap()).rejects.toMatchObject({ status: 503 })
+  expect(
+    api.endpoints.infiniteStays.select(arg)(store.getState()).data?.pageParams,
+  ).toEqual([1])
+  expect((await next().unwrap()).pageParams).toEqual([1, 2])
+  await next().unwrap()
+  await store
+    .dispatch(
+      api.endpoints.infiniteStays.initiate({
+        status: 'active',
+        accommodation: 'individual',
+      }),
+    )
+    .unwrap()
+  await store
+    .dispatch(
+      api.endpoints.infiniteStays.initiate({
+        status: 'closed',
+        accommodation: 'camping',
+      }),
+    )
+    .unwrap()
+  expect(requests).toEqual([
+    'active/camping/1',
+    'active/camping/2',
+    'active/camping/2',
+    'active/individual/1',
+    'closed/camping/1',
+  ])
+  first.unsubscribe()
+})

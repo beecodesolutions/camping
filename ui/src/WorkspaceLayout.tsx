@@ -27,7 +27,10 @@ export default function WorkspaceLayout({ header, notices, children }: Props) {
           maxWidth: 980,
           mx: 'auto',
           px: { xs: 2, sm: 3 },
-          pt: { xs: 3, md: 5 },
+          pt: {
+            xs: `calc(${theme.spacing(8)} + env(safe-area-inset-top))`,
+            md: 5,
+          },
           pb: {
             xs: `calc(${theme.spacing(workspaceSpacing.mobileNavigationHeight + workspaceSpacing.floatingActionGap + workspaceSpacing.floatingActionHeight + workspaceSpacing.contentBottomGap)} + env(safe-area-inset-bottom))`,
             md: 4,
