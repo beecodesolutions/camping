@@ -22,8 +22,10 @@ import {
   reservationCreateSchema,
   type CampingProfile,
   type ReservationCreate,
+  todayInTimezone,
 } from '@camping/contracts'
 import CountrySelect from './checkIn/CountrySelect'
+import ReservationReview from './ReservationReview'
 import { departureForNights, reservationNights } from './reservations/dates'
 import {
   useAccommodationTypesQuery,
@@ -77,7 +79,7 @@ export default function ReservationCreateDialog({
   const [state, dispatch] = useReducer(creationReducer, initialCreationState)
   const [requestQuote, quoteRequest] = useReservationQuoteCreateMutation()
   const [createReservation] = useReservationCreateMutation()
-  const summaryRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const sending = useRef(false)
   const {
     register,
@@ -110,10 +112,13 @@ export default function ReservationCreateDialog({
   const inventoryError = typesQuery.isError || unitsQuery.isError
   const noInventory = !loading && !inventoryError && usableTypes.length === 0
   const quote = state.quote
+  const reviewing = quote !== null
   useEffect(() => {
-    if (open && (state.phase === 'ready' || state.phase === 'uncertain'))
-      summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [open, state.phase])
+    if (open) {
+      contentRef.current?.scrollTo({ top: 0 })
+      if (reviewing) contentRef.current?.focus({ preventScroll: true })
+    }
+  }, [open, reviewing])
   const changed = () => dispatch({ type: 'change' })
   const datesChanged = () => {
     setNightsDraft(null)
@@ -146,6 +151,7 @@ export default function ReservationCreateDialog({
         quote: {
           ...result,
           input,
+          responsibleName: values.responsibleName,
           accommodationName: unit
             ? `${selectedType.name} · ${unit.name}`
             : selectedType.name,
@@ -189,16 +195,19 @@ export default function ReservationCreateDialog({
   }
 
   const saveValues = () =>
-    handleSubmit(async (values) => {
-      if (!quote) return
-      const attempt = reservationCreateSchema.parse({
-        ...quote.input,
-        ...reservationContact(values),
-        acceptedTotalMinor: quote.priceSnapshot.totalMinor,
-        idempotencyKey: createUuid(),
-      })
-      await saveAttempt(attempt)
-    })()
+    handleSubmit(
+      async (values) => {
+        if (!quote) return
+        const attempt = reservationCreateSchema.parse({
+          ...quote.input,
+          ...reservationContact(values),
+          acceptedTotalMinor: quote.priceSnapshot.totalMinor,
+          idempotencyKey: createUuid(),
+        })
+        await saveAttempt(attempt)
+      },
+      () => dispatch({ type: 'change' }),
+    )()
 
   const money = (amount: number) =>
     formatMoney(
@@ -221,7 +230,7 @@ export default function ReservationCreateDialog({
       aria-labelledby="reservation-create-title"
     >
       <DialogTitle id="reservation-create-title">
-        {t('reservationCreate.title')}
+        {t(reviewing ? 'reservationCreate.summary' : 'reservationCreate.title')}
       </DialogTitle>
       <Box
         component="form"
@@ -237,15 +246,27 @@ export default function ReservationCreateDialog({
         }}
         sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
-        <DialogContent dividers>
+        <DialogContent
+          dividers
+          ref={contentRef}
+          tabIndex={-1}
+          sx={{ outline: 'none' }}
+        >
           <Stack spacing={2.5}>
+            <Typography variant="overline" color="text.secondary">
+              {t(
+                reviewing
+                  ? 'reservationCreate.reviewStep'
+                  : 'reservationCreate.detailsStep',
+              )}
+            </Typography>
             {state.error && (
               <Alert severity="error">{errorText(state.error)}</Alert>
             )}
-            {loading && (
+            {!reviewing && loading && (
               <Typography role="status">{t('common.loading')}</Typography>
             )}
-            {inventoryError && (
+            {!reviewing && inventoryError && (
               <Alert
                 severity="error"
                 action={
@@ -255,13 +276,14 @@ export default function ReservationCreateDialog({
                 {t('reservationCreate.inventoryError')}
               </Alert>
             )}
-            {noInventory && (
+            {!reviewing && noInventory && (
               <Alert severity="info">
                 {t('reservationCreate.noInventory')}
               </Alert>
             )}
             <Box
               component="fieldset"
+              hidden={reviewing}
               disabled={locked || loading || inventoryError || noInventory}
               sx={{ m: 0, p: 0, border: 0, minWidth: 0 }}
             >
@@ -532,81 +554,25 @@ export default function ReservationCreateDialog({
               </Stack>
             </Box>
             {quote && (
-              <Stack
-                spacing={1.5}
-                sx={{ p: 2, borderRadius: 1, bgcolor: 'action.hover' }}
-                ref={summaryRef}
-                aria-label={t('reservationCreate.summary')}
-              >
-                <Typography
-                  component="h2"
-                  variant="subtitle1"
-                  sx={{ fontWeight: 700 }}
-                >
-                  {t('reservationCreate.summary')}
-                </Typography>
-                <Typography>{quote.accommodationName}</Typography>
-                <Typography variant="body2">
-                  {quote.input.checkInDate} → {quote.input.checkOutDate} ·{' '}
-                  {t('reservationCreate.nights', {
-                    count: quote.priceSnapshot.nights,
-                  })}
-                </Typography>
-                <Typography variant="body2">
-                  {t('checkIn.reservationGuests', quote.input)}
-                </Typography>
-                {quote.priceSnapshot.basis === 'per_unit' ? (
-                  <Typography variant="body2">
-                    {t('reservationCreate.unitRate', {
-                      amount: money(quote.priceSnapshot.baseNightlyPriceMinor),
-                    })}
-                  </Typography>
-                ) : (
-                  (['adults', 'children', 'infants'] as const).map((name) => (
-                    <Typography key={name} variant="body2">
-                      {t(`checkIn.${name}`)}: {quote.input[name]} ×{' '}
-                      {money(
-                        quote.priceSnapshot.basis === 'per_person'
-                          ? quote.priceSnapshot.rates[name]
-                          : 0,
-                      )}{' '}
-                      ×{' '}
-                      {t('reservationCreate.nights', {
-                        count: quote.priceSnapshot.nights,
-                      })}
-                    </Typography>
-                  ))
-                )}
-                {!!quote.priceSnapshot.roundingMinor && (
-                  <Typography variant="body2">
-                    {t('reservationCreate.rounding', {
-                      amount: money(quote.priceSnapshot.roundingMinor),
-                    })}
-                  </Typography>
-                )}
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {t('reservationCreate.total', {
-                    amount: money(quote.priceSnapshot.totalMinor),
-                  })}
-                </Typography>
-                {quote.occupancyWarning && (
-                  <Alert severity="warning">
-                    {t('reservationCreate.overCapacity', {
-                      max: quote.occupancyWarning.maxOccupancy,
-                      people: quote.occupancyWarning.people,
-                    })}
-                  </Alert>
-                )}
-                <Typography variant="body2" color="text.secondary">
-                  {t('reservationCreate.notHeld')}
-                </Typography>
-              </Stack>
+              <ReservationReview
+                quote={quote}
+                today={todayInTimezone(profile.timezone)}
+              />
             )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2, gap: 1, flexWrap: 'wrap' }}>
-          <Button onClick={onClose} disabled={saving}>
-            {t(locked ? 'common.close' : 'common.cancel')}
+          <Button
+            onClick={reviewing && !locked ? changed : onClose}
+            disabled={saving}
+          >
+            {t(
+              reviewing && !locked
+                ? 'reservationCreate.back'
+                : locked
+                  ? 'common.close'
+                  : 'common.cancel',
+            )}
           </Button>
           <Button
             type="submit"
@@ -616,7 +582,7 @@ export default function ReservationCreateDialog({
               invalidNights ||
               isSubmitting ||
               quoteRequest.isLoading ||
-              (!locked && (loading || inventoryError || noInventory))
+              (!reviewing && (loading || inventoryError || noInventory))
             }
           >
             {saving

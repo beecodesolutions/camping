@@ -18,6 +18,7 @@ const input = {
 const quote = {
   input,
   accommodationName: 'Camping',
+  responsibleName: 'Ana',
   priceSnapshot: {
     basis: 'per_unit',
     currency: 'CLP',

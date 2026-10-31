@@ -7,6 +7,7 @@ import type {
 export type CreationQuote = ReservationQuote & {
   input: ReservationQuoteCreate
   accommodationName: string
+  responsibleName: string
 }
 export type CreationState = {
   revision: number
