@@ -1,10 +1,10 @@
 # Maytu visual identity
 
-Central theme: `ui/src/app/theme.ts`. Both themes share typography, spacing (8 px), restrained radii, component defaults, keyboard focus and table styles. Existing automatic/manual theme switching remains intact.
+Central theme: `ui/src/app/theme.ts`. Both themes share self-hosted Source Sans 3 / Source Serif 4 typography, spacing (8 px), restrained radii, component defaults, keyboard focus and table styles. Existing automatic/manual theme switching remains intact.
 
 Light surfaces use warm sand `#F6F1E8` and off-white `#FFFDFA`. Dark surfaces use toasted sand/charcoal `#211E1A` and `#2C2823`, with cream text rather than green backgrounds. Forest green remains the action/selection color. Both modes use a forest appbar (`navigation` tokens), with cream inverse wordmark/pages and gold upper-right page. Mobile bottom navigation uses the same treatment. Mobile has a compact 48 px appbar with logo, Configuration shortcut and account menu in normal document flow; it scrolls out of view with the page. Mobile bottom navigation contains only Today, Stays and Reservations; desktop retains Configuration in its navigation. Gold is secondary; wine remains `accent` (`#963D5A` light, `#E86684` dark) for existing occupancy, chart and calendar accents. Error uses a separate red semantic color.
 
-Georgia/system serif is intentionally local and dependency-free: h1–h4 and the lowercase wordmark. h5/h6, labels, amounts, forms, navigation and tables remain system sans-serif. Financial rows use tabular numerals. Named `metric`, `metricLarge` and `metricSmall` variants keep dashboard numbers sans-serif; `pageTitle`, `brand` and `brandCompact` carry the editorial identity. Every standard and custom variant explicitly defines its family and size. Buttons and inputs retain 44 px touch targets.
+Source Serif 4 is self-hosted and dependency-free: h1–h4 and the lowercase wordmark. h5/h6, labels, amounts, forms, navigation and tables use self-hosted Source Sans 3. Financial rows use tabular numerals. Named `metric`, `metricLarge` and `metricSmall` variants keep dashboard numbers sans-serif; `pageTitle`, `brand` and `brandCompact` carry the editorial identity. Every standard and custom variant explicitly defines its family and size. Buttons and inputs retain 44 px touch targets.
 
 Shared navigation, login and stays adopt the foundation. Existing list behavior, filtering, menus, routes and API calls are preserved. All screens now reference shared theme styles and layout presets; components contain no inline visual definitions. Do not migrate every operational heading to serif.
 
@@ -25,3 +25,7 @@ No approved vector asset was supplied. The isolated page-shaped placeholder is i
 - `ui/src/app/theme/visuals.ts`: illustration palette and themed chart presentation.
 
 The same style/layout registries are exposed as `theme.ui` / `theme.layout`; React components import `uiStyles` / `uiProps` from the theme entry point. Palette-dependent callbacks resolve against the active MUI theme. SVG paths and business data remain in components; visual values stay in the theme. `themeArchitecture.test.ts` guards against reintroducing local styles, raw colors or typography definitions. See repository `AGENTS.md` for the required workflow.
+
+Font files and SIL Open Font Licenses are in `ui/public/fonts/`, downloaded from Adobe’s official source-sans and source-serif repositories. Variable upright fonts cover weights 200–900. `font-display: swap` keeps text visible during loading; no external font service is needed.
+
+Workspace navigation uses clean paths (`/hoy`, `/estadias`, `/reservas`, `/configuracion`) with the History API, preserving browser Back and dialog history behavior. Old hash bookmarks are normalized with `replaceState` on startup. Existing `ui/vercel.json` SPA fallback supports direct visits and reloads.

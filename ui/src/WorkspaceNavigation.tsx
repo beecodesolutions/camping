@@ -1,12 +1,15 @@
 import { uiProps, uiStyles } from './app/theme'
-import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { BedDouble, CalendarDays, Settings, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Box, Button, Paper, Stack } from '@mui/material'
 import MaytuBrand from './components/MaytuBrand'
 import LucideIcon from './components/LucideIcon'
-import { workspaceHref, type WorkspaceSection } from './app/workspaceLocation'
+import {
+  navigateWorkspace,
+  workspaceHref,
+  type WorkspaceSection,
+} from './app/workspaceLocation'
 
 type Props = {
   section: WorkspaceSection
@@ -59,11 +62,11 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
       if (event.key === 'Tab') show()
     }
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('hashchange', show)
+    window.addEventListener('popstate', show)
     window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('hashchange', show)
+      window.removeEventListener('popstate', show)
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [])
@@ -90,7 +93,7 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
             href={workspaceHref(value)}
             aria-label={t(`navigation.${value}`)}
             title={value === 'settings' ? t('navigation.settings') : undefined}
-            onClick={() => scrollWorkspaceToTop()}
+            onClick={navigateWorkspace}
             aria-current={activeSection === value ? 'page' : undefined}
             sx={uiStyles.navigationItem(value, activeSection)}
           >

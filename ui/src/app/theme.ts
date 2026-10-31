@@ -27,7 +27,7 @@ declare module '@mui/material/styles' {
 }
 
 export { editorialFont } from './theme/typography'
-import { typography } from './theme/typography'
+import { fontFaces, typography } from './theme/typography'
 
 export const lightTheme = createTheme({
   ui: uiStyles,
@@ -73,12 +73,13 @@ export const lightTheme = createTheme({
   shape: { borderRadius: 8 },
   components: {
     MuiCssBaseline: {
-      styleOverrides: (theme) => ({
-        '*:focus-visible': {
-          outline: `2px solid ${theme.palette.primary.main}`,
-          outlineOffset: 3,
-        },
-      }),
+      styleOverrides: (theme) => `
+        ${fontFaces}
+        *:focus-visible {
+          outline: 2px solid ${theme.palette.primary.main};
+          outline-offset: 3px;
+        }
+      `,
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },

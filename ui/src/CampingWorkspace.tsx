@@ -75,7 +75,11 @@ import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
 import WorkspaceNavigation from './WorkspaceNavigation'
 import WorkspaceUserMenu from './WorkspaceUserMenu'
-import { useWorkspaceSection, workspaceHref } from './app/workspaceLocation'
+import {
+  navigateWorkspace,
+  useWorkspaceSection,
+  workspaceHref,
+} from './app/workspaceLocation'
 import PendingBalanceCard from './PendingBalanceCard'
 import { useTimeOfDay } from './app/timeOfDay'
 import AvailabilityCalendar from './AvailabilityCalendar'
@@ -200,7 +204,7 @@ export default function CampingWorkspace({
               href={workspaceHref('settings')}
               aria-label={t('navigation.settings')}
               aria-current={section === 'settings' ? 'page' : undefined}
-              onClick={() => scrollWorkspaceToTop()}
+              onClick={navigateWorkspace}
               sx={uiStyles.mobileSettings(section)}
             >
               <LucideIcon icon={Settings} />
@@ -265,7 +269,11 @@ export default function CampingWorkspace({
                   onSelect={setSelection}
                   refreshKey={todayRefreshKey}
                 />
-                <Button href={workspaceHref('stays')} sx={uiStyles.topGap}>
+                <Button
+                  href={workspaceHref('stays')}
+                  onClick={navigateWorkspace}
+                  sx={uiStyles.topGap}
+                >
                   {t('navigation.allStays')}
                 </Button>
               </Box>

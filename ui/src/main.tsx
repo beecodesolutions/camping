@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client'
 import { Provider } from 'react-redux'
 import App from './App'
 import i18n, { i18nReady } from './app/i18n'
+import { migrateWorkspaceHash } from './app/workspaceLocation'
 import { createAppStore } from './app/store'
 
 async function startApp() {
+  migrateWorkspaceHash()
   await i18nReady
   document.documentElement.lang = i18n.language
   document.title = i18n.t('common.appName')

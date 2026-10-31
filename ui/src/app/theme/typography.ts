@@ -1,9 +1,9 @@
 import type { CSSProperties } from '@mui/material/styles'
 import type { TypographyVariantsOptions } from '@mui/material/styles'
 
-export const editorialFont = 'Georgia, "Times New Roman", serif'
+export const editorialFont = '"Source Serif 4", Georgia, serif'
 export const operationalFont =
-  'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  '"Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
 export type MaytuTypographyVariant =
   | 'pageTitle'
@@ -193,3 +193,20 @@ export const typography: TypographyVariantsOptions = {
     lineHeight: 1.5,
   },
 }
+
+export const fontFaces = `
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/fonts/source-sans-3-latin-variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url('/fonts/source-serif-4-latin-variable.woff2') format('woff2');
+}
+`
