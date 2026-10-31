@@ -94,6 +94,17 @@ pnpm package:lambda
 
 Pruebas backend usan PostgreSQL real en base separada `camping_test`, nunca base del piloto. Crear una vez con `docker compose exec database createdb -U camping camping_test`. Por defecto usan `camping_test` en el mismo servidor local; para otra conexión, pasar `DATABASE_URL` con esa base. Pruebas deben fallar si apuntan a base no identificada como test.
 
+## Pruebas automáticas en GitHub
+
+El workflow **Checks** corre únicamente en PRs hacia `main`. Usa Node y pnpm
+según `package.json`, comprueba tipos y lint, y
+ejecuta los tests de contratos, API, UI y los controles offline del despliegue.
+Los tests de API usan PostgreSQL temporal con base `camping_test`; los archivos
+se ejecutan en serie porque la prueba de migraciones reconstruye el esquema.
+No necesita secretos ni acceso a AWS, Supabase o datos del piloto. Su resultado
+aparece como **Types, lint and tests** en los checks del PR. El despliegue sigue
+siendo un workflow separado que se ejecuta al actualizar `main`.
+
 ## AWS + Supabase
 
 Arquitectura: frontend → API Gateway HTTP API → Lambda Node 24 → PostgreSQL Supabase. No se usan Supabase Auth, Data API ni SDK desde frontend.
