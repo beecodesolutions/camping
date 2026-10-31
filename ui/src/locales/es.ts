@@ -103,6 +103,8 @@ const es = {
     capacity_other: 'máximo {{count}} personas',
     checkIn: 'Entrada',
     checkOut: 'Salida',
+    nightsField: 'Noches',
+    invalidNights: 'Ingresá un número entero de noches mayor que cero.',
     email: 'Email',
     notes: 'Notas',
     invalidEmail: 'Ingresá un email válido.',

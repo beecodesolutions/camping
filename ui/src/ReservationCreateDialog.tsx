@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
@@ -24,6 +24,7 @@ import {
   type ReservationCreate,
 } from '@camping/contracts'
 import CountrySelect from './checkIn/CountrySelect'
+import { departureForNights, reservationNights } from './reservations/dates'
 import {
   useAccommodationTypesQuery,
   useAccommodationUnitsQuery,
@@ -93,6 +94,12 @@ export default function ReservationCreateDialog({
   })
   const typeId = useWatch({ control, name: 'accommodationTypeId' })
   const checkInDate = useWatch({ control, name: 'checkInDate' })
+  const checkOutDate = useWatch({ control, name: 'checkOutDate' })
+  const [nightsDraft, setNightsDraft] = useState<string | null>(null)
+  const nights = reservationNights(checkInDate, checkOutDate)
+  const invalidNights =
+    nightsDraft !== null &&
+    departureForNights(checkInDate, nightsDraft) === null
   const selectedType = types.find((type) => type.id === typeId)
   const availableUnits = units.filter(
     (unit) => unit.typeId === typeId && unit.enabled,
@@ -108,6 +115,20 @@ export default function ReservationCreateDialog({
       summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [open, state.phase])
   const changed = () => dispatch({ type: 'change' })
+  const datesChanged = () => {
+    setNightsDraft(null)
+    changed()
+  }
+  const nightsChanged = (value: string) => {
+    changed()
+    const departure = departureForNights(checkInDate, value)
+    setNightsDraft(departure ? null : value)
+    if (departure)
+      setValue('checkOutDate', departure, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+  }
   const errorText = (message?: string) =>
     message ? t(message, { defaultValue: t('validation.invalid') }) : undefined
 
@@ -207,7 +228,7 @@ export default function ReservationCreateDialog({
         noValidate
         onSubmit={(event) => {
           event.preventDefault()
-          if (!saving && !quoteRequest.isLoading)
+          if (!saving && !quoteRequest.isLoading && !invalidNights)
             void (state.attempt
               ? saveAttempt(state.attempt)
               : quote
@@ -316,7 +337,16 @@ export default function ReservationCreateDialog({
                     )}
                   />
                 )}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: 'minmax(0, 1fr)',
+                      sm: 'minmax(0, 1fr) minmax(0, 1fr) 100px',
+                    },
+                    gap: 2,
+                  }}
+                >
                   <TextField
                     label={t('reservationCreate.checkIn')}
                     type="date"
@@ -326,7 +356,9 @@ export default function ReservationCreateDialog({
                     helperText={errorText(errors.checkInDate?.message)}
                     slotProps={{
                       inputLabel: { shrink: true },
-                      htmlInput: register('checkInDate', { onChange: changed }),
+                      htmlInput: register('checkInDate', {
+                        onChange: datesChanged,
+                      }),
                     }}
                   />
                   <TextField
@@ -339,12 +371,31 @@ export default function ReservationCreateDialog({
                     slotProps={{
                       inputLabel: { shrink: true },
                       htmlInput: {
-                        ...register('checkOutDate', { onChange: changed }),
+                        ...register('checkOutDate', { onChange: datesChanged }),
                         min: checkInDate,
                       },
                     }}
                   />
-                </Stack>
+                  <TextField
+                    name="nights"
+                    label={t('reservationCreate.nightsField')}
+                    type="number"
+                    required
+                    fullWidth
+                    value={nightsDraft ?? nights}
+                    onChange={(event) => nightsChanged(event.target.value)}
+                    disabled={locked || !checkInDate}
+                    error={invalidNights}
+                    helperText={
+                      invalidNights
+                        ? t('reservationCreate.invalidNights')
+                        : undefined
+                    }
+                    slotProps={{
+                      htmlInput: { min: 1, step: 1, inputMode: 'numeric' },
+                    }}
+                  />
+                </Box>
                 <Box
                   sx={{
                     display: 'grid',
@@ -562,6 +613,7 @@ export default function ReservationCreateDialog({
             variant="contained"
             disabled={
               saving ||
+              invalidNights ||
               isSubmitting ||
               quoteRequest.isLoading ||
               (!locked && (loading || inventoryError || noInventory))
