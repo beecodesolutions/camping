@@ -28,7 +28,7 @@ export default function WorkspaceLayout({ header, notices, children }: Props) {
           mx: 'auto',
           px: { xs: 2, sm: 3 },
           pt: {
-            xs: `calc(${theme.spacing(8)} + env(safe-area-inset-top))`,
+            xs: 3,
             md: 5,
           },
           pb: {

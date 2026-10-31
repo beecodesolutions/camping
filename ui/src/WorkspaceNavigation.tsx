@@ -127,6 +127,10 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
             onClick={() => scrollWorkspaceToTop()}
             aria-current={activeSection === value ? 'page' : undefined}
             sx={{
+              display:
+                value === 'settings'
+                  ? { xs: 'none', md: 'inline-flex' }
+                  : undefined,
               flex: { xs: 1, md: 'initial' },
               minWidth: 0,
               minHeight: (theme) => ({

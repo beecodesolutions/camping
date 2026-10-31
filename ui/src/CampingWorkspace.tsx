@@ -31,7 +31,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Settings, Trash2 } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
 import MoneyField from './components/MoneyField'
 import { paymentInputSchema } from '@camping/contracts'
@@ -200,23 +200,52 @@ export default function CampingWorkspace({
         }
       />
       <Paper
-        elevation={2}
+        component="header"
+        square
+        elevation={0}
         sx={{
           display: { xs: 'flex', md: 'none' },
-          position: 'fixed',
-          top: 'calc(8px + env(safe-area-inset-top))',
-          right: 16,
-          borderRadius: '50%',
-          zIndex: (theme) => theme.zIndex.appBar,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          px: 2,
+          pt: 'env(safe-area-inset-top)',
+          minHeight: 48,
+          bgcolor: 'navigation.main',
+          color: 'navigation.contrastText',
+          border: 0,
+          '& svg': { width: 24, height: 24 },
+          '& span': { fontSize: '1.5rem' },
           '& .MuiIconButton-root': { width: 44, height: 44 },
+          '& button.MuiIconButton-root': { color: 'inherit' },
+          '& :focus-visible': { outlineColor: 'navigation.contrastText' },
         }}
       >
-        <WorkspaceUserMenu
-          themeMode={themeMode}
-          onToggleTheme={onToggleTheme}
-          onLogout={() => void logout()}
-          logoutPending={logoutState.isLoading}
-        />
+        <MaytuBrand inverse />
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title={t('navigation.settings')}>
+            <IconButton
+              href={workspaceHref('settings')}
+              aria-label={t('navigation.settings')}
+              aria-current={section === 'settings' ? 'page' : undefined}
+              onClick={() => scrollWorkspaceToTop()}
+              sx={{
+                color: section === 'settings' ? 'accent.light' : 'inherit',
+                borderBottom: '3px solid',
+                borderBottomColor:
+                  section === 'settings' ? 'accent.light' : 'transparent',
+                borderRadius: 0,
+              }}
+            >
+              <LucideIcon icon={Settings} />
+            </IconButton>
+          </Tooltip>
+          <WorkspaceUserMenu
+            themeMode={themeMode}
+            onToggleTheme={onToggleTheme}
+            onLogout={() => void logout()}
+            logoutPending={logoutState.isLoading}
+          />
+        </Stack>
       </Paper>
       <WorkspaceLayout
         notices={
@@ -238,28 +267,14 @@ export default function CampingWorkspace({
         }
         header={
           profile && (
-            <>
-              {section === 'home' && (
-                <Box
-                  sx={{
-                    display: { xs: 'block', md: 'none' },
-                    mb: 2,
-                    '& svg': { width: 24, height: 24 },
-                    '& span': { fontSize: '1.5rem' },
-                  }}
-                >
-                  <MaytuBrand />
-                </Box>
-              )}
-              <HomeHeader
-                name={profile.name}
-                greeting={
-                  section === 'home' ? t(greeting) : t(`navigation.${section}`)
-                }
-                userName={section === 'home' ? user.name : undefined}
-                showCheckIn={false}
-              />
-            </>
+            <HomeHeader
+              name={profile.name}
+              greeting={
+                section === 'home' ? t(greeting) : t(`navigation.${section}`)
+              }
+              userName={section === 'home' ? user.name : undefined}
+              showCheckIn={false}
+            />
           )
         }
       >

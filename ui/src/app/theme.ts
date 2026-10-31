@@ -30,7 +30,7 @@ export const lightTheme = createTheme({
       contrastText: '#253C30',
     },
     navigation: {
-      main: '#1D4031',
+      main: '#18382B',
       contrastText: '#F5E7D0',
       selected: '#FFFFFF1F',
     },
