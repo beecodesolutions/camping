@@ -188,7 +188,7 @@ test('block creation rolls back inventory, audit, and outbox when outbox insert 
 
   const unit = await request('/api/accommodations/units', {
     method: 'POST',
-    body: { typeId: ids.type, name: 'A-1', enabled: true },
+    body: { typeId: ids.type, name: 'A-1', maxOccupancy: 4, enabled: true },
   })
   assert.equal(unit.response.status, 201)
   ids.unit = unit.value.id
@@ -300,7 +300,12 @@ test('accommodation CRUD isolates tenants and enforces inventory constraints', a
   assert.equal(malformedQuery.response.status, 400)
   const foreignBody = await request('/api/accommodations/units', {
     method: 'POST',
-    body: { typeId: ids.typeB, name: 'cross-tenant', enabled: true },
+    body: {
+      typeId: ids.typeB,
+      name: 'cross-tenant',
+      maxOccupancy: 4,
+      enabled: true,
+    },
   })
   assert.equal(foreignBody.response.status, 404)
   const foreignMove = await request(`/api/accommodations/units/${ids.unit}`, {
@@ -366,7 +371,7 @@ test('accommodation CRUD isolates tenants and enforces inventory constraints', a
     method: 'PATCH',
     body: { maxOccupancy: 1 },
   })
-  assert.equal(maxReduction.response.status, 409)
+  assert.equal(maxReduction.response.status, 200)
   const modeChange = await request(`/api/accommodations/types/${ids.type}`, {
     method: 'PATCH',
     body: { inventoryMode: 'unlimited', maxOccupancy: null },
@@ -435,4 +440,30 @@ test('accommodation CRUD isolates tenants and enforces inventory constraints', a
     concurrent.map((result) => result.response.status).sort((a, b) => a - b),
     [201, 409],
   )
+})
+
+test('unit maximum is required on creation, positive on update and independently editable', async () => {
+  for (const capacity of [undefined, null, 0, -1, 1.5]) {
+    const result = await request('/api/accommodations/units', {
+      method: 'POST',
+      body: {
+        typeId: ids.type,
+        name: 'Invalid capacity',
+        enabled: true,
+        ...(capacity === undefined ? {} : { maxOccupancy: capacity }),
+      },
+    })
+    assert.equal(result.response.status, 400)
+  }
+  const result = await request(`/api/accommodations/units/${ids.unit}`, {
+    method: 'PATCH',
+    body: { maxOccupancy: 2 },
+  })
+  assert.equal(result.response.status, 200)
+  assert.equal(result.value.maxOccupancy, 2)
+  const invalid = await request(`/api/accommodations/units/${ids.unit}`, {
+    method: 'PATCH',
+    body: { maxOccupancy: 0 },
+  })
+  assert.equal(invalid.response.status, 400)
 })

@@ -42,6 +42,9 @@ export class AccommodationUnitEntity {
   @Column({ type: 'varchar', length: 200 })
   name!: string
 
+  @Column({ name: 'max_occupancy', type: 'integer' })
+  maxOccupancy!: number
+
   @Column({ type: 'boolean', default: true })
   enabled!: boolean
 

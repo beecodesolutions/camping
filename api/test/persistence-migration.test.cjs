@@ -194,6 +194,7 @@ before(async () => {
      VALUES ($1, $2, $3, 'A-1'), ($4, $5, $6, 'B-1')`,
     [ids.unitA, ids.campingA, ids.typeA, ids.unitB, ids.campingB, ids.typeB],
   )
+  await dataSource.runMigrations({ transaction: 'all' })
 })
 
 after(async () => {
@@ -507,5 +508,21 @@ test('migration down refuses void metadata', async () => {
   } finally {
     if (runner.isTransactionActive) await runner.rollbackTransaction()
     await runner.release()
+  }
+})
+
+test('unit capacity migrates from its type and stays required and positive', async () => {
+  const rows = await dataSource.query(
+    'SELECT max_occupancy FROM camping_private.accommodation_units WHERE id = $1',
+    [ids.unitA],
+  )
+  assert.equal(rows[0].max_occupancy, 4)
+  for (const capacity of [null, 0, -1]) {
+    await assert.rejects(
+      dataSource.query(
+        'UPDATE camping_private.accommodation_units SET max_occupancy = $1 WHERE id = $2',
+        [capacity, ids.unitA],
+      ),
+    )
   }
 })

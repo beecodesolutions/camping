@@ -27,6 +27,8 @@ import type {
   CheckInRequest,
   ExtraTemplate,
   PaymentInput,
+  ReservationCreate,
+  ReservationQuoteCreate,
   ReservationListQuery,
   ReservationPage,
   ReservationQuote,
@@ -179,6 +181,22 @@ export const apiSlice = createApi({
         parse(reservationResponseSchema, response),
       providesTags: (_result, _error, id) => [{ type: 'Reservation', id }],
     }),
+    reservationQuoteCreate: builder.mutation<
+      ReservationQuote,
+      ReservationQuoteCreate
+    >({
+      query: (body) => ({ url: '/reservations/quote', method: 'POST', body }),
+      transformResponse: (response) => parse(reservationQuoteSchema, response),
+    }),
+    reservationCreate: builder.mutation<ReservationResponse, ReservationCreate>(
+      {
+        query: (body) => ({ url: '/reservations', method: 'POST', body }),
+        transformResponse: (response) =>
+          parse(reservationResponseSchema, response),
+        invalidatesTags: (result) =>
+          result ? ['Reservations', 'Availability'] : [],
+      },
+    ),
     reservationCheckInQuote: builder.mutation<
       ReservationQuote,
       { id: string; version: number; arrivalDate: string }
@@ -419,6 +437,8 @@ export const {
   useReservationsQuery,
   useReservationQuery,
   useLazyReservationQuery,
+  useReservationQuoteCreateMutation,
+  useReservationCreateMutation,
   useReservationCheckInQuoteMutation,
   useReservationCheckInMutation,
   useStaysQuery,

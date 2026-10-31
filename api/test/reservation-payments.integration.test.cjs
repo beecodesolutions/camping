@@ -204,8 +204,8 @@ before(async () => {
   )
   await dataSource.query(
     `INSERT INTO camping_private.accommodation_units
-      (id, camping_id, accommodation_type_id, name, enabled)
-     VALUES ($1, $2, $3, 'A1', true), ($4, $5, $6, 'B1', true)`,
+      (id, camping_id, accommodation_type_id, name, enabled, max_occupancy)
+     VALUES ($1, $2, $3, 'A1', true, 4), ($4, $5, $6, 'B1', true, 4)`,
     [
       ids.unit,
       ids.camping,

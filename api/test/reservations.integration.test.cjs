@@ -157,8 +157,8 @@ before(async () => {
   )
   await dataSource.query(
     `INSERT INTO camping_private.accommodation_units
-      (id, camping_id, accommodation_type_id, name)
-     VALUES ($1, $2, $3, 'A-1')`,
+      (id, camping_id, accommodation_type_id, name, max_occupancy)
+     VALUES ($1, $2, $3, 'A-1', 4)`,
     [ids.unit, ids.camping, ids.type],
   )
   app = await createNestApp()
@@ -345,7 +345,7 @@ test('manual override survives edit and original create retry replays current ro
   assert.equal(retry.value.version, edited.value.version)
 })
 
-test('self modification excludes its own reservation and failed occupancy edit rolls back', async () => {
+test('self modification excludes its own reservation and permits exceeding capacity', async () => {
   const created = await createReservation({
     checkInDate: '2031-01-01',
     checkOutDate: '2031-01-03',
@@ -365,7 +365,7 @@ test('self modification excludes its own reservation and failed occupancy edit r
   })
   assert.equal(quote.response.status, 201)
   assert.equal(quote.value.priceSnapshot.totalMinor, 2000)
-  const rejected = await request(`/api/reservations/${created.value.id}`, {
+  const edited = await request(`/api/reservations/${created.value.id}`, {
     method: 'PATCH',
     origin: ORIGIN,
     cookie,
@@ -375,13 +375,13 @@ test('self modification excludes its own reservation and failed occupancy edit r
       acceptedTotalMinor: 2000,
     },
   })
-  assert.equal(rejected.response.status, 409)
+  assert.equal(edited.response.status, 200)
   const current = await request(`/api/reservations/${created.value.id}`, {
     cookie,
   })
   assert.equal(current.response.status, 200)
-  assert.equal(current.value.adults, 2)
-  assert.equal(current.value.version, created.value.version)
+  assert.equal(current.value.adults, 5)
+  assert.equal(current.value.version, created.value.version + 1)
 })
 
 test('simultaneous creates for one unit have one winner', async () => {
@@ -631,4 +631,40 @@ test('outbox failure rolls back reservation and audit atomically', async () => {
   await dataSource.query(
     'DROP FUNCTION camping_private.fail_reservation_outbox()',
   )
+})
+
+test('capacity warning uses the unit limit including infants and does not block creation', async () => {
+  await dataSource.query(
+    'UPDATE camping_private.accommodation_units SET max_occupancy = 2 WHERE id = $1',
+    [ids.unit],
+  )
+  const input = quoteBody({
+    checkInDate: '2098-07-01',
+    checkOutDate: '2098-07-03',
+    adults: 3,
+    children: 1,
+    infants: 1,
+  })
+  const quote = await request('/api/reservations/quote', {
+    method: 'POST',
+    origin: ORIGIN,
+    cookie,
+    body: input,
+  })
+  assert.equal(quote.response.status, 201)
+  assert.deepEqual(quote.value.occupancyWarning, { maxOccupancy: 2, people: 5 })
+  const created = await createReservation({
+    ...input,
+    acceptedTotalMinor: quote.value.priceSnapshot.totalMinor,
+  })
+  assert.equal(created.response.status, 201)
+  assert.equal(created.value.status, 'pending')
+  const normal = await request('/api/reservations/quote', {
+    method: 'POST',
+    origin: ORIGIN,
+    cookie,
+    body: quoteBody({ checkInDate: '2098-08-01', checkOutDate: '2098-08-02' }),
+  })
+  assert.equal(normal.response.status, 201)
+  assert.equal(normal.value.occupancyWarning, undefined)
 })

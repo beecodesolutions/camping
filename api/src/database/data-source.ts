@@ -20,6 +20,8 @@ import { AuditLogEntity } from './entities/audit-log.entity'
 import { ReservationCreationHash1760000003000 } from './migrations/1760000003000-ReservationCreationHash'
 import { ReservationStayPricing1760000004000 } from './migrations/1760000004000-ReservationStayPricing'
 
+import { UnitCapacity1760000006000 } from './migrations/1760000006000-UnitCapacity'
+
 export const entities = [
   CampingEntity,
   UserEntity,
@@ -74,6 +76,7 @@ export function createDataSource() {
       ReservationCreationHash1760000003000,
       ReservationStayPricing1760000004000,
       MoneyPrecision1760000005000,
+      UnitCapacity1760000006000,
     ],
     synchronize: false,
     migrationsRun: false,

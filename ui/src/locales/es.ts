@@ -91,6 +91,50 @@ const es = {
     individualOccupancyUnoccupied_one: '{{count}} sin ocupar',
     individualOccupancyUnoccupied_other: '{{count}} sin ocupar',
   },
+  reservationCreate: {
+    title: 'Nueva reserva',
+    success: 'Reserva de {{name}} creada como pendiente.',
+    accommodationSection: 'Alojamiento y fechas',
+    type: 'Tipo de alojamiento',
+    selectType: 'Elegí un tipo de alojamiento.',
+    selectUnit: 'Elegí una unidad.',
+    unit: 'Unidad',
+    capacity_one: 'máximo {{count}} persona',
+    capacity_other: 'máximo {{count}} personas',
+    checkIn: 'Entrada',
+    checkOut: 'Salida',
+    email: 'Email',
+    notes: 'Notas',
+    invalidEmail: 'Ingresá un email válido.',
+    invalidDeparture: 'La salida debe ser posterior a la entrada.',
+    guestsRequired: 'Ingresá al menos un huésped.',
+    inventoryError: 'No pudimos cargar los alojamientos.',
+    noInventory:
+      'No hay alojamientos habilitados para crear reservas. Revisá la configuración de tipos y unidades.',
+    quote: 'Consultar disponibilidad y precio',
+    summary: 'Revisá tu reserva',
+    nights_one: '{{count}} noche',
+    nights_other: '{{count}} noches',
+    unitRate: '{{amount}} por unidad y noche',
+    rounding: 'Redondeo: {{amount}}',
+    total: 'Total: {{amount}} {{currency}}',
+    createFor: 'Crear reserva por {{amount}}',
+    notHeld:
+      'La cotización no retiene disponibilidad. Se verificará nuevamente al guardar.',
+    overCapacity:
+      'La unidad admite un máximo de {{max}} personas y la reserva incluye {{people}}, contando adultos, niños y bebés. Podés crear la reserva igualmente.',
+    priceChanged:
+      'El precio cambió. Consultá nuevamente y revisá el nuevo total antes de guardar.',
+    unavailable:
+      'No se puede reservar ese alojamiento con los datos elegidos. Revisá la unidad, las fechas y la disponibilidad.',
+    invalidRequest:
+      'No pudimos guardar esos datos. Revisá el formulario y volvé a cotizar.',
+    quoteError:
+      'No pudimos consultar disponibilidad y precio. Volvé a intentarlo.',
+    uncertain:
+      'No pudimos confirmar si la reserva se guardó. Reintentá con los mismos datos para evitar duplicados.',
+    retrySave: 'Reintentar guardar reserva',
+  },
   auth: {
     title: 'Ingresar al camping',
     subtitle: 'Administrá ingresos, extras y cierres.',

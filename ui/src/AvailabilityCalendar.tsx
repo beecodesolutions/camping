@@ -41,7 +41,7 @@ import {
   type AvailabilitySummary,
 } from './services/calendar'
 
-type Props = { profile: CampingProfile }
+type Props = { profile: CampingProfile; refreshKey?: number }
 type SelectedDay = { date: string; typeId: string } | null
 
 function monthLabel(value: string, language: string) {
@@ -394,7 +394,10 @@ function DayDetail({
   )
 }
 
-export default function AvailabilityCalendar({ profile }: Props) {
+export default function AvailabilityCalendar({
+  profile,
+  refreshKey = 0,
+}: Props) {
   const { t, i18n } = useTranslation()
   const today = todayInTimezone(profile.timezone)
   const [month, setMonth] = useState(monthKey(today))
@@ -579,7 +582,7 @@ export default function AvailabilityCalendar({ profile }: Props) {
       </Stack>
       {visibleSelectedDay && (
         <DayDetail
-          key={`${visibleSelectedDay.date}:${visibleSelectedDay.typeId}`}
+          key={`${visibleSelectedDay.date}:${visibleSelectedDay.typeId}:${refreshKey}`}
           selected={visibleSelectedDay}
           summary={visibleSummary}
           type={visibleAccommodationType}
