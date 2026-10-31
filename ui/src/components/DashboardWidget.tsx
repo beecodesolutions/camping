@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from '../app/theme'
 import type { CSSProperties, ReactNode } from 'react'
 import { Paper, Stack, Typography, type TypographyProps } from '@mui/material'
 
@@ -20,41 +21,23 @@ export default function DashboardWidget({
   children,
   height,
   titleVariant = 'subtitle1',
-  contentSpacing = 2,
+  contentSpacing = uiProps.stackStandard.spacing,
 }: DashboardWidgetProps) {
   return (
     <Paper
       component="section"
       aria-labelledby={titleId}
       variant="outlined"
-      sx={{
-        p: 2,
-        borderRadius: 2,
-        ...(height === undefined ? {} : { height }),
-      }}
+      sx={uiStyles.dashboardWidgetPaper(height)}
     >
       <Stack spacing={contentSpacing}>
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 1,
-          }}
-        >
-          <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
+        <Stack {...uiProps.row} sx={uiStyles.dashboardWidgetStack}>
+          <Stack {...uiProps.stackTight} sx={uiStyles.flexContent}>
             <Typography
               id={titleId}
               component="h2"
               variant={titleVariant}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                minWidth: 0,
-                overflowWrap: 'anywhere',
-                fontWeight: 700,
-              }}
+              sx={uiStyles.dashboardWidgetTypography}
             >
               {title}
             </Typography>

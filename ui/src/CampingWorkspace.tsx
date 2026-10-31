@@ -1,10 +1,10 @@
+import { uiProps, uiStyles } from './app/theme'
 import AccommodationFilter from './AccommodationFilter'
 import { useAppDispatch, useAppSelector } from './app/hooks'
 import {
   accommodationFilterChanged,
   selectAccommodationFilter,
 } from './app/accommodationFilterSlice'
-import { workspaceSpacing } from './app/workspaceSpacing'
 import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -31,7 +31,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Pencil, Plus, RotateCcw, Settings, Trash2 } from 'lucide-react'
 import LucideIcon from './components/LucideIcon'
 import MoneyField from './components/MoneyField'
 import { paymentInputSchema } from '@camping/contracts'
@@ -70,11 +70,16 @@ import ReservationCreateDialog from './ReservationCreateDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
 import WorkspaceLayout from './WorkspaceLayout'
+import MaytuBrand from './components/MaytuBrand'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
 import WorkspaceNavigation from './WorkspaceNavigation'
 import WorkspaceUserMenu from './WorkspaceUserMenu'
-import { useWorkspaceSection, workspaceHref } from './app/workspaceLocation'
+import {
+  navigateWorkspace,
+  useWorkspaceSection,
+  workspaceHref,
+} from './app/workspaceLocation'
 import PendingBalanceCard from './PendingBalanceCard'
 import { useTimeOfDay } from './app/timeOfDay'
 import AvailabilityCalendar from './AvailabilityCalendar'
@@ -90,13 +95,6 @@ type WorkspaceProps = {
   user: SessionUser
   themeMode: 'light' | 'dark'
   onToggleTheme: () => void
-}
-const formGridSx = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
-  gap: 2,
-  alignItems: 'start',
-  '& > .MuiTextField-root': { width: '100%', minWidth: 0 },
 }
 
 function countPeople(stay: Stay) {
@@ -141,7 +139,7 @@ export default function CampingWorkspace({
   if (camping.isError && errorStatus(camping.error) === '401') return null
   if (camping.isError)
     return (
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pt: 8 }}>
+      <Box sx={uiStyles.campingWorkspaceBox}>
         <Alert
           severity="error"
           action={
@@ -198,26 +196,27 @@ export default function CampingWorkspace({
           </>
         }
       />
-      <Paper
-        elevation={3}
-        sx={{
-          display: { xs: 'flex', md: 'none' },
-          position: 'fixed',
-          top: 'calc(8px + env(safe-area-inset-top))',
-          right: 16,
-          borderRadius: '50%',
-          zIndex: (theme) => theme.zIndex.appBar,
-          border: 1,
-          borderColor: 'divider',
-          '& .MuiIconButton-root': { width: 44, height: 44 },
-        }}
-      >
-        <WorkspaceUserMenu
-          themeMode={themeMode}
-          onToggleTheme={onToggleTheme}
-          onLogout={() => void logout()}
-          logoutPending={logoutState.isLoading}
-        />
+      <Paper component="header" square elevation={0} sx={uiStyles.mobileAppBar}>
+        <MaytuBrand inverse />
+        <Stack {...uiProps.rowCompact}>
+          <Tooltip title={t('navigation.settings')}>
+            <IconButton
+              href={workspaceHref('settings')}
+              aria-label={t('navigation.settings')}
+              aria-current={section === 'settings' ? 'page' : undefined}
+              onClick={navigateWorkspace}
+              sx={uiStyles.mobileSettings(section)}
+            >
+              <LucideIcon icon={Settings} />
+            </IconButton>
+          </Tooltip>
+          <WorkspaceUserMenu
+            themeMode={themeMode}
+            onToggleTheme={onToggleTheme}
+            onLogout={() => void logout()}
+            logoutPending={logoutState.isLoading}
+          />
+        </Stack>
       </Paper>
       <WorkspaceLayout
         notices={
@@ -253,40 +252,28 @@ export default function CampingWorkspace({
         {section === 'home' &&
           (profile ? (
             <>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: 'minmax(0, 1fr)',
-                    sm: 'repeat(2, minmax(0, 1fr))',
-                    lg: 'repeat(3, minmax(0, 1fr))',
-                  },
-                  gap: 2,
-                  mb: 2,
-                }}
-              >
-                <Box
-                  sx={{
-                    minWidth: 0,
-                    gridColumn: { sm: 'span 2', lg: 'span 2' },
-                  }}
-                >
+              <Box sx={uiStyles.campingWorkspaceBox2}>
+                <Box sx={uiStyles.campingWorkspaceBox3}>
                   <OccupancyCard profile={profile} />
                 </Box>
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={uiStyles.shrinkable}>
                   <PendingBalanceCard
                     pendingAmountMinor={profile.pendingAmountMinor}
                     currency={profile.currency}
                   />
                 </Box>
               </Box>
-              <Box sx={{ mt: 2 }}>
+              <Box sx={uiStyles.topGap}>
                 <DashboardToday
                   profile={profile}
                   onSelect={setSelection}
                   refreshKey={todayRefreshKey}
                 />
-                <Button href={workspaceHref('stays')} sx={{ mt: 2 }}>
+                <Button
+                  href={workspaceHref('stays')}
+                  onClick={navigateWorkspace}
+                  sx={uiStyles.topGap}
+                >
                   {t('navigation.allStays')}
                 </Button>
               </Box>
@@ -296,7 +283,7 @@ export default function CampingWorkspace({
           ))}
         {section === 'reservations' &&
           (profile ? (
-            <Stack spacing={2}>
+            <Stack {...uiProps.stackStandard}>
               <Box>
                 <Typography component="h2" variant="h6">
                   {t('calendar.title')}
@@ -323,13 +310,13 @@ export default function CampingWorkspace({
           <Stack
             component={Paper}
             variant="outlined"
-            spacing={2}
-            sx={{ p: 2, borderRadius: 2 }}
+            {...uiProps.stackStandard}
+            sx={uiStyles.staysFilters}
           >
             <Stack
-              direction="row"
-              spacing={1}
-              sx={{ alignItems: 'center', justifyContent: 'space-between' }}
+              {...uiProps.rowSmall}
+
+              sx={uiStyles.rowBetween}
             >
               <Tabs
                 value={stayStatus}
@@ -339,10 +326,7 @@ export default function CampingWorkspace({
                 }}
                 variant="scrollable"
                 scrollButtons={false}
-                sx={{
-                  minWidth: 0,
-                  '& .MuiTab-root': { minWidth: 0, px: { xs: 1, sm: 2 } },
-                }}
+                sx={uiStyles.campingWorkspaceTabs}
                 aria-label={t('navigation.stayViews')}
               >
                 <Tab value="active" label={t('navigation.inProgress')} />
@@ -378,27 +362,40 @@ export default function CampingWorkspace({
               />
             )}
             {stays.isFetching && (
-              <Stack role="status" aria-label={t('home.loading')} spacing={2}>
+              <Stack
+                role="status"
+                aria-label={t('home.loading')}
+                {...uiProps.stackStandard}
+              >
                 {Array.from(
                   { length: stays.currentData ? 2 : 4 },
                   (_, index) => (
                     <Stack
                       key={index}
-                      direction="row"
-                      spacing={2}
-                      sx={{ alignItems: 'center', py: 1 }}
+                      {...uiProps.rowStandard}
+
+                      sx={uiStyles.campingWorkspaceStack3}
                     >
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Skeleton variant="text" width="45%" height={28} />
-                        <Skeleton variant="text" width="70%" height={22} />
+                      <Box sx={uiStyles.campingWorkspaceBox6}>
+                        <Skeleton
+                          variant="text"
+                          {...uiProps.guestNamePlaceholder}
+                        />
+                        <Skeleton
+                          variant="text"
+                          {...uiProps.guestDetailsPlaceholder}
+                        />
                       </Box>
                       <Skeleton
                         variant="text"
-                        width={100}
-                        height={32}
-                        sx={{ display: { xs: 'none', sm: 'block' } }}
+                        {...uiProps.amountPlaceholder}
+
+                        sx={uiStyles.desktopBlock}
                       />
-                      <Skeleton variant="rounded" width={44} height={44} />
+                      <Skeleton
+                        variant="rounded"
+                        {...uiProps.actionPlaceholder}
+                      />
                     </Stack>
                   ),
                 )}
@@ -426,18 +423,7 @@ export default function CampingWorkspace({
                 section === 'reservations' ? 'reservation-create' : 'check-in',
             })
           }
-          sx={{
-            position: 'fixed',
-            right: (theme) => ({ xs: theme.spacing(2), md: theme.spacing(4) }),
-            bottom: (theme) => ({
-              xs: `calc(${theme.spacing(workspaceSpacing.mobileNavigationHeight + workspaceSpacing.floatingActionGap)} + env(safe-area-inset-bottom))`,
-              md: theme.spacing(3),
-            }),
-            minHeight: (theme) =>
-              theme.spacing(workspaceSpacing.floatingActionHeight),
-            gap: 1,
-            zIndex: (theme) => theme.zIndex.appBar,
-          }}
+          sx={uiStyles.campingWorkspaceFab}
         >
           <LucideIcon icon={Plus} />
           {t(
@@ -525,7 +511,7 @@ function EnrichedStayList({
 
 function LoadingPanel() {
   return (
-    <Box sx={{ py: 5 }}>
+    <Box sx={uiStyles.loadingPanelBox}>
       <Typography color="text.secondary">Cargando…</Typography>
     </Box>
   )
@@ -557,7 +543,7 @@ function InfiniteStayLoader({
     return () => observer.disconnect()
   }, [hasMore, loading, failed, onLoad])
   return (
-    <Box ref={sentinel} sx={{ textAlign: 'center', minHeight: 1 }}>
+    <Box ref={sentinel} sx={uiStyles.infiniteStayLoaderBox}>
       {hasMore && !loading && (
         <Button disabled={loading} onClick={onLoad}>
           {t('common.loadMore')}
@@ -761,13 +747,13 @@ function StayDetail({
   }
   const closePanel =
     stay && editable ? (
-      <Stack spacing={2}>
+      <Stack {...uiProps.stackStandard}>
         <Divider />
         <Typography variant="h6">{t('stay.closeTitle')}</Typography>
         <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1}
-          sx={{ alignItems: 'stretch' }}
+          {...uiProps.responsiveRowSmall}
+
+          sx={uiStyles.stayDetailStack}
         >
           <TextField
             type="date"
@@ -794,8 +780,8 @@ function StayDetail({
           </Button>
         </Stack>
         {preview && (
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack spacing={0.5}>
+          <Paper variant="outlined" sx={uiStyles.panelPadding}>
+            <Stack {...uiProps.stackCompact}>
               <Info label={t('stay.nights')} value={String(preview.nights)} />
               <Info
                 label={t('stay.accommodation')}
@@ -871,14 +857,11 @@ function StayDetail({
       maxWidth="md"
       slotProps={{
         paper: {
-          sx: {
-            m: { xs: 1, sm: 4 },
-            width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 64px)' },
-          },
+          sx: uiStyles.stayDialogPaper,
         },
       }}
     >
-      <DialogTitle sx={{ overflowWrap: 'anywhere' }}>
+      <DialogTitle sx={uiStyles.wrappedText}>
         {action === 'payment'
           ? `${t('stay.recordPayment')} · `
           : action === 'extras'
@@ -893,11 +876,11 @@ function StayDetail({
           <Alert severity="error">{t('stay.loadError')}</Alert>
         )}
         {stay && (
-          <Stack spacing={2}>
+          <Stack {...uiProps.stackStandard}>
             {action === 'close' && closePanel}
             {action === 'detail' && (
               <>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Stack {...uiProps.responsiveRow}>
                   <Info
                     label={t('checkIn.arrivalDate')}
                     value={formatDate(stay.arrivalDate, i18n.language)}
@@ -916,11 +899,11 @@ function StayDetail({
                   />
                 </Stack>
                 {stay.closure && (
-                  <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Paper variant="outlined" sx={uiStyles.panelPadding}>
                     <Typography variant="h6">
                       {t('stay.closedSummary')}
                     </Typography>
-                    <Box sx={{ ...formGridSx, mt: 1 }}>
+                    <Box sx={uiStyles.stayDetailBox}>
                       <Info
                         label={t('stay.departureDate')}
                         value={formatDate(
@@ -967,7 +950,7 @@ function StayDetail({
                     <Typography
                       variant="body2"
                       color="text.secondary"
-                      sx={{ mt: 1 }}
+                      sx={uiStyles.smallTopGap}
                     >
                       {t('stay.totalCalculated')}
                     </Typography>
@@ -977,12 +960,12 @@ function StayDetail({
             )}
             {action !== 'extras' && (
               <>
-                <Paper variant="outlined" sx={{ p: 2 }}>
+                <Paper variant="outlined" sx={uiStyles.panelPadding}>
                   <Typography variant="h6">{t('stay.account')}</Typography>
                   <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    sx={{ mt: 1 }}
+                    {...uiProps.responsiveRow}
+
+                    sx={uiStyles.smallTopGap}
                   >
                     <Info
                       label={t('stay.total')}
@@ -1018,12 +1001,12 @@ function StayDetail({
                     />
                   </Stack>
                   {stay.account.balanceMinor < 0 && (
-                    <Typography color="info.main" sx={{ mt: 1 }}>
+                    <Typography color="info.main" sx={uiStyles.smallTopGap}>
                       {t('stay.creditHelp')}
                     </Typography>
                   )}
                 </Paper>
-                <Paper variant="outlined" sx={{ p: 2 }}>
+                <Paper variant="outlined" sx={uiStyles.panelPadding}>
                   <Typography variant="h6">{t('stay.payments')}</Typography>
                   {action === 'detail' &&
                     (stay.payments.length === 0 ? (
@@ -1031,19 +1014,19 @@ function StayDetail({
                         {t('stay.noPayments')}
                       </Typography>
                     ) : (
-                      <Stack spacing={1} sx={{ mt: 1 }}>
+                      <Stack {...uiProps.stackSmall} sx={uiStyles.smallTopGap}>
                         {stay.payments.map((payment) => (
                           <Stack
                             key={payment.id}
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1}
-                            sx={{ justifyContent: 'space-between' }}
+                            {...uiProps.responsiveRowSmall}
+
+                            sx={uiStyles.campingWorkspaceStack4}
                           >
                             <Typography>
                               {formatDate(payment.paidOn, i18n.language)} ·{' '}
                               {t(`stay.paymentMethods.${payment.method}`)}
                             </Typography>
-                            <Typography sx={{ fontWeight: 700 }}>
+                            <Typography sx={uiStyles.boldText}>
                               {formatMoney(
                                 payment.amountMinor,
                                 stay.currency,
@@ -1059,8 +1042,8 @@ function StayDetail({
                         ))}
                       </Stack>
                     ))}
-                  <Stack spacing={1} sx={{ mt: 2 }}>
-                    <Box sx={formGridSx}>
+                  <Stack {...uiProps.stackSmall} sx={uiStyles.topGap}>
+                    <Box sx={uiStyles.formGrid}>
                       <MoneyField
                         label={t('stay.paymentAmount')}
                         currency={stay.currency}
@@ -1187,7 +1170,7 @@ function StayDetail({
                   />
                 ))}
                 {editable && (
-                  <Box sx={formGridSx}>
+                  <Box sx={uiStyles.formGrid}>
                     <TextField
                       select
                       label={t('stay.template')}
@@ -1286,11 +1269,11 @@ type DeleteExtra = (arg: DeleteExtraArg) => Promise<unknown>
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <Box sx={{ minWidth: 0, flex: 1 }}>
+    <Box sx={uiStyles.flexContent}>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography sx={{ overflowWrap: 'anywhere' }}>{value}</Typography>
+      <Typography sx={uiStyles.wrappedText}>{value}</Typography>
     </Box>
   )
 }
@@ -1341,7 +1324,7 @@ function ExtraRow({
     }
   }
   return (
-    <Box sx={formGridSx}>
+    <Box sx={uiStyles.formGrid}>
       <TextField
         size="small"
         label={t('stay.category')}
@@ -1373,17 +1356,8 @@ function ExtraRow({
         disabled={!editable || saving}
         onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
       />
-      <Stack
-        direction="row"
-        useFlexGap
-        sx={{
-          gridColumn: '1 / -1',
-          gap: 1,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        <Typography sx={{ mr: 'auto', overflowWrap: 'anywhere' }}>
+      <Stack {...uiProps.row} useFlexGap sx={uiStyles.extraRowStack}>
+        <Typography sx={uiStyles.extraRowTypography}>
           {formatMoney(price * quantity, stay.currency, i18n.language)}
         </Typography>
         {error && <Typography color="error">{t('stay.extraError')}</Typography>}
@@ -1461,8 +1435,8 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
     a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, i18n.language),
   )
   return (
-    <Stack spacing={3} sx={{ mt: 3 }}>
-      <Paper variant="outlined" sx={{ p: 2 }}>
+    <Stack {...uiProps.stackSection} sx={uiStyles.settingsPanelStack}>
+      <Paper variant="outlined" sx={uiStyles.panelPadding}>
         <Typography variant="h6">{t('settings.money')}</Typography>
         <Typography color="text.secondary">
           {t('settings.moneyHelp')}
@@ -1494,28 +1468,32 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
         </Box>
       </Paper>
       {error && <Alert severity="error">{error}</Alert>}
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Paper variant="outlined" sx={uiStyles.panelPadding}>
         <Typography variant="h6">{t('settings.rates')}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={uiStyles.bottomGap}
+        >
           {t('settings.ratesHelp')}
         </Typography>
-        <Stack spacing={2}>
+        <Stack {...uiProps.stackStandard}>
           {(['adults', 'children', 'infants'] as const).map((category) => (
             <Stack
               key={category}
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
-              sx={{ alignItems: { sm: 'center' } }}
+              {...uiProps.responsiveRow}
+
+              sx={uiStyles.tabletAlignCenter}
             >
-              <Typography sx={{ flex: 1 }}>
+              <Typography sx={uiStyles.flexGrow}>
                 {t(`checkIn.${category}`)} (
                 {ageLabel(profile.ageRanges[category])})
               </Typography>
               {editingRate === category ? (
                 <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={1}
-                  sx={{ alignItems: { sm: 'center' } }}
+                  {...uiProps.responsiveRowSmall}
+
+                  sx={uiStyles.tabletAlignCenter}
                 >
                   <MoneyField
                     autoFocus
@@ -1533,7 +1511,7 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
                       })
                     }
                   />
-                  <Stack direction="row" spacing={1}>
+                  <Stack {...uiProps.rowSmall}>
                     <Button
                       variant="contained"
                       color="primary"
@@ -1549,7 +1527,7 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
                     <Button
                       variant="text"
                       color="error"
-                      sx={{ textDecoration: 'underline' }}
+                      sx={uiStyles.campingWorkspaceButton2}
                       disabled={ratesState.isLoading}
                       onClick={() => {
                         setEditingRate(null)
@@ -1562,9 +1540,9 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
                 </Stack>
               ) : (
                 <Stack
-                  direction="row"
-                  spacing={2}
-                  sx={{ alignItems: 'center' }}
+                  {...uiProps.rowStandard}
+
+                  sx={uiStyles.alignCenter}
                 >
                   <Typography>
                     {formatMoney(
@@ -1596,18 +1574,22 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
           ))}
         </Stack>
       </Paper>
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Paper variant="outlined" sx={uiStyles.panelPadding}>
         <Typography variant="h6">{t('settings.templates')}</Typography>
-        <Stack spacing={3} divider={<Divider />} sx={{ mt: 2 }}>
+        <Stack
+          {...uiProps.stackSection}
+          divider={<Divider />}
+          sx={uiStyles.topGap}
+        >
           {templates.isError && (
             <Alert severity="error">{t('settings.loadError')}</Alert>
           )}
           {categories.map((category) => (
-            <Stack key={category} spacing={2}>
+            <Stack key={category} {...uiProps.stackStandard}>
               <Typography
                 component="h3"
                 variant="subtitle1"
-                sx={{ fontWeight: 700 }}
+                sx={uiStyles.boldText}
               >
                 {category || t('settings.uncategorized')}
               </Typography>
@@ -1623,8 +1605,8 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
             </Stack>
           ))}
         </Stack>
-        <Divider sx={{ my: 2 }} />
-        <Box sx={formGridSx}>
+        <Divider sx={uiStyles.settingsPanelDivider} />
+        <Box sx={uiStyles.formGrid}>
           <TextField
             label={t('stay.category')}
             value={category}
@@ -1701,16 +1683,7 @@ function TemplateRow({
   return (
     <Box>
       {editing ? (
-        <Box
-          sx={{
-            ...formGridSx,
-            gridTemplateColumns: {
-              xs: 'minmax(0, 1fr)',
-              sm: 'repeat(2, minmax(0, 1fr))',
-              md: 'minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 0.8fr) auto',
-            },
-          }}
-        >
+        <Box sx={uiStyles.templateRowBox}>
           <TextField
             size="small"
             label={t('stay.category')}
@@ -1736,7 +1709,7 @@ function TemplateRow({
             disabled={saving}
             onChangeMinor={(value) => setPrice(value === '' ? NaN : value)}
           />
-          <Stack direction="row" spacing={1}>
+          <Stack {...uiProps.rowSmall}>
             <Button
               variant="contained"
               color="primary"
@@ -1759,7 +1732,7 @@ function TemplateRow({
             <Button
               variant="text"
               color="error"
-              sx={{ textDecoration: 'underline' }}
+              sx={uiStyles.templateRowButton}
               disabled={saving}
               onClick={() => {
                 setEditing(false)
@@ -1771,18 +1744,9 @@ function TemplateRow({
           </Stack>
         </Box>
       ) : (
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{ alignItems: 'center', minWidth: 0 }}
-        >
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography
-              sx={{
-                overflowWrap: 'anywhere',
-                color: template.enabled ? 'text.primary' : 'text.secondary',
-              }}
-            >
+        <Stack {...uiProps.rowStandard} sx={uiStyles.templateRowStack}>
+          <Box sx={uiStyles.campingWorkspaceBox6}>
+            <Typography sx={uiStyles.templateRowTypography(template.enabled)}>
               {template.description}
             </Typography>
             {!template.enabled && (
@@ -1791,10 +1755,10 @@ function TemplateRow({
               </Typography>
             )}
           </Box>
-          <Typography sx={{ whiteSpace: 'nowrap' }}>
+          <Typography sx={uiStyles.templateRowTypography2}>
             {formatMoney(template.unitPriceMinor, currency, i18n.language)}
           </Typography>
-          <Stack direction="row">
+          <Stack {...uiProps.row}>
             <Tooltip title={t('settings.editExtra')}>
               <span>
                 <IconButton
@@ -1847,7 +1811,7 @@ function TemplateRow({
         </Stack>
       )}
       {error && !confirmRemove && (
-        <Alert severity="error" sx={{ mt: 2 }}>
+        <Alert severity="error" sx={uiStyles.topGap}>
           {t('settings.saveError')}
         </Alert>
       )}
@@ -1865,7 +1829,7 @@ function TemplateRow({
             {t('settings.deactivateHelp', { name: template.description })}
           </Typography>
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>
+            <Alert severity="error" sx={uiStyles.topGap}>
               {t('settings.saveError')}
             </Alert>
           )}

@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -244,15 +245,15 @@ export default function ReservationCreateDialog({
                 ? saveValues()
                 : quoteValues(event))
         }}
-        sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+        sx={uiStyles.formColumn}
       >
         <DialogContent
           dividers
           ref={contentRef}
           tabIndex={-1}
-          sx={{ outline: 'none' }}
+          sx={uiStyles.reservationCreateDialogDialogContent}
         >
-          <Stack spacing={2.5}>
+          <Stack {...uiProps.stackForm}>
             {state.error && (
               <Alert severity="error">{errorText(state.error)}</Alert>
             )}
@@ -278,13 +279,13 @@ export default function ReservationCreateDialog({
               component="fieldset"
               hidden={reviewing}
               disabled={locked || loading || inventoryError || noInventory}
-              sx={{ m: 0, p: 0, border: 0, minWidth: 0 }}
+              sx={uiStyles.fieldsetReset}
             >
-              <Stack spacing={2.5}>
+              <Stack {...uiProps.stackForm}>
                 <Typography
                   component="h2"
                   variant="subtitle1"
-                  sx={{ fontWeight: 700 }}
+                  sx={uiStyles.reservationCreateDialogTypography}
                 >
                   {t('reservationCreate.accommodationSection')}
                 </Typography>
@@ -352,16 +353,7 @@ export default function ReservationCreateDialog({
                     )}
                   />
                 )}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: 'minmax(0, 1fr)',
-                      sm: 'minmax(0, 1fr) minmax(0, 1fr) 100px',
-                    },
-                    gap: 2,
-                  }}
-                >
+                <Box sx={uiStyles.reservationCreateDialogBox3}>
                   <TextField
                     label={t('reservationCreate.checkIn')}
                     type="date"
@@ -411,13 +403,7 @@ export default function ReservationCreateDialog({
                     }}
                   />
                 </Box>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                    gap: 2,
-                  }}
-                >
+                <Box sx={uiStyles.reservationCreateDialogBox4}>
                   {(['adults', 'children', 'infants'] as const).map((name) => {
                     const range = profile.ageRanges[name]
                     return (
@@ -448,7 +434,7 @@ export default function ReservationCreateDialog({
                 <Typography
                   component="h2"
                   variant="subtitle1"
-                  sx={{ fontWeight: 700 }}
+                  sx={uiStyles.reservationCreateDialogTypography}
                 >
                   {t('checkIn.responsibleSection')}
                 </Typography>
@@ -461,7 +447,7 @@ export default function ReservationCreateDialog({
                   helperText={errorText(errors.responsibleName?.message)}
                   slotProps={{ htmlInput: register('responsibleName') }}
                 />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Stack {...uiProps.responsiveRow}>
                   <Controller
                     name="nationality"
                     control={control}
@@ -491,13 +477,7 @@ export default function ReservationCreateDialog({
                     slotProps={{ htmlInput: register('document') }}
                   />
                 </Stack>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(140px, 2fr) minmax(0, 3fr)',
-                    gap: 1,
-                  }}
-                >
+                <Box sx={uiStyles.contactFields}>
                   <Controller
                     name="phoneCountry"
                     control={control}
@@ -554,7 +534,7 @@ export default function ReservationCreateDialog({
             )}
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, gap: 1, flexWrap: 'wrap' }}>
+        <DialogActions sx={uiStyles.reservationCreateDialogDialogActions}>
           <Button
             onClick={reviewing && !locked ? changed : onClose}
             disabled={saving}

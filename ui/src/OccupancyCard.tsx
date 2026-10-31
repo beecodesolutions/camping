@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -57,11 +58,11 @@ function LegacyOccupancyCard({
     <DashboardWidget
       titleId="occupancy-title"
       title={t('home.occupancy')}
-      height="100%"
+      {...uiProps.fullHeightWidget}
     >
-      <Stack direction="row" spacing={2}>
+      <Stack {...uiProps.rowStandard}>
         <Box>
-          <Typography component="p" variant="h3">
+          <Typography component="p" variant="metric">
             {activeGroups}
           </Typography>
           <Typography>{t('home.groups', { count: activeGroups })}</Typography>
@@ -164,11 +165,14 @@ function LiveOccupancyCard({ profile }: LiveProps) {
           onChange={(value) => dispatch(accommodationFilterChanged(value))}
         />
       }
-      height="100%"
+      {...uiProps.fullHeightWidget}
     >
       {loading ? (
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <CircularProgress size={20} aria-label={t('common.loading')} />
+        <Stack {...uiProps.rowSmall} sx={uiStyles.alignCenter}>
+          <CircularProgress
+            {...uiProps.inlineProgress}
+            aria-label={t('common.loading')}
+          />
           <Typography color="text.secondary">
             {t('home.occupancyLoading')}
           </Typography>
@@ -181,30 +185,14 @@ function LiveOccupancyCard({ profile }: LiveProps) {
           {t('home.occupancyLoadError')}
         </Alert>
       ) : selectedMetrics ? (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'minmax(0, 1fr)',
-              sm: 'minmax(0, 1.35fr) minmax(130px, 0.65fr)',
-            },
-            gap: { xs: 2, sm: 3 },
-            alignItems: 'start',
-          }}
-        >
-          <Box sx={{ minWidth: 0 }}>
+        <Box sx={uiStyles.liveOccupancyCardBox}>
+          <Box sx={uiStyles.shrinkable}>
             <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns:
-                  filter !== 'camping' &&
+              sx={uiStyles.occupancyMetricGrid(
+                filter !== 'camping' &&
                   state.status === 'ready' &&
-                  state.data.individualUnits.total > 0
-                    ? 'repeat(2, minmax(0, 1fr))'
-                    : 'minmax(0, 1fr)',
-                gap: { xs: 1.5, sm: 2 },
-                alignItems: 'start',
-              }}
+                  state.data.individualUnits.total > 0,
+              )}
             >
               <Metric
                 value={selectedMetrics.groups}
@@ -212,7 +200,7 @@ function LiveOccupancyCard({ profile }: LiveProps) {
                 primary
               />
               {filter !== 'camping' && state.status === 'ready' && (
-                <Box sx={{ minWidth: 0 }}>
+                <Box sx={uiStyles.shrinkable}>
                   {state.data.individualUnits.total === 0 ? (
                     <Typography variant="body2" color="text.secondary">
                       {t('home.individualOccupancyEmpty')}
@@ -227,27 +215,7 @@ function LiveOccupancyCard({ profile }: LiveProps) {
               )}
             </Box>
           </Box>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: 'max-content max-content max-content max-content',
-                sm: 'max-content max-content',
-              },
-              justifyContent: { xs: 'start', sm: 'end' },
-              alignItems: 'center',
-              columnGap: 1,
-              rowGap: 0.5,
-              '& .occupancy-count': {
-                color: 'accent.main',
-                fontSize: '1.5rem',
-                fontWeight: 700,
-                lineHeight: 1.2,
-                fontVariantNumeric: 'tabular-nums',
-                textAlign: 'right',
-              },
-            }}
-          >
+          <Box sx={uiStyles.liveOccupancyCardBox5}>
             <Typography className="occupancy-count">
               {selectedMetrics.people}
             </Typography>
@@ -270,28 +238,19 @@ function LiveOccupancyCard({ profile }: LiveProps) {
 function UnitMetric({ occupied, total }: { occupied: number; total: number }) {
   const { t } = useTranslation()
   return (
-    <Box sx={{ minWidth: 0 }}>
+    <Box sx={uiStyles.shrinkable}>
       <Typography
         component="p"
-        variant="h3"
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          fontWeight: 650,
-          color: 'primary.main',
-          fontVariantNumeric: 'tabular-nums',
-        }}
+        variant="metric"
+        sx={uiStyles.unitMetricTypography}
       >
         {occupied}
-        <Box
-          component="span"
-          sx={{ fontSize: '0.65em', mx: '0.12em', lineHeight: 1 }}
-        >
+        <Box component="span" sx={uiStyles.unitMetricBox2}>
           /
         </Box>
         {total}
       </Typography>
-      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+      <Stack {...uiProps.rowSmall} sx={uiStyles.wrapRow}>
         <Typography color="text.secondary">
           {t('home.individualOccupancyOccupiedLabel', { count: occupied })}
         </Typography>
@@ -310,19 +269,15 @@ function Metric({
   primary?: boolean
 }) {
   return (
-    <Box sx={{ minWidth: 0 }}>
+    <Box sx={uiStyles.shrinkable}>
       <Typography
         component="p"
-        variant={primary ? 'h3' : 'h5'}
-        sx={{
-          fontWeight: primary ? 650 : 700,
-          color: primary ? 'primary.main' : 'accent.main',
-          fontVariantNumeric: 'tabular-nums',
-        }}
+        variant={primary ? 'metric' : 'metricSecondary'}
+        sx={uiStyles.metricTypography(primary)}
       >
         {value}
       </Typography>
-      <Typography color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+      <Typography color="text.secondary" sx={uiStyles.wrappedText}>
         {label}
       </Typography>
     </Box>

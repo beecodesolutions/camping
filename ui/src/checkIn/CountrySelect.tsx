@@ -1,3 +1,4 @@
+import { callingCodePopperProps } from '../app/theme'
 import type { Ref } from 'react'
 import { Autocomplete, createFilterOptions, TextField } from '@mui/material'
 import {
@@ -45,9 +46,7 @@ export default function CountrySelect({
       fullWidth
       openOnFocus={callingCode}
       disableClearable={callingCode}
-      slotProps={
-        callingCode ? { popper: { style: { minWidth: 280 } } } : undefined
-      }
+      slotProps={callingCode ? callingCodePopperProps : undefined}
       disabled={disabled}
       options={options}
       value={value || null}

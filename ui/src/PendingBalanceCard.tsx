@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, Typography } from '@mui/material'
 import { PiggyBank } from 'lucide-react'
@@ -16,13 +17,17 @@ export default function PendingBalanceCard({
       component="section"
       aria-labelledby="balance-title"
       variant="outlined"
-      sx={{ p: 2, borderRadius: 2, height: '100%' }}
+      sx={uiStyles.pendingBalanceCardPaper}
     >
-      <Stack spacing={2}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <Stack {...uiProps.stackStandard}>
+        <Stack
+          {...uiProps.rowSmall}
+
+          sx={uiStyles.alignCenter}
+        >
           <LucideIcon
             icon={PiggyBank}
-            sx={{ color: 'secondary.dark' }}
+            sx={uiStyles.goldIcon}
             aria-hidden="true"
           />
           <Typography
@@ -30,7 +35,7 @@ export default function PendingBalanceCard({
             component="h2"
             variant="subtitle1"
             color="text.primary"
-            sx={{ fontWeight: 700 }}
+            sx={uiStyles.boldText}
           >
             {t('home.pendingBalance')}
           </Typography>
@@ -38,13 +43,8 @@ export default function PendingBalanceCard({
         <Box>
           <Typography
             component="p"
-            variant="h3"
-            sx={{
-              fontWeight: 650,
-              fontVariantNumeric: 'tabular-nums',
-              fontSize: { xs: '2rem', sm: '2.5rem' },
-              overflowWrap: 'anywhere',
-            }}
+            variant="metricLarge"
+            sx={uiStyles.pageTitle}
           >
             {formatMoney(pendingAmountMinor, currency, i18n.language, {
               hideCurrency: true,
@@ -53,7 +53,7 @@ export default function PendingBalanceCard({
               component="span"
               variant="body2"
               color="text.secondary"
-              sx={{ fontWeight: 500 }}
+              sx={uiStyles.pendingBalanceCardTypography3}
             >
               {currency}
             </Typography>

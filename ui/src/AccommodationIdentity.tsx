@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, Stack } from '@mui/material'
@@ -21,62 +22,26 @@ export default function AccommodationIdentity({
   return (
     <Stack
       component="span"
-      direction="row"
-      spacing={0.5}
-      sx={{
-        alignItems: 'center',
-        flexWrap: compactMobile ? { xs: 'nowrap', sm: 'wrap' } : 'wrap',
-        minWidth: 0,
-        fontSize: '0.875rem',
-        lineHeight: 1.43,
-        color: 'text.secondary',
-      }}
+      {...uiProps.rowCompact}
+
+      sx={uiStyles.accommodationIdentityStack(compactMobile)}
     >
       <LucideIcon
         icon={icon}
         aria-hidden="true"
         focusable="false"
-        sx={(theme) => ({
-          fontSize: 18,
-          flexShrink: 0,
-          color:
-            identity.kind === 'camping'
-              ? theme.palette.mode === 'dark'
-                ? 'primary.main'
-                : 'primary.dark'
-              : identity.kind === 'individual'
-                ? theme.palette.mode === 'dark'
-                  ? 'secondary.main'
-                  : 'secondary.dark'
-                : 'text.secondary',
-        })}
+        sx={uiStyles.accommodationIdentityLucideIcon(identity.kind)}
       />
       <Box
         component="span"
-        sx={{
-          minWidth: 0,
-          overflow: compactMobile ? { xs: 'hidden', sm: 'visible' } : undefined,
-          textOverflow: 'ellipsis',
-          whiteSpace: compactMobile
-            ? { xs: 'nowrap', sm: 'normal' }
-            : undefined,
-          fontSize: '0.875rem',
-          lineHeight: 1.43,
-          color: 'text.secondary',
-        }}
+        sx={uiStyles.accommodationIdentityBox(compactMobile)}
       >
         {compactMobile ? (
           <>
-            <Box
-              component="span"
-              sx={{ display: { xs: 'inline', sm: 'none' } }}
-            >
+            <Box component="span" sx={uiStyles.mobileOnlyInline}>
               {identity.compactLabel ?? identity.label}
             </Box>
-            <Box
-              component="span"
-              sx={{ display: { xs: 'none', sm: 'inline' } }}
-            >
+            <Box component="span" sx={uiStyles.desktopInline}>
               {identity.label}
             </Box>
           </>
@@ -87,9 +52,7 @@ export default function AccommodationIdentity({
       {meta !== undefined && (
         <Box
           component="span"
-          sx={{
-            display: compactMobile ? { xs: 'none', sm: 'inline' } : undefined,
-          }}
+          sx={uiStyles.accommodationIdentityBox4(compactMobile)}
         >
           · {meta}
         </Box>
@@ -99,15 +62,15 @@ export default function AccommodationIdentity({
           <Box component="span">·</Box>
           <Stack
             component="span"
-            direction="row"
-            spacing={0.25}
-            sx={{ alignItems: 'center', flexShrink: 0 }}
+            {...uiProps.rowTight}
+
+            sx={uiStyles.accommodationIdentityStack2}
           >
             <LucideIcon
               icon={Users}
               aria-hidden="true"
               focusable="false"
-              sx={{ fontSize: 16, color: 'text.secondary' }}
+              sx={uiStyles.accommodationIdentityLucideIcon2}
             />
             <Box
               component="span"

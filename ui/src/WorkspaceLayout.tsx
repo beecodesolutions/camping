@@ -1,6 +1,6 @@
+import { uiProps, uiStyles } from './app/theme'
 import type { ReactNode } from 'react'
 import { Box, Stack } from '@mui/material'
-import { workspaceSpacing } from './app/workspaceSpacing'
 
 type Props = {
   header: ReactNode
@@ -10,37 +10,12 @@ type Props = {
 
 export default function WorkspaceLayout({ header, notices, children }: Props) {
   return (
-    <Box
-      id="workspace-scroll"
-      sx={(theme) => ({
-        position: { md: 'fixed' },
-        top: { md: theme.spacing(workspaceSpacing.desktopNavigationHeight) },
-        bottom: { md: 0 },
-        left: { md: 0 },
-        right: { md: 0 },
-        overflowY: { md: 'auto' },
-      })}
-    >
-      <Box
-        component="main"
-        sx={(theme) => ({
-          maxWidth: 980,
-          mx: 'auto',
-          px: { xs: 2, sm: 3 },
-          pt: {
-            xs: `calc(${theme.spacing(8)} + env(safe-area-inset-top))`,
-            md: 5,
-          },
-          pb: {
-            xs: `calc(${theme.spacing(workspaceSpacing.mobileNavigationHeight + workspaceSpacing.floatingActionGap + workspaceSpacing.floatingActionHeight + workspaceSpacing.contentBottomGap)} + env(safe-area-inset-bottom))`,
-            md: 4,
-          },
-        })}
-      >
-        <Stack spacing={3}>
+    <Box id="workspace-scroll" sx={uiStyles.workspaceScroll}>
+      <Box component="main" sx={uiStyles.workspaceContent}>
+        <Stack {...uiProps.stackSection}>
           {notices}
           {header}
-          <Box sx={{ minWidth: 0 }}>{children}</Box>
+          <Box sx={uiStyles.shrinkable}>{children}</Box>
         </Stack>
       </Box>
     </Box>

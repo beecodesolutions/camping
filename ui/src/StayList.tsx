@@ -1,3 +1,4 @@
+import { uiProps, uiStyles, checkoutActionStyles } from './app/theme'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -64,7 +65,7 @@ export default function StayList({
   }
   if (!items.length)
     return (
-      <Typography color="text.secondary" sx={{ p: 2 }}>
+      <Typography color="text.secondary" sx={uiStyles.panelPadding}>
         {t('home.noStays')}
       </Typography>
     )
@@ -93,20 +94,11 @@ export default function StayList({
               key={stay.id}
               disablePadding
               divider
-              sx={{
-                '&:last-child': { borderBottom: 0 },
-                alignItems: { xs: 'center', sm: 'stretch' },
-                flexDirection: { xs: 'row', sm: 'column', md: 'row' },
-              }}
+              sx={uiStyles.stayListListItem}
             >
               <ListItemButton
                 onClick={() => onSelect({ id: stay.id, action: 'detail' })}
-                sx={{
-                  minWidth: 0,
-                  flex: 1,
-                  borderRadius: 1,
-                  px: 0,
-                }}
+                sx={uiStyles.stayListListItemButton}
               >
                 <ListItemText
                   primary={stay.responsibleName}
@@ -120,23 +112,16 @@ export default function StayList({
                   }
                   slotProps={{
                     primary: {
-                      sx: { fontWeight: 700, overflowWrap: 'anywhere' },
+                      sx: uiStyles.strongWrappedText,
                     },
                     secondary: {
                       component: 'div',
-                      sx: { overflowWrap: 'anywhere' },
+                      sx: uiStyles.wrappedText,
                     },
                   }}
                 />
                 {stay.closure && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      ml: 2,
-                      flexShrink: 0,
-                      display: { xs: 'none', sm: 'block' },
-                    }}
-                  >
+                  <Typography variant="body2" sx={uiStyles.stayListTypography2}>
                     {formatMoney(
                       stay.closure.totalMinor,
                       stay.currency,
@@ -145,41 +130,16 @@ export default function StayList({
                   </Typography>
                 )}
               </ListItemButton>
-              <Stack
-                sx={{
-                  display: { xs: 'flex', sm: 'grid' },
-                  flexDirection: 'row',
-                  gridTemplateColumns: {
-                    xs: 'minmax(0, 1fr) 44px',
-                    sm: 'minmax(0, 1fr) minmax(0, 1.3fr) 44px 44px',
-                    md: '100px 132px 44px 44px',
-                  },
-                  columnGap: { xs: 0.5, sm: 1, md: 3 },
-                  rowGap: 1,
-                  width: { xs: 'auto', sm: '100%', md: 'auto' },
-                  alignItems: 'center',
-                  pr: { xs: 0, sm: 1 },
-                  pl: { xs: 0, sm: 2, md: 0 },
-                  pb: { xs: 0, sm: 1, md: 0 },
-                  justifyContent: 'flex-end',
-                  flexShrink: 0,
-                }}
-              >
+              <Stack sx={uiStyles.stayListStack}>
                 <Stack
-                  direction="row"
-                  spacing={0.5}
-                  sx={{
-                    alignItems: 'center',
-                    display: { xs: 'none', sm: 'flex' },
-                    justifyContent: { xs: 'flex-start', sm: 'flex-end' },
-                    gridColumn: { xs: '1 / -1', sm: 'auto' },
-                    minWidth: 0,
-                  }}
+                  {...uiProps.rowCompact}
+
+                  sx={uiStyles.stayListStack2}
                 >
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{ display: { xs: 'none', sm: 'block' } }}
+                    sx={uiStyles.desktopBlock}
                   >
                     {stay.extras.length > 0
                       ? t('stay.extrasCount', { count: stay.extras.length })
@@ -188,31 +148,17 @@ export default function StayList({
                 </Stack>
                 {(!stay.closure || stay.account.balanceMinor > 0) && (
                   <Stack
-                    direction="row"
-                    spacing={0.5}
-                    sx={{
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      display: { xs: 'none', sm: 'flex' },
-                    }}
+                    {...uiProps.rowCompact}
+
+                    sx={uiStyles.stayListStack3}
                   >
                     <Typography
                       variant="h6"
                       component="span"
                       aria-label={`${t(stay.account.balanceMinor < 0 ? 'stay.credit' : 'stay.balance')}: ${formatMoney(Math.abs(stay.account.balanceMinor), stay.currency, i18n.language)}`}
-                      sx={{
-                        display: { xs: 'none', sm: 'inline' },
-                        fontWeight: 700,
-                        overflowWrap: 'anywhere',
-                        minWidth: 0,
-                        fontVariantNumeric: 'tabular-nums',
-                        color:
-                          stay.account.balanceMinor < 0
-                            ? 'success.light'
-                            : stay.account.balanceMinor > 0
-                              ? 'error.light'
-                              : 'text.secondary',
-                      }}
+                      sx={uiStyles.stayListTypography4(
+                        stay.account.balanceMinor,
+                      )}
                     >
                       {formatMoney(
                         Math.abs(stay.account.balanceMinor),
@@ -240,12 +186,7 @@ export default function StayList({
                           stayId: stay.id,
                         })
                       }
-                      sx={{
-                        width: 44,
-                        height: 44,
-                        flexShrink: 0,
-                        color: 'text.secondary',
-                      }}
+                      sx={uiStyles.stayListIconButton}
                     >
                       <LucideIcon icon={EllipsisVertical} />
                     </IconButton>
@@ -256,20 +197,7 @@ export default function StayList({
                     <IconButton
                       aria-label={t('stay.closeTitle')}
                       onClick={() => onSelect({ id: stay.id, action: 'close' })}
-                      sx={(theme) => {
-                        const palette = theme.palette.warning
-                        const background =
-                          theme.palette.mode === 'dark'
-                            ? palette.light
-                            : palette.dark
-                        return {
-                          width: 44,
-                          height: 44,
-                          bgcolor: background,
-                          color: theme.palette.getContrastText(background),
-                          '&:hover': { bgcolor: palette.main },
-                        }
-                      }}
+                      sx={checkoutActionStyles}
                     >
                       <LucideIcon icon={LogOut} />
                     </IconButton>

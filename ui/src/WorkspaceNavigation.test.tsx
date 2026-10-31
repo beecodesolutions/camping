@@ -26,10 +26,10 @@ it.each([
     expect(current).toHaveLength(1)
     expect(current[0]).toContain(label)
     expect(links.map((link) => link.match(/href="([^"]+)"/)?.[1])).toEqual([
-      '#/hoy',
-      '#/estadias',
-      '#/reservas',
-      '#/configuracion',
+      '/hoy',
+      '/estadias',
+      '/reservas',
+      '/configuracion',
     ])
     expect(markup).not.toContain('Registrar ingreso')
     expect(markup).not.toContain('Cerrar sesión')

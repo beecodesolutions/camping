@@ -1,3 +1,4 @@
+import { uiStyles } from './app/theme'
 import { useTranslation } from 'react-i18next'
 import { Box, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { BedDouble, LayoutGrid, Tent } from 'lucide-react'
@@ -21,14 +22,7 @@ export default function AccommodationFilter({
       }
       aria-label={t('home.occupancyFilter')}
       size="small"
-      sx={{
-        flexShrink: 0,
-        '& .MuiToggleButton-root.Mui-selected': {
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
-          '&:hover': { bgcolor: 'primary.dark' },
-        },
-      }}
+      sx={uiStyles.accommodationFilterToggleButtonGroup}
     >
       {(
         [
@@ -49,9 +43,9 @@ export default function AccommodationFilter({
         >
           <LucideIcon
             icon={option.icon}
-            sx={{ mr: { xs: 0, sm: 0.5 }, fontSize: 17 }}
+            sx={uiStyles.accommodationFilterLucideIcon}
           />
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+          <Box component="span" sx={uiStyles.desktopInline}>
             {t(option.label)}
           </Box>
         </ToggleButton>

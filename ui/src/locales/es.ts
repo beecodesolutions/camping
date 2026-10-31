@@ -5,7 +5,7 @@ const es = {
     loadMore: 'Cargar más',
     previous: 'Anterior',
     next: 'Siguiente',
-    appName: 'Camping',
+    appName: 'Maytu',
     retry: 'Reintentar',
     loading: 'Cargando…',
     cancel: 'Cancelar',

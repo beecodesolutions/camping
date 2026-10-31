@@ -1,3 +1,4 @@
+import { uiStyles } from './app/theme'
 import { useTranslation } from 'react-i18next'
 import { Box, Button, Typography } from '@mui/material'
 import CampingIllustration from './assets/CampingIllustration'
@@ -21,49 +22,17 @@ export default function HomeHeader({
 }: HomeHeaderProps) {
   const { t } = useTranslation()
   return (
-    <Box
-      component="header"
-      sx={{
-        color: 'text.primary',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        flexDirection: { xs: 'column', md: 'row' },
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          flex: 1,
-          minWidth: 0,
-          width: '100%',
-        }}
-      >
+    <Box component="header" sx={uiStyles.pageHeader}>
+      <Box sx={uiStyles.pageHeadingRow}>
         <CampingIllustration />
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            variant="overline"
-            sx={{
-              display: 'block',
-              mb: 0,
-              lineHeight: 1.5,
-              color: 'primary.main',
-              letterSpacing: 2,
-            }}
-          >
+        <Box sx={uiStyles.shrinkable}>
+          <Typography variant="overline" sx={uiStyles.campgroundEyebrow}>
             {name}
           </Typography>
           <Typography
             component="h1"
-            variant="h4"
-            sx={{
-              fontWeight: 650,
-              fontSize: { xs: '1.8rem', sm: '2.125rem' },
-              lineHeight: 1.2,
-              overflowWrap: 'anywhere',
-            }}
+            variant="pageTitle"
+            sx={uiStyles.pageTitle}
           >
             {userName?.trim()
               ? t('home.greetingWithName', { greeting, name: userName.trim() })
@@ -77,11 +46,7 @@ export default function HomeHeader({
           onClick={onCheckIn}
           disabled={checkInDisabled}
           variant="contained"
-          sx={{
-            width: { xs: '100%', md: 'auto' },
-            flexShrink: 0,
-            minHeight: 44,
-          }}
+          sx={uiStyles.homeHeaderButton}
         >
           {t('checkIn.register')}
         </Button>

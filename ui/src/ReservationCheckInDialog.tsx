@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -107,10 +108,13 @@ export default function ReservationCheckInDialog({
         {t('checkIn.reservationTitle')}
       </DialogTitle>
       <DialogContent dividers>
-        <Stack spacing={2.5}>
+        <Stack {...uiProps.stackForm}>
           {error && <Alert severity="error">{error}</Alert>}
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            <Typography
+              variant="h6"
+              sx={uiStyles.reservationCreateDialogTypography}
+            >
               {reservation.responsibleName}
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -139,8 +143,11 @@ export default function ReservationCheckInDialog({
               },
             }}
           />
-          <Stack spacing={1}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          <Stack {...uiProps.stackSmall}>
+            <Typography
+              variant="subtitle1"
+              sx={uiStyles.reservationCreateDialogTypography}
+            >
               {t('checkIn.vehicleSection')}
             </Typography>
             <Button
@@ -149,12 +156,12 @@ export default function ReservationCheckInDialog({
               variant="outlined"
               disabled={busy}
               onClick={() => setHasVehicle((value) => !value)}
-              sx={{ alignSelf: 'flex-start' }}
+              sx={uiStyles.reservationCheckInDialogButton}
             >
               {t(hasVehicle ? 'checkIn.withoutVehicle' : 'checkIn.addVehicle')}
             </Button>
             {hasVehicle && (
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Stack {...uiProps.responsiveRow}>
                 <TextField
                   label={t('checkIn.vehicleDescription')}
                   value={vehicleDescription}
@@ -182,18 +189,21 @@ export default function ReservationCheckInDialog({
             fullWidth
           />
           {quote && (
-            <Box sx={{ p: 2, borderRadius: 1, bgcolor: 'action.hover' }}>
+            <Box sx={uiStyles.reservationCheckInDialogBox}>
               <Typography variant="body2" color="text.secondary">
                 {t('checkIn.totalAtArrival')}
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              <Typography
+                variant="h6"
+                sx={uiStyles.reservationCreateDialogTypography}
+              >
                 {formatMoney(quote.totalMinor, quote.currency, i18n.language)}
               </Typography>
             </Box>
           )}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+      <DialogActions sx={uiStyles.reservationCheckInDialogDialogActions}>
         <Button onClick={onClose} disabled={busy}>
           {t('common.cancel')}
         </Button>
