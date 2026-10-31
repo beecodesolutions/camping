@@ -253,13 +253,6 @@ export default function ReservationCreateDialog({
           sx={{ outline: 'none' }}
         >
           <Stack spacing={2.5}>
-            <Typography variant="overline" color="text.secondary">
-              {t(
-                reviewing
-                  ? 'reservationCreate.reviewStep'
-                  : 'reservationCreate.detailsStep',
-              )}
-            </Typography>
             {state.error && (
               <Alert severity="error">{errorText(state.error)}</Alert>
             )}

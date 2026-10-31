@@ -115,8 +115,6 @@ const es = {
       'No hay alojamientos habilitados para crear reservas. Revisá la configuración de tipos y unidades.',
     quote: 'Consultar disponibilidad y precio',
     summary: 'Revisá tu reserva',
-    detailsStep: 'Paso 1 de 2 · Datos de la reserva',
-    reviewStep: 'Paso 2 de 2 · Revisión',
     back: 'Volver',
     accommodationLabel: 'Alojamiento',
     totalLabel: 'Total de la reserva',
