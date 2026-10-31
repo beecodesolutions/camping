@@ -61,7 +61,14 @@ function LegacyOccupancyCard({
     >
       <Stack direction="row" spacing={2}>
         <Box>
-          <Typography component="p" variant="h3">
+          <Typography
+            component="p"
+            variant="h3"
+            sx={{
+              fontFamily: (theme) => theme.typography.fontFamily,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {activeGroups}
           </Typography>
           <Typography>{t('home.groups', { count: activeGroups })}</Typography>
@@ -277,6 +284,7 @@ function UnitMetric({ occupied, total }: { occupied: number; total: number }) {
         sx={{
           display: 'flex',
           alignItems: 'center',
+          fontFamily: (theme) => theme.typography.fontFamily,
           fontWeight: 650,
           color: 'primary.main',
           fontVariantNumeric: 'tabular-nums',
@@ -315,6 +323,7 @@ function Metric({
         component="p"
         variant={primary ? 'h3' : 'h5'}
         sx={{
+          fontFamily: (theme) => theme.typography.fontFamily,
           fontWeight: primary ? 650 : 700,
           color: primary ? 'primary.main' : 'accent.main',
           fontVariantNumeric: 'tabular-nums',

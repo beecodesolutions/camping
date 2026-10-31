@@ -9,6 +9,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import MaytuBrand from './components/MaytuBrand'
 import { useLoginMutation } from './services/api'
 
 export default function LoginScreen() {
@@ -32,6 +33,7 @@ export default function LoginScreen() {
         sx={{ p: 3, width: '100%', maxWidth: 420 }}
       >
         <Stack spacing={2}>
+          <MaytuBrand />
           <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
             {t('auth.title')}
           </Typography>

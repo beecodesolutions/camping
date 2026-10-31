@@ -208,9 +208,9 @@ export default function StayList({
                         fontVariantNumeric: 'tabular-nums',
                         color:
                           stay.account.balanceMinor < 0
-                            ? 'success.light'
+                            ? 'success.main'
                             : stay.account.balanceMinor > 0
-                              ? 'error.light'
+                              ? 'error.main'
                               : 'text.secondary',
                       }}
                     >

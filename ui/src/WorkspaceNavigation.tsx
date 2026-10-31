@@ -3,7 +3,8 @@ import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { BedDouble, CalendarDays, Settings, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { alpha, Box, Button, Paper, Stack, Typography } from '@mui/material'
+import { alpha, Box, Button, Paper, Stack } from '@mui/material'
+import MaytuBrand from './components/MaytuBrand'
 import LucideIcon from './components/LucideIcon'
 import { workspaceHref, type WorkspaceSection } from './app/workspaceLocation'
 
@@ -74,6 +75,13 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
       square
       elevation={0}
       sx={{
+        bgcolor: 'navigation.main',
+        color: 'navigation.contrastText',
+        '& .MuiIconButton-root': { color: 'inherit' },
+        '& :focus-visible': {
+          outlineColor: 'navigation.contrastText',
+          outlineOffset: -4,
+        },
         position: 'fixed',
         zIndex: (theme) => theme.zIndex.appBar,
         bottom: { xs: 0, md: 'auto' },
@@ -86,9 +94,7 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
         display: { md: 'flex' },
         alignItems: { md: 'center' },
         gap: { md: 4 },
-        borderTop: { xs: 1, md: 0 },
-        borderBottom: { md: 1 },
-        borderColor: 'divider',
+        border: 0,
         pb: { xs: 'env(safe-area-inset-bottom)', md: 0 },
         px: { md: 3 },
         transform: {
@@ -109,9 +115,7 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
           maxWidth: '35%',
         }}
       >
-        <Typography noWrap sx={{ fontWeight: 700, color: 'primary.main' }}>
-          Maytu
-        </Typography>
+        <MaytuBrand inverse />
       </Box>
       <Stack direction="row" spacing={{ md: 1 }} sx={{ flex: 1 }}>
         {destinations.map(({ section: value, icon }) => (
@@ -136,22 +140,21 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
               px: { xs: 0.5, md: 1.5 },
               py: 1,
               borderRadius: 0,
-              borderBottom: { md: '3px solid' },
-              borderBottomColor: {
-                md: activeSection === value ? 'accent.main' : 'transparent',
-              },
               textTransform: 'none',
-              bgcolor: (theme) =>
+              borderBottom: '3px solid',
+              borderBottomColor:
+                activeSection === value ? 'accent.light' : 'transparent',
+              color:
                 activeSection === value
-                  ? {
-                      xs: alpha(theme.palette.accent.main, 0.12),
-                      md: 'transparent',
-                    }
-                  : undefined,
-              color: activeSection === value ? 'accent.main' : 'text.secondary',
+                  ? 'accent.light'
+                  : 'navigation.contrastText',
+              '&.Mui-focusVisible': {
+                outlineColor: 'navigation.contrastText',
+                outlineOffset: -4,
+              },
               '&:hover': {
-                bgcolor: (theme) => alpha(theme.palette.accent.main, 0.18),
-                color: 'accent.main',
+                bgcolor: (theme) =>
+                  alpha(theme.palette.navigation.contrastText, 0.14),
               },
               fontWeight: activeSection === value ? 700 : 500,
               fontSize: { xs: '0.75rem', md: '0.875rem' },

@@ -70,6 +70,7 @@ import ReservationCreateDialog from './ReservationCreateDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
 import WorkspaceLayout from './WorkspaceLayout'
+import MaytuBrand from './components/MaytuBrand'
 import StayList, { type StayAction, type StaySelection } from './StayList'
 import OccupancyCard from './OccupancyCard'
 import WorkspaceNavigation from './WorkspaceNavigation'
@@ -199,7 +200,7 @@ export default function CampingWorkspace({
         }
       />
       <Paper
-        elevation={3}
+        elevation={2}
         sx={{
           display: { xs: 'flex', md: 'none' },
           position: 'fixed',
@@ -207,8 +208,6 @@ export default function CampingWorkspace({
           right: 16,
           borderRadius: '50%',
           zIndex: (theme) => theme.zIndex.appBar,
-          border: 1,
-          borderColor: 'divider',
           '& .MuiIconButton-root': { width: 44, height: 44 },
         }}
       >
@@ -239,14 +238,28 @@ export default function CampingWorkspace({
         }
         header={
           profile && (
-            <HomeHeader
-              name={profile.name}
-              greeting={
-                section === 'home' ? t(greeting) : t(`navigation.${section}`)
-              }
-              userName={section === 'home' ? user.name : undefined}
-              showCheckIn={false}
-            />
+            <>
+              {section === 'home' && (
+                <Box
+                  sx={{
+                    display: { xs: 'block', md: 'none' },
+                    mb: 2,
+                    '& svg': { width: 24, height: 24 },
+                    '& span': { fontSize: '1.5rem' },
+                  }}
+                >
+                  <MaytuBrand />
+                </Box>
+              )}
+              <HomeHeader
+                name={profile.name}
+                greeting={
+                  section === 'home' ? t(greeting) : t(`navigation.${section}`)
+                }
+                userName={section === 'home' ? user.name : undefined}
+                showCheckIn={false}
+              />
+            </>
           )
         }
       >
@@ -324,7 +337,7 @@ export default function CampingWorkspace({
             component={Paper}
             variant="outlined"
             spacing={2}
-            sx={{ p: 2, borderRadius: 2 }}
+            sx={{ p: { xs: 2, sm: 3 } }}
           >
             <Stack
               direction="row"

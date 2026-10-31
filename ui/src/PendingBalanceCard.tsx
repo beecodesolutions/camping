@@ -40,6 +40,7 @@ export default function PendingBalanceCard({
             component="p"
             variant="h3"
             sx={{
+              fontFamily: (theme) => theme.typography.fontFamily,
               fontWeight: 650,
               fontVariantNumeric: 'tabular-nums',
               fontSize: { xs: '2rem', sm: '2.5rem' },

@@ -29,7 +29,6 @@ export default function DashboardWidget({
       variant="outlined"
       sx={{
         p: 2,
-        borderRadius: 2,
         ...(height === undefined ? {} : { height }),
       }}
     >
