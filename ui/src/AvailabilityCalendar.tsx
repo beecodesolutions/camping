@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -14,7 +15,7 @@ import {
   useTheme,
 } from '@mui/material'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { alpha, type Theme } from '@mui/material/styles'
+import { availabilityTone } from './app/theme'
 import LucideIcon from './components/LucideIcon'
 import AccommodationIdentity from './AccommodationIdentity'
 import { buildAccommodationIdentity } from './services/accommodationIdentity'
@@ -52,29 +53,6 @@ function monthLabel(value: string, language: string) {
   }).format(dateFromIso(`${value}-01`))
 }
 
-function toneColor(tone: AvailabilitySummary['tone'], theme: Theme) {
-  const dark = theme.palette.mode === 'dark'
-  if (tone === 'free')
-    return {
-      backgroundColor: alpha(theme.palette.primary.main, dark ? 0.16 : 0.1),
-      color: dark ? theme.palette.primary.light : theme.palette.primary.dark,
-    }
-  if (tone === 'partial')
-    return {
-      backgroundColor: alpha(theme.palette.secondary.main, dark ? 0.22 : 0.2),
-      color: dark ? theme.palette.secondary.main : theme.palette.secondary.dark,
-    }
-  if (tone === 'none')
-    return {
-      backgroundColor: alpha(theme.palette.accent.main, dark ? 0.18 : 0.1),
-      color: theme.palette.accent.main,
-    }
-  return {
-    backgroundColor: theme.palette.action.hover,
-    color: theme.palette.text.secondary,
-  }
-}
-
 type Translate = ReturnType<typeof useTranslation>['t']
 
 function statusLabel(summary: AvailabilitySummary | null, t: Translate) {
@@ -110,31 +88,23 @@ function AvailabilityGrid({
     ),
   )
   return (
-    <Paper
-      component="section"
-      variant="outlined"
-      sx={{ p: 1.5, borderRadius: 2 }}
-    >
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-          gap: 0.5,
-        }}
-      >
+    <Paper component="section" variant="outlined" sx={uiStyles.compactPanel}>
+      <Box sx={uiStyles.availabilityGridBox}>
         {weekdays.map((weekday) => (
           <Typography
             key={weekday}
             variant="caption"
             color="text.secondary"
-            sx={{ textAlign: 'center', textTransform: 'capitalize', py: 0.5 }}
+            sx={uiStyles.availabilityCalendarTypography}
           >
             {weekday}
           </Typography>
         ))}
         {cells.map((cell) => {
           const summary = availabilityForDate(nights, cell.date)
-          const colors = summary ? toneColor(summary.tone, theme) : undefined
+          const colors = summary
+            ? availabilityTone(summary.tone, theme)
+            : undefined
           const isToday = cell.date === today
           const isSelected = cell.date === selectedDate
           return (
@@ -146,48 +116,21 @@ function AvailabilityGrid({
               aria-pressed={isSelected}
               onClick={() => cell.inMonth && onDay(cell.date, type.id)}
               disabled={!cell.inMonth || !summary}
-              sx={{
-                position: 'relative',
-                minWidth: 0,
-                minHeight: 44,
-                p: 0.5,
-                borderRadius: 1.25,
-                color: cell.inMonth ? colors?.color : 'text.disabled',
-                backgroundColor: cell.inMonth
-                  ? colors?.backgroundColor
-                  : 'transparent',
-                border: '3px solid transparent',
-                borderColor: isSelected ? 'selection.main' : 'transparent',
-                boxShadow: 'none',
-                '&:focus-visible': {
-                  outline: `2px solid ${theme.palette.selection.main}`,
-                  outlineOffset: 2,
-                },
-                '&:hover': {
-                  backgroundColor: cell.inMonth
-                    ? colors?.backgroundColor
-                    : undefined,
-                  filter: 'brightness(0.97)',
-                },
-                '&.Mui-disabled': {
-                  color: cell.inMonth ? colors?.color : 'text.disabled',
-                  backgroundColor: cell.inMonth
-                    ? colors?.backgroundColor
-                    : 'transparent',
-                  opacity: cell.inMonth ? 0.86 : 0.5,
-                },
-              }}
+              sx={uiStyles.availabilityCalendarButton(
+                cell.inMonth,
+                colors?.color,
+                colors?.backgroundColor,
+                isSelected,
+                theme,
+              )}
             >
               <Typography
                 variant="body2"
                 component="span"
-                sx={{
-                  fontWeight: isToday || isSelected ? 800 : 600,
-                  display: 'grid',
-                  placeItems: 'center',
-                  width: 24,
-                  height: 24,
-                }}
+                sx={uiStyles.availabilityCalendarTypography2(
+                  isToday,
+                  isSelected,
+                )}
               >
                 {cell.day}
               </Typography>
@@ -195,16 +138,7 @@ function AvailabilityGrid({
                 <Box
                   component="span"
                   aria-hidden="true"
-                  sx={{
-                    position: 'absolute',
-                    top: 4,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 4,
-                    height: 4,
-                    borderRadius: '50%',
-                    bgcolor: 'selection.main',
-                  }}
+                  sx={uiStyles.availabilityCalendarBox}
                 />
               )}
             </Button>
@@ -277,22 +211,15 @@ function DayDetail({
       component="section"
       aria-labelledby="calendar-day-detail-title"
       variant="outlined"
-      sx={{ p: 1.5, borderRadius: 2 }}
+      sx={uiStyles.compactPanel}
     >
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 1,
-        }}
-      >
+      <Stack {...uiProps.row} sx={uiStyles.dayDetailStack}>
         <Box>
           <Typography
             id="calendar-day-detail-title"
             component="h3"
             variant="subtitle1"
-            sx={{ fontWeight: 700 }}
+            sx={uiStyles.boldText}
           >
             {new Intl.DateTimeFormat(i18n.language, {
               dateStyle: 'full',
@@ -301,17 +228,21 @@ function DayDetail({
           </Typography>
         </Box>
       </Stack>
-      <Box sx={{ mt: 1.5 }}>
+      <Box sx={uiStyles.dayDetailBox}>
         {!summary ? (
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
+          <Typography color="text.secondary" sx={uiStyles.bottomGap}>
             {t('common.loading')}
           </Typography>
         ) : summary.tone === 'unlimited' ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={uiStyles.bottomGap}
+          >
             {t('calendar.unlimitedReservations', { count: summary.reserved })}
           </Typography>
         ) : (
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mb: 2 }}>
+          <Stack {...uiProps.rowSmall} sx={uiStyles.dayDetailStack2}>
             <Chip
               label={t('calendar.freeCount', {
                 count: summary?.available ?? 0,
@@ -347,17 +278,11 @@ function DayDetail({
               {t('calendar.noReservations')}
             </Typography>
           )}
-        <Stack spacing={1.5}>
+        <Stack {...uiProps.stackMedium}>
           {currentReservations.map((reservation) => (
-            <Box
-              key={reservation.id}
-              sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}
-            >
-              <Stack
-                direction="row"
-                sx={{ justifyContent: 'space-between', gap: 1 }}
-              >
-                <Typography sx={{ fontWeight: 700 }}>
+            <Box key={reservation.id} sx={uiStyles.availabilityCalendarBox2}>
+              <Stack {...uiProps.row} sx={uiStyles.availabilityCalendarStack}>
+                <Typography sx={uiStyles.boldText}>
                   {reservation.responsibleName}
                 </Typography>
                 <Chip
@@ -467,16 +392,11 @@ export default function AvailabilityCalendar({
   )
 
   return (
-    <Stack spacing={1.5}>
+    <Stack {...uiProps.stackMedium}>
       <Stack
-        direction="row"
-        spacing={0.5}
-        sx={{
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          justifyContent: { xs: 'center', sm: 'flex-start' },
-          maxWidth: '100%',
-        }}
+        {...uiProps.rowCompact}
+
+        sx={uiStyles.availabilityCalendarStack2}
       >
         <IconButton
           aria-label={t('common.previous')}
@@ -484,15 +404,7 @@ export default function AvailabilityCalendar({
         >
           <LucideIcon icon={ChevronLeft} />
         </IconButton>
-        <Typography
-          sx={{
-            minWidth: { xs: 100, sm: 130 },
-            flex: '1 1 100px',
-            textAlign: 'center',
-            fontWeight: 700,
-            textTransform: 'capitalize',
-          }}
-        >
+        <Typography sx={uiStyles.availabilityCalendarTypography4}>
           {monthLabel(month, i18n.language)}
         </Typography>
         <IconButton
@@ -514,7 +426,7 @@ export default function AvailabilityCalendar({
           }
           aria-label={t('calendar.typeFilter')}
           size="small"
-          sx={{ flexWrap: 'wrap' }}
+          sx={uiStyles.availabilityCalendarToggleButtonGroup}
         >
           {enabledTypes.map((type) => (
             <ToggleButton key={type.id} value={type.id}>
@@ -566,14 +478,24 @@ export default function AvailabilityCalendar({
             onDay={(date, typeId) => setSelectedDay({ date, typeId })}
           />
         )}
-      <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap' }}>
-        <Typography variant="caption" sx={{ color: 'primary.dark' }}>
+      <Stack
+        {...uiProps.rowMedium}
+
+        sx={uiStyles.wrapRow}
+      >
+        <Typography
+          variant="caption"
+          sx={uiStyles.availabilityCalendarTypography5}
+        >
           ● {t('calendar.free')}
         </Typography>
-        <Typography variant="caption" sx={{ color: 'secondary.dark' }}>
+        <Typography variant="caption" sx={uiStyles.goldIcon}>
           ● {t('calendar.partial')}
         </Typography>
-        <Typography variant="caption" sx={{ color: 'accent.main' }}>
+        <Typography
+          variant="caption"
+          sx={uiStyles.availabilityCalendarTypography7}
+        >
           ● {t('calendar.none')}
         </Typography>
         <Typography variant="caption" color="text.secondary">

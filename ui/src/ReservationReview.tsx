@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { Alert, Box, Divider, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import type { CreationQuote } from './reservations/creationState'
@@ -18,30 +19,27 @@ export default function ReservationReview({ quote, today }: Props) {
   const date = (value: string) =>
     reservationReviewDate(value, today, i18n.language)
   return (
-    <Stack spacing={3} aria-label={t('reservationCreate.summary')}>
+    <Stack
+      {...uiProps.stackSection}
+      aria-label={t('reservationCreate.summary')}
+    >
       <Box>
         <Typography variant="overline" color="text.secondary">
           {t('reservationCreate.accommodationLabel')}
         </Typography>
-        <Typography component="h3" variant="h5" sx={{ fontWeight: 700 }}>
+        <Typography component="h3" variant="h5" sx={uiStyles.boldText}>
           {quote.accommodationName}
         </Typography>
-        <Typography variant="body1" sx={{ mt: 1 }}>
+        <Typography variant="body1" sx={uiStyles.smallTopGap}>
           {quote.responsibleName}
         </Typography>
       </Box>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-          gap: 2,
-        }}
-      >
+      <Box sx={uiStyles.reservationReviewBox}>
         <Box>
           <Typography variant="body2" color="text.secondary">
             {t('reservationCreate.checkIn')}
           </Typography>
-          <Typography sx={{ fontWeight: 600 }}>
+          <Typography sx={uiStyles.semiboldText}>
             {date(quote.input.checkInDate)}
           </Typography>
         </Box>
@@ -49,18 +47,18 @@ export default function ReservationReview({ quote, today }: Props) {
           <Typography variant="body2" color="text.secondary">
             {t('reservationCreate.checkOut')}
           </Typography>
-          <Typography sx={{ fontWeight: 600 }}>
+          <Typography sx={uiStyles.semiboldText}>
             {date(quote.input.checkOutDate)}
           </Typography>
         </Box>
       </Box>
       <Stack
-        direction="row"
-        spacing={1}
+        {...uiProps.rowSmall}
+
         useFlexGap
-        sx={{ flexWrap: 'wrap', alignItems: 'center' }}
+        sx={uiStyles.reservationReviewStack}
       >
-        <Typography sx={{ fontWeight: 600 }}>
+        <Typography sx={uiStyles.semiboldText}>
           {t('reservationCreate.nights', { count: price.nights })}
         </Typography>
         <Typography color="text.secondary">·</Typography>
@@ -73,7 +71,7 @@ export default function ReservationReview({ quote, today }: Props) {
         </Typography>
       </Stack>
       <Divider />
-      <Stack spacing={1}>
+      <Stack {...uiProps.stackSmall}>
         {price.basis === 'per_unit' ? (
           <Typography color="text.secondary">
             {t('reservationCreate.unitRate', {
@@ -84,13 +82,13 @@ export default function ReservationReview({ quote, today }: Props) {
           guests.map(({ name, count }) => (
             <Stack
               key={name}
-              direction="row"
-              sx={{ justifyContent: 'space-between', gap: 2 }}
+              {...uiProps.row}
+              sx={uiStyles.reservationReviewStack2}
             >
               <Typography color="text.secondary">
                 {t(`reservationCreate.guest_${name}`, { count })}
               </Typography>
-              <Typography sx={{ textAlign: 'right' }}>
+              <Typography sx={uiStyles.reservationReviewTypography6}>
                 {count} × {money(price.rates[name])} ×{' '}
                 {t('reservationCreate.nights', { count: price.nights })}
               </Typography>
@@ -105,11 +103,11 @@ export default function ReservationReview({ quote, today }: Props) {
           </Typography>
         )}
       </Stack>
-      <Box sx={{ p: 2.5, borderRadius: 2, bgcolor: 'action.hover' }}>
+      <Box sx={uiStyles.reservationReviewBox2}>
         <Typography color="text.secondary">
           {t('reservationCreate.totalLabel')}
         </Typography>
-        <Typography variant="h4" sx={{ fontWeight: 800, mt: 0.5 }}>
+        <Typography variant="h4" sx={uiStyles.reservationReviewTypography7}>
           {money(price.totalMinor)}
         </Typography>
       </Box>

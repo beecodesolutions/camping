@@ -1,3 +1,4 @@
+import { uiStyles, darkTheme, lightTheme } from './app/theme'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -15,7 +16,6 @@ import LucideIcon from './components/LucideIcon'
 import { useSessionQuery } from './services/api'
 import LoginScreen from './LoginScreen'
 import CampingWorkspace from './CampingWorkspace'
-import { darkTheme, lightTheme } from './app/theme'
 import { useTimeOfDay } from './app/timeOfDay'
 
 export default function App() {
@@ -40,12 +40,10 @@ export default function App() {
     <ThemeProvider theme={mode === 'dark' ? darkTheme : lightTheme}>
       <CssBaseline enableColorScheme />
       {!session.data && (
-        <Box sx={{ position: 'fixed', top: 4, right: 8, zIndex: 10 }}>
-          {themeControl}
-        </Box>
+        <Box sx={uiStyles.sessionThemeControl}>{themeControl}</Box>
       )}
       {session.isLoading ? (
-        <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <Box sx={uiStyles.appBox2}>
           <CircularProgress aria-label={t('home.loading')} />
         </Box>
       ) : session.isError ? (
@@ -72,9 +70,7 @@ function SessionError({ error }: { error: unknown }) {
       : ''
   if (status === '401') return <LoginScreen />
   return (
-    <Box
-      sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}
-    >
+    <Box sx={uiStyles.centeredPage}>
       <Alert
         severity="error"
         action={

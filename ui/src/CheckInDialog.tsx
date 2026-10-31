@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import type { AgeRanges } from '@camping/contracts'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -83,29 +84,29 @@ export default function CheckInDialog({
         component="form"
         noValidate
         onSubmit={submit}
-        sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+        sx={uiStyles.formColumn}
       >
         <DialogContent dividers>
-          <Stack spacing={2.5}>
+          <Stack {...uiProps.stackForm}>
             {isError && (
               <Alert severity="error">{t('checkIn.saveError')}</Alert>
             )}
             <Box
               component="fieldset"
               disabled={isSubmitting}
-              sx={{ m: 0, p: 0, border: 0, minWidth: 0 }}
+              sx={uiStyles.fieldsetReset}
             >
-              <Stack spacing={2.5}>
+              <Stack {...uiProps.stackForm}>
                 <Stack
                   component="section"
                   aria-labelledby="check-in-responsible-title"
-                  spacing={2}
+                  {...uiProps.stackStandard}
                 >
                   <Typography
                     id="check-in-responsible-title"
                     component="h2"
                     variant="subtitle1"
-                    sx={{ fontWeight: 700 }}
+                    sx={uiStyles.boldText}
                   >
                     {t('checkIn.responsibleSection')}
                   </Typography>
@@ -119,7 +120,7 @@ export default function CheckInDialog({
                     helperText={errorText(errors.responsibleName?.message)}
                     slotProps={{ htmlInput: register('responsibleName') }}
                   />
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Stack {...uiProps.responsiveRow}>
                     <Controller
                       name="nationality"
                       control={control}
@@ -147,13 +148,7 @@ export default function CheckInDialog({
                       slotProps={{ htmlInput: register('document') }}
                     />
                   </Stack>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'minmax(140px, 2fr) minmax(0, 3fr)',
-                      gap: 1,
-                    }}
-                  >
+                  <Box sx={uiStyles.contactFields}>
                     <Controller
                       name="phoneCountry"
                       control={control}
@@ -185,17 +180,17 @@ export default function CheckInDialog({
                 <Stack
                   component="section"
                   aria-labelledby="check-in-reservation-title"
-                  spacing={2}
+                  {...uiProps.stackStandard}
                 >
                   <Typography
                     id="check-in-reservation-title"
                     component="h2"
                     variant="subtitle1"
-                    sx={{ fontWeight: 700 }}
+                    sx={uiStyles.boldText}
                   >
                     {t('checkIn.reservationSection')}
                   </Typography>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Stack {...uiProps.responsiveRow}>
                     <TextField
                       label={t('checkIn.arrivalDate')}
                       type="date"
@@ -227,16 +222,7 @@ export default function CheckInDialog({
                     />
                   </Stack>
                   <Box>
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: {
-                          xs: '1fr',
-                          sm: 'repeat(3, 1fr)',
-                        },
-                        gap: 2,
-                      }}
-                    >
+                    <Box sx={uiStyles.checkInDialogBox4}>
                       {(['adults', 'children', 'infants'] as const).map(
                         (name) => (
                           <TextField
@@ -265,21 +251,18 @@ export default function CheckInDialog({
                 <Stack
                   component="section"
                   aria-labelledby="check-in-vehicle-title"
-                  spacing={2}
+                  {...uiProps.stackStandard}
                 >
                   <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    }}
+                    {...uiProps.rowSmall}
+
+                    sx={uiStyles.rowBetween}
                   >
                     <Typography
                       id="check-in-vehicle-title"
                       component="h2"
                       variant="subtitle1"
-                      sx={{ fontWeight: 700 }}
+                      sx={uiStyles.boldText}
                     >
                       {t('checkIn.vehicleSection')}
                     </Typography>
@@ -303,7 +286,7 @@ export default function CheckInDialog({
                     </Button>
                   </Stack>
                   {hasVehicle && (
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <Stack {...uiProps.responsiveRow}>
                       <TextField
                         label={t('checkIn.vehicleDescription')}
                         fullWidth
@@ -323,13 +306,13 @@ export default function CheckInDialog({
                 <Stack
                   component="section"
                   aria-labelledby="check-in-notes-title"
-                  spacing={2}
+                  {...uiProps.stackStandard}
                 >
                   <Typography
                     id="check-in-notes-title"
                     component="h2"
                     variant="subtitle1"
-                    sx={{ fontWeight: 700 }}
+                    sx={uiStyles.boldText}
                   >
                     {t('checkIn.notesSection')}
                   </Typography>
@@ -344,7 +327,7 @@ export default function CheckInDialog({
             </Box>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+        <DialogActions sx={uiStyles.checkInDialogDialogActions}>
           <Button onClick={onClose} disabled={isSubmitting}>
             {t('common.cancel')}
           </Button>

@@ -1,3 +1,4 @@
+import { uiProps, uiStyles } from './app/theme'
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -22,19 +23,16 @@ export default function LoginScreen() {
     await login({ username, password })
   }
   return (
-    <Box
-      component="main"
-      sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2 }}
-    >
+    <Box component="main" sx={uiStyles.centeredPage}>
       <Paper
         component="form"
         onSubmit={submit}
         variant="outlined"
-        sx={{ p: 3, width: '100%', maxWidth: 420 }}
+        sx={uiStyles.loginScreenPaper}
       >
-        <Stack spacing={2}>
+        <Stack {...uiProps.stackStandard}>
           <MaytuBrand />
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+          <Typography variant="h4" component="h1" sx={uiStyles.boldText}>
             {t('auth.title')}
           </Typography>
           <Typography color="text.secondary">{t('auth.subtitle')}</Typography>

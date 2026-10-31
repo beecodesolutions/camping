@@ -1,0 +1,32 @@
+// Declarative MUI layout props, shared without redefining values in screens.
+export const uiProps = {
+  compactWidget: { contentSpacing: 1 },
+  rowCompact: { direction: 'row', spacing: 0.5 },
+  rowTight: { direction: 'row', spacing: 0.25 },
+  row: { direction: 'row' },
+  rowSmall: { direction: 'row', spacing: 1 },
+  stackMedium: { spacing: 1.5 },
+  rowMedium: { direction: 'row', spacing: 1.5 },
+  stackStandard: { spacing: 2 },
+  rowStandard: { direction: 'row', spacing: 2 },
+  guestNamePlaceholder: { width: '45%', height: 28 },
+  guestDetailsPlaceholder: { width: '70%', height: 22 },
+  amountPlaceholder: { width: 100, height: 32 },
+  actionPlaceholder: { width: 44, height: 44 },
+  responsiveRowSmall: {
+    direction: { xs: 'column', sm: 'row' },
+    spacing: 1,
+  },
+  stackCompact: { spacing: 0.5 },
+  responsiveRow: {
+    direction: { xs: 'column', sm: 'row' },
+    spacing: 2,
+  },
+  stackSmall: { spacing: 1 },
+  stackSection: { spacing: 3 },
+  stackForm: { spacing: 2.5 },
+  fullHeightWidget: { height: '100%' },
+  inlineProgress: { size: 20 },
+  navigationRow: { direction: 'row', spacing: { md: 1 } },
+  stackTight: { spacing: 0.25 },
+} as const

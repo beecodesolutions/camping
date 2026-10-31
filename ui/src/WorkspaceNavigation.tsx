@@ -1,9 +1,9 @@
-import { workspaceSpacing } from './app/workspaceSpacing'
+import { uiProps, uiStyles } from './app/theme'
 import { scrollWorkspaceToTop } from './app/workspaceScroll'
 import { useEffect, useState, type ReactNode } from 'react'
 import { BedDouble, CalendarDays, Settings, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { alpha, Box, Button, Paper, Stack } from '@mui/material'
+import { Box, Button, Paper, Stack } from '@mui/material'
 import MaytuBrand from './components/MaytuBrand'
 import LucideIcon from './components/LucideIcon'
 import { workspaceHref, type WorkspaceSection } from './app/workspaceLocation'
@@ -74,50 +74,16 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
       aria-label={t('home.sections')}
       square
       elevation={0}
-      sx={{
-        bgcolor: 'navigation.main',
-        color: 'navigation.contrastText',
-        '& .MuiIconButton-root': { color: 'inherit' },
-        '& :focus-visible': {
-          outlineColor: 'navigation.contrastText',
-          outlineOffset: -4,
-        },
-        position: 'fixed',
-        zIndex: (theme) => theme.zIndex.appBar,
-        bottom: { xs: 0, md: 'auto' },
-        left: 0,
-        right: 0,
-        top: { md: 0 },
-        height: (theme) => ({
-          md: theme.spacing(workspaceSpacing.desktopNavigationHeight),
-        }),
-        display: { md: 'flex' },
-        alignItems: { md: 'center' },
-        gap: { md: 4 },
-        border: 0,
-        pb: { xs: 'env(safe-area-inset-bottom)', md: 0 },
-        px: { md: 3 },
-        transform: {
-          xs: barVisible ? 'translateY(0)' : 'translateY(100%)',
-          md: 'none',
-        },
-        visibility: { xs: barVisible ? 'visible' : 'hidden', md: 'visible' },
-        transition: barVisible
-          ? 'transform 180ms ease-out'
-          : 'transform 180ms ease-out, visibility 0s 180ms',
-        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
-      }}
+      sx={uiStyles.navigationBar(barVisible)}
     >
-      <Box
-        sx={{
-          display: { xs: 'none', md: 'block' },
-          minWidth: 0,
-          maxWidth: '35%',
-        }}
-      >
+      <Box sx={uiStyles.desktopBrand}>
         <MaytuBrand inverse />
       </Box>
-      <Stack direction="row" spacing={{ md: 1 }} sx={{ flex: 1 }}>
+      <Stack
+        {...uiProps.navigationRow}
+
+        sx={uiStyles.flexGrow}
+      >
         {destinations.map(({ section: value, icon }) => (
           <Button
             key={value}
@@ -126,63 +92,19 @@ export default function WorkspaceNavigation({ section, controls }: Props) {
             title={value === 'settings' ? t('navigation.settings') : undefined}
             onClick={() => scrollWorkspaceToTop()}
             aria-current={activeSection === value ? 'page' : undefined}
-            sx={{
-              display:
-                value === 'settings'
-                  ? { xs: 'none', md: 'inline-flex' }
-                  : undefined,
-              flex: { xs: 1, md: 'initial' },
-              minWidth: 0,
-              minHeight: (theme) => ({
-                xs: theme.spacing(workspaceSpacing.mobileNavigationHeight),
-                md: theme.spacing(workspaceSpacing.desktopNavigationHeight),
-              }),
-              ml: { md: value === 'settings' ? 'auto !important' : undefined },
-              flexDirection: { xs: 'column', md: 'row' },
-              justifyContent: 'center',
-              gap: { xs: 0.5, md: 1.5 },
-              px: { xs: 0.5, md: 1.5 },
-              py: 1,
-              borderRadius: 0,
-              textTransform: 'none',
-              borderBottom: '3px solid',
-              borderBottomColor:
-                activeSection === value ? 'accent.light' : 'transparent',
-              color:
-                activeSection === value
-                  ? 'accent.light'
-                  : 'navigation.contrastText',
-              '&.Mui-focusVisible': {
-                outlineColor: 'navigation.contrastText',
-                outlineOffset: -4,
-              },
-              '&:hover': {
-                bgcolor: (theme) =>
-                  alpha(theme.palette.navigation.contrastText, 0.14),
-              },
-              fontWeight: activeSection === value ? 700 : 500,
-              fontSize: { xs: '0.75rem', md: '0.875rem' },
-            }}
+            sx={uiStyles.navigationItem(value, activeSection)}
           >
             <LucideIcon icon={icon} />
-            <Box
-              component="span"
-              sx={{
-                display:
-                  value === 'settings'
-                    ? { xs: 'inline', md: 'none' }
-                    : 'inline',
-              }}
-            >
+            <Box component="span" sx={uiStyles.navigationLabel(value)}>
               {t(`navigation.${value}`)}
             </Box>
           </Button>
         ))}
       </Stack>
       <Stack
-        direction="row"
-        spacing={1}
-        sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}
+        {...uiProps.rowSmall}
+
+        sx={uiStyles.workspaceNavigationStack2}
       >
         {controls}
       </Stack>

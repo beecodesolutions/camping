@@ -1,3 +1,4 @@
+import { lucideIconStyles } from '../app/theme'
 import { SvgIcon, type SvgIconProps } from '@mui/material'
 import type { LucideIcon as LucideIconComponent } from 'lucide-react'
 
@@ -17,10 +18,12 @@ export default function LucideIcon({
   sx,
   ...props
 }: LucideIconProps) {
-  const mergedSx = [
-    { fill: 'none', stroke: 'currentColor' },
-    ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
-  ]
-
-  return <SvgIcon {...props} component={Icon} inheritViewBox sx={mergedSx} />
+  return (
+    <SvgIcon
+      {...props}
+      component={Icon}
+      inheritViewBox
+      sx={lucideIconStyles(sx)}
+    />
+  )
 }

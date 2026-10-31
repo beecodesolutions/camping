@@ -1,6 +1,19 @@
+import { uiProps } from './theme/layout'
+import { uiStyles } from './theme/styles'
+import { illustrationColors } from './theme/visuals'
 import { alpha, createTheme } from '@mui/material/styles'
 
 declare module '@mui/material/styles' {
+  interface Theme {
+    ui: typeof uiStyles
+    layout: typeof uiProps
+    illustration: typeof illustrationColors
+  }
+  interface ThemeOptions {
+    ui?: typeof uiStyles
+    layout?: typeof uiProps
+    illustration?: typeof illustrationColors
+  }
   interface Palette {
     navigation: { main: string; contrastText: string; selected: string }
     accent: { main: string; light: string }
@@ -13,9 +26,13 @@ declare module '@mui/material/styles' {
   }
 }
 
-export const editorialFont = 'Georgia, "Times New Roman", serif'
+export { editorialFont } from './theme/typography'
+import { typography } from './theme/typography'
 
 export const lightTheme = createTheme({
+  ui: uiStyles,
+  layout: uiProps,
+  illustration: illustrationColors,
   palette: {
     primary: {
       main: '#35644B',
@@ -51,40 +68,7 @@ export const lightTheme = createTheme({
       disabledBackground: '#E7E2D8',
     },
   },
-  typography: {
-    fontFamily:
-      'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    h1: {
-      fontFamily: editorialFont,
-      fontWeight: 600,
-      fontSize: '2.75rem',
-      lineHeight: 1.15,
-    },
-    h2: {
-      fontFamily: editorialFont,
-      fontWeight: 600,
-      fontSize: '2.25rem',
-      lineHeight: 1.2,
-    },
-    h3: {
-      fontFamily: editorialFont,
-      fontWeight: 600,
-      fontSize: '2rem',
-      lineHeight: 1.2,
-    },
-    h4: {
-      fontFamily: editorialFont,
-      fontWeight: 600,
-      fontSize: '1.875rem',
-      lineHeight: 1.2,
-    },
-    h5: { fontWeight: 600, fontSize: '1.25rem' },
-    h6: { fontWeight: 600, fontSize: '1.125rem' },
-    body1: { fontSize: '0.9375rem', lineHeight: 1.6 },
-    body2: { fontSize: '0.875rem', lineHeight: 1.5 },
-    button: { fontWeight: 600, textTransform: 'none' },
-    overline: { fontSize: '0.6875rem', letterSpacing: '0.12em' },
-  },
+  typography,
   spacing: 8,
   shape: { borderRadius: 8 },
   components: {
@@ -164,6 +148,9 @@ export const lightTheme = createTheme({
 })
 
 export const darkTheme = createTheme({
+  ui: uiStyles,
+  layout: uiProps,
+  illustration: illustrationColors,
   typography: lightTheme.typography,
   shape: lightTheme.shape,
   components: lightTheme.components,
@@ -200,3 +187,15 @@ export const darkTheme = createTheme({
     },
   },
 })
+
+export {
+  availabilityTone,
+  callingCodePopperProps,
+  checkoutActionStyles,
+  lucideIconStyles,
+  uiStyles,
+} from './theme/styles'
+
+export { uiProps } from './theme/layout'
+
+export { occupancyChartProps } from './theme/visuals'

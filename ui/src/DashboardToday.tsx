@@ -1,3 +1,4 @@
+import { uiProps, uiStyles, checkoutActionStyles } from './app/theme'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -214,19 +215,9 @@ function ReservationRow({
     },
   })
   return (
-    <ListItem
-      disableGutters
-      divider
-      sx={{
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 1,
-        py: 1.25,
-        '&:last-child': { borderBottom: 0 },
-      }}
-    >
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+    <ListItem disableGutters divider sx={uiStyles.operationalListRow}>
+      <Box sx={uiStyles.flexContent}>
+        <Typography sx={uiStyles.strongWrappedText}>
           {reservation.responsibleName}
         </Typography>
         <AccommodationIdentity
@@ -235,22 +226,12 @@ function ReservationRow({
           people={guestCount(reservation)}
         />
       </Box>
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}
-      >
+      <Stack {...uiProps.rowSmall} sx={uiStyles.trailingActions}>
         <Tooltip title={t('home.checkInAction')}>
           <IconButton
             aria-label={t('home.checkInAction')}
             onClick={onCheckIn}
-            sx={{
-              width: 44,
-              height: 44,
-              bgcolor: 'success.main',
-              color: 'success.contrastText',
-              '&:hover': { bgcolor: 'success.dark' },
-            }}
+            sx={uiStyles.reservationRowIconButton}
           >
             <LucideIcon icon={LogIn} />
           </IconButton>
@@ -258,7 +239,7 @@ function ReservationRow({
         <Typography
           variant="caption"
           color="text.secondary"
-          sx={{ display: { xs: 'none', sm: 'block' } }}
+          sx={uiStyles.desktopBlock}
         >
           {formatDate(reservation.checkOutDate, language)}
         </Typography>
@@ -295,19 +276,9 @@ function DepartureRow({
     },
   })
   return (
-    <ListItem
-      disableGutters
-      divider
-      sx={{
-        alignItems: 'center',
-        flexDirection: 'row',
-        gap: 1,
-        py: 1.25,
-        '&:last-child': { borderBottom: 0 },
-      }}
-    >
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+    <ListItem disableGutters divider sx={uiStyles.operationalListRow}>
+      <Box sx={uiStyles.flexContent}>
+        <Typography sx={uiStyles.strongWrappedText}>
           {stay.responsibleName}
         </Typography>
         <AccommodationIdentity
@@ -316,28 +287,13 @@ function DepartureRow({
           people={stay.adults + stay.children + stay.infants}
         />
       </Box>
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{ alignItems: 'center', justifyContent: 'flex-end', flexShrink: 0 }}
-      >
+      <Stack {...uiProps.rowSmall} sx={uiStyles.trailingActions}>
         {stay.canCheckOut && (
           <Tooltip title={t('home.checkOutAction')}>
             <IconButton
               aria-label={t('home.checkOutAction')}
               onClick={onCheckOut}
-              sx={(theme) => {
-                const palette = theme.palette.warning
-                const background =
-                  theme.palette.mode === 'dark' ? palette.light : palette.dark
-                return {
-                  width: 44,
-                  height: 44,
-                  bgcolor: background,
-                  color: theme.palette.getContrastText(background),
-                  '&:hover': { bgcolor: palette.main },
-                }
-              }}
+              sx={checkoutActionStyles}
             >
               <LucideIcon icon={LogOut} />
             </IconButton>
@@ -472,31 +428,28 @@ export default function DashboardToday({
   if (!dashboard) return null
 
   return (
-    <Stack spacing={2}>
+    <Stack {...uiProps.stackStandard}>
       <Paper
         component="section"
         variant="outlined"
-        sx={{ p: 2, borderRadius: 2 }}
+        sx={uiStyles.dashboardTodayPaper}
       >
-        <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
+        <Typography component="h2" variant="h6" sx={uiStyles.boldText}>
           {t('home.todayTitle')}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={uiStyles.bottomGap}
+        >
           {formatDate(today, i18n.language)} · {profile.timezone}
         </Typography>
-        <Stack spacing={3}>
+        <Stack {...uiProps.stackSection}>
           <Box>
             <Typography
               component="h3"
               variant="subtitle1"
-              sx={(theme) => ({
-                mb: 0.5,
-                fontWeight: 700,
-                color:
-                  theme.palette.mode === 'dark'
-                    ? 'success.light'
-                    : 'success.dark',
-              })}
+              sx={uiStyles.dashboardTodayTypography3}
             >
               {t('home.expectedArrivals')}
             </Typography>
@@ -529,14 +482,7 @@ export default function DashboardToday({
             <Typography
               component="h3"
               variant="subtitle1"
-              sx={(theme) => ({
-                mb: 0.5,
-                fontWeight: 700,
-                color:
-                  theme.palette.mode === 'dark'
-                    ? 'warning.light'
-                    : 'warning.dark',
-              })}
+              sx={uiStyles.dashboardTodayTypography4}
             >
               {t('home.expectedDepartures')}
             </Typography>
@@ -566,14 +512,7 @@ export default function DashboardToday({
               <Typography
                 component="h3"
                 variant="subtitle1"
-                sx={(theme) => ({
-                  mb: 0.5,
-                  fontWeight: 700,
-                  color:
-                    theme.palette.mode === 'dark'
-                      ? 'error.light'
-                      : 'error.dark',
-                })}
+                sx={uiStyles.dashboardTodayTypography5}
               >
                 {t('home.overdueDepartures')}
               </Typography>
@@ -611,7 +550,7 @@ export default function DashboardToday({
         title={t('home.activeStays')}
         subtitle={t('home.activeStaysCount', { count: activeStays.length })}
         titleVariant="h6"
-        contentSpacing={1}
+        {...uiProps.compactWidget}
         action={
           <AccommodationFilter
             value={activeFilter}

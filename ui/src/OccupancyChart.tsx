@@ -1,3 +1,5 @@
+import { uiProps, uiStyles } from './app/theme'
+import { occupancyChartProps } from './app/theme'
 import { useTranslation } from 'react-i18next'
 import { Box, Paper, Stack, Typography, useTheme } from '@mui/material'
 import { BarChart3 } from 'lucide-react'
@@ -18,6 +20,7 @@ const exampleGroups = [4, 6, 5, 9, 12, 10, 8]
 export default function OccupancyChart() {
   const { t, i18n } = useTranslation()
   const theme = useTheme()
+  const chartStyles = occupancyChartProps(theme)
   const today = new Date()
   const data = exampleGroups.map((groups, index) => {
     const date = new Date(today)
@@ -36,92 +39,56 @@ export default function OccupancyChart() {
       component="section"
       aria-labelledby="occupancy-history-title"
       variant="outlined"
-      sx={{
-        p: 2,
-        borderRadius: 2,
-        gridColumn: '1 / -1',
-        minWidth: 0,
-        bgcolor: 'secondary.light',
-        color: 'secondary.contrastText',
-        borderColor: 'divider',
-      }}
+      sx={uiStyles.occupancyChartPaper}
     >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <Stack {...uiProps.rowSmall} sx={uiStyles.alignCenter}>
         <LucideIcon icon={BarChart3} color="inherit" aria-hidden="true" />
         <Typography
           id="occupancy-history-title"
           component="h2"
           variant="subtitle1"
-          sx={{ fontWeight: 700 }}
+          sx={uiStyles.boldText}
         >
           {t('home.historyTitle')}
         </Typography>
       </Stack>
-      <Typography variant="body2" color="inherit" sx={{ mt: 0.5, mb: 3 }}>
+      <Typography
+        variant="body2"
+        color="inherit"
+        sx={uiStyles.occupancyChartTypography2}
+      >
         {t('home.historyDescription')} · {t('home.historySample')}
       </Typography>
-      <Box sx={{ height: 240 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            accessibilityLayer
-            margin={{ top: 24, right: 8, bottom: 0, left: -24 }}
-          >
-            <CartesianGrid
-              vertical={false}
-              stroke={theme.palette.secondary.contrastText}
-              strokeOpacity={0.2}
-              strokeDasharray="3 3"
-            />
+      <Box sx={uiStyles.occupancyChartBox}>
+        <ResponsiveContainer {...chartStyles.container}>
+          <BarChart data={data} accessibilityLayer {...chartStyles.chart}>
+            <CartesianGrid vertical={false} {...chartStyles.grid} />
             <XAxis
               dataKey="day"
               axisLine={false}
               tickLine={false}
-              tick={{
-                fill: theme.palette.secondary.contrastText,
-                fontSize: 12,
-              }}
-              tickMargin={10}
+              {...chartStyles.xAxis}
               interval="preserveStartEnd"
-              minTickGap={12}
             />
             <YAxis
               allowDecimals={false}
               axisLine={false}
               tickLine={false}
-              tick={{
-                fill: theme.palette.secondary.contrastText,
-                fontSize: 12,
-              }}
+              {...chartStyles.yAxis}
               domain={[0, 12]}
               ticks={[0, 3, 6, 9, 12]}
             />
-            <Tooltip
-              itemStyle={{ color: theme.palette.secondary.contrastText }}
-              cursor={{
-                fill: theme.palette.secondary.contrastText,
-                fillOpacity: 0.08,
-              }}
-              contentStyle={{
-                backgroundColor: theme.palette.secondary.light,
-                borderColor: theme.palette.secondary.dark,
-                borderRadius: theme.shape.borderRadius,
-                color: theme.palette.secondary.contrastText,
-              }}
-            />
+            <Tooltip {...chartStyles.tooltip} />
             <Bar
               dataKey="groups"
               name={t('home.historySeries')}
-              fill={theme.palette.accent.main}
-              radius={[6, 6, 0, 0]}
-              maxBarSize={48}
+              {...chartStyles.bar}
               isAnimationActive={false}
             >
               <LabelList
                 dataKey="groups"
                 position="top"
-                fill={theme.palette.secondary.contrastText}
-                fontSize={13}
+                {...chartStyles.labels}
               />
             </Bar>
           </BarChart>
