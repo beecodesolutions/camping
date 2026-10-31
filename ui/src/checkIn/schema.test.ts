@@ -40,11 +40,15 @@ it.each([
 
 it('no permite registrar ingresos futuros y usa fecha local', () => {
   vi.useFakeTimers()
-  vi.setSystemTime(new Date(2026, 8, 20, 23, 30))
-  expect(todayInTimezone('America/Santiago')).toBe('2026-09-21')
+  // In Santiago it is still September 20, independently of the runner's timezone.
+  vi.setSystemTime(new Date('2026-09-21T02:30:00.000Z'))
+  expect(todayInTimezone('America/Santiago')).toBe('2026-09-20')
   expect(
-    checkInSchema.safeParse({ ...valid(), arrivalDate: '2026-09-22' }).success,
+    checkInSchema.safeParse({ ...valid(), arrivalDate: '2026-09-21' }).success,
   ).toBe(false)
+  expect(
+    checkInSchema.safeParse({ ...valid(), arrivalDate: '2026-09-20' }).success,
+  ).toBe(true)
 })
 
 it('conserva datos opcionales y permite vehículo sin patente', () => {
