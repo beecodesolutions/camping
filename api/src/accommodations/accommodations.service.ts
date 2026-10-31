@@ -245,18 +245,6 @@ export class AccommodationsService {
                 'INVENTORY_MODE_LOCKED',
               )
           }
-          if (
-            row.maxOccupancy !== null &&
-            merged.data.maxOccupancy !== null &&
-            merged.data.maxOccupancy < row.maxOccupancy
-          ) {
-            await this.assertOccupancy(
-              manager,
-              context.camping.id,
-              row.id,
-              merged.data.maxOccupancy,
-            )
-          }
           if (row.enabled && !merged.data.enabled)
             await this.assertCanDisableTypeForId(manager, context, row.id)
 
@@ -681,33 +669,6 @@ export class AccommodationsService {
     if (!unit.enabled) errorForAvailability('La unidad')
   }
 
-  private async assertOccupancy(
-    manager: EntityManager,
-    campingId: string,
-    typeId: string,
-    maxOccupancy: number,
-  ): Promise<void> {
-    const reservations = await manager.find(ReservationEntity, {
-      where: {
-        campingId,
-        accommodationTypeId: typeId,
-        status: reservationStatusFilter,
-      },
-      select: { adults: true, children: true, infants: true },
-    })
-    if (
-      reservations.some(
-        (reservation) =>
-          reservation.adults + reservation.children + reservation.infants >
-          maxOccupancy,
-      )
-    )
-      throw conflict(
-        'La ocupación máxima es menor que una reserva activa',
-        'MAX_OCCUPANCY_TOO_LOW',
-      )
-  }
-
   private async assertCanDisableUnit(
     manager: EntityManager,
     context: AuthContext,
@@ -839,6 +800,7 @@ export class AccommodationsService {
       id: row.id,
       campingId: row.campingId,
       typeId: row.typeId,
+      maxOccupancy: row.maxOccupancy,
       name: row.name,
       enabled: row.enabled,
       createdAt: row.createdAt.toISOString(),

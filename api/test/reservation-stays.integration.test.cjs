@@ -224,8 +224,8 @@ before(async () => {
   )
   await dataSource.query(
     `INSERT INTO camping_private.accommodation_units
-      (id, camping_id, accommodation_type_id, name)
-     VALUES ($1, $2, $3, 'A-1')`,
+      (id, camping_id, accommodation_type_id, name, max_occupancy)
+     VALUES ($1, $2, $3, 'A-1', 4)`,
     [ids.unit, ids.camping, ids.type],
   )
   app = await createNestApp()

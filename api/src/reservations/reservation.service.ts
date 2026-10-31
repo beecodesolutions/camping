@@ -168,7 +168,16 @@ export class ReservationService {
           where: { id: context.camping.id },
         })
         const snapshot = this.calculateSnapshot(input, type, camping, undefined)
+        const unit = input.unitId
+          ? await manager.findOneOrFail(AccommodationUnitEntity, {
+              where: { id: input.unitId, campingId: context.camping.id },
+            })
+          : null
+        const people = input.adults + input.children + input.infants
         return reservationQuoteSchema.parse({
+          ...(unit && people > unit.maxOccupancy
+            ? { occupancyWarning: { maxOccupancy: unit.maxOccupancy, people } }
+            : {}),
           priceSnapshot: snapshotWithoutInternalBase(snapshot),
         })
       },
@@ -789,7 +798,6 @@ export class ReservationService {
         'El tipo de alojamiento no está habilitado',
         'INVENTORY_UNAVAILABLE',
       )
-    const totalPeople = input.adults + input.children + input.infants
     if (type.inventoryMode === 'unlimited') {
       if (input.unitId)
         throw conflict('El camping no admite unidad', 'UNIT_NOT_ALLOWED')
@@ -797,8 +805,6 @@ export class ReservationService {
     }
     if (!input.unitId)
       throw conflict('La reserva requiere una unidad', 'UNIT_REQUIRED')
-    if (type.maxOccupancy !== null && totalPeople > type.maxOccupancy)
-      throw conflict('La ocupación supera el máximo', 'OCCUPANCY_EXCEEDED')
     const unit = await manager.findOne(AccommodationUnitEntity, {
       where: { id: input.unitId, campingId },
     })

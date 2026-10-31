@@ -240,3 +240,28 @@ Pruebas prioritarias: solapamientos, entradas/salidas contiguas, disponibilidad 
 Los modelos Zod son la fuente de validación y tipos y se convierten a componentes OpenAPI. Documentar reglas de negocio que JSON Schema no pueda representar, además de verificarlas en servicios. Las entidades TypeORM representan persistencia, no DTO públicos.
 
 El documento de rutas debe describir solo endpoints implementados, con request/response, errores, parámetros, seguridad por cookie y `operationId` estable. Exportación offline sin conectar a PostgreSQL. Swagger se habilita explícitamente en producción. La futura UI generará su cliente RTK Query desde OpenAPI; no se genera ni modifica cliente en esta etapa.
+
+## Creación desde recepción y capacidad de las unidades
+
+La pantalla Reservas ofrece «Nueva reserva» desde el botón flotante. La recepción
+carga alojamiento, fechas, huéspedes y contacto, consulta disponibilidad/precio y
+acepta el total mostrado antes de guardar una reserva pendiente. Cotizar no retiene
+inventario. Cambiar fechas, tipo, unidad o huéspedes exige una nueva cotización.
+
+Cada unidad requiere `maxOccupancy`, un entero positivo; PATCH permite conservarlo
+omitiendo el campo, pero no admite null o cero. La migración UnitCapacity1760000006000
+copia inicialmente el máximo del tipo en las unidades existentes. El máximo del tipo
+se conserva por compatibilidad, pero ya no limita la creación o edición de reservas.
+La capacidad es orientativa: adultos, niños y bebés cuentan como personas, y superar
+el máximo de la unidad no bloquea cotización, creación ni ingreso. La cotización de
+creación devuelve `occupancyWarning: { maxOccupancy, people }` solo al excederlo;
+la UI muestra esa advertencia y permite crear igualmente. Los solapamientos,
+bloqueos, unidades deshabilitadas y demás restricciones de disponibilidad siguen vigentes.
+
+Un fallo ambiguo al guardar conserva la clave y el payload para reintentar exactamente
+la misma operación. La UI mantiene ese intento al cerrar/reabrir el diálogo en la
+misma sesión de recepción; recargar la página descarta el estado local del formulario.
+Antes de publicar esta versión de la API, aplicar la migración y volver a aprovisionar
+el rol de runtime para permitir actualizar `accommodation_units.max_occupancy`.
+La API actualizada debe estar disponible antes de publicar la UI que exige el nuevo
+campo en las respuestas de unidades.

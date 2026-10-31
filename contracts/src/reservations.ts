@@ -170,6 +170,7 @@ export type AccommodationType = z.infer<typeof accommodationTypeSchema>
 
 const accommodationUnitValuesSchema = z.strictObject({
   typeId: idSchema,
+  maxOccupancy: reservationCount.min(1),
   name: nonBlankText(200),
   enabled: z.boolean(),
 })
@@ -420,6 +421,12 @@ export type Reservation = ReservationResponse
 
 /** Price returned by either creation or edit previews. */
 export const reservationQuoteSchema = z.strictObject({
+  occupancyWarning: z
+    .strictObject({
+      maxOccupancy: reservationCount.min(1),
+      people: safeCount.min(1),
+    })
+    .optional(),
   priceSnapshot: reservationPriceSnapshotSchema,
 })
 export type ReservationQuote = z.infer<typeof reservationQuoteSchema>

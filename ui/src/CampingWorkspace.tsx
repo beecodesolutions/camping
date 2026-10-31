@@ -66,6 +66,7 @@ import {
   useUpdateMoneySettingsMutation,
 } from './services/api'
 import CheckInDialog from './CheckInDialog'
+import ReservationCreateDialog from './ReservationCreateDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
 import WorkspaceLayout from './WorkspaceLayout'
@@ -127,6 +128,7 @@ export default function CampingWorkspace({
     openWorkspaceDialog({ kind: 'stay', ...value })
   const [todayRefreshKey, setTodayRefreshKey] = useState(0)
   const checkInOpen = dialog?.kind === 'check-in'
+  const [reservedName, setReservedName] = useState<string | null>(null)
   const [registeredName, setRegisteredName] = useState<string | null>(null)
   const camping = useCampingQuery()
   const stays = useInfiniteStaysInfiniteQuery(
@@ -163,6 +165,22 @@ export default function CampingWorkspace({
           onSuccess={(name) => {
             closeWorkspaceDialog()
             setRegisteredName(name)
+            setTodayRefreshKey((value) => value + 1)
+          }}
+        />
+      )}
+      {profile && (
+        <ReservationCreateDialog
+          key={`${user.id}:${profile.id}`}
+          open={dialog?.kind === 'reservation-create'}
+          profile={profile}
+          onClose={closeWorkspaceDialog}
+          onSuccess={(name) => {
+            if (
+              window.history.state?.campingDialog?.kind === 'reservation-create'
+            )
+              closeWorkspaceDialog()
+            setReservedName(name)
             setTodayRefreshKey((value) => value + 1)
           }}
         />
@@ -206,6 +224,11 @@ export default function CampingWorkspace({
           <>
             {logoutState.isError && (
               <Alert severity="error">{t('auth.logoutError')}</Alert>
+            )}
+            {reservedName && (
+              <Alert severity="success" onClose={() => setReservedName(null)}>
+                {t('reservationCreate.success', { name: reservedName })}
+              </Alert>
             )}
             {registeredName && (
               <Alert severity="success" onClose={() => setRegisteredName(null)}>
@@ -282,7 +305,10 @@ export default function CampingWorkspace({
                   {t('navigation.reservationsHelp')}
                 </Typography>
               </Box>
-              <AvailabilityCalendar profile={profile} />
+              <AvailabilityCalendar
+                profile={profile}
+                refreshKey={todayRefreshKey}
+              />
             </Stack>
           ) : (
             <LoadingPanel />
@@ -387,12 +413,19 @@ export default function CampingWorkspace({
           </Stack>
         ) : null}
       </WorkspaceLayout>
-      {(section === 'home' || section === 'stays') && (
+      {(section === 'home' ||
+        section === 'stays' ||
+        section === 'reservations') && (
         <Fab
           color="primary"
           variant="extended"
           disabled={!profile}
-          onClick={() => openWorkspaceDialog({ kind: 'check-in' })}
+          onClick={() =>
+            openWorkspaceDialog({
+              kind:
+                section === 'reservations' ? 'reservation-create' : 'check-in',
+            })
+          }
           sx={{
             position: 'fixed',
             right: (theme) => ({ xs: theme.spacing(2), md: theme.spacing(4) }),
@@ -407,7 +440,11 @@ export default function CampingWorkspace({
           }}
         >
           <LucideIcon icon={Plus} />
-          {t('checkIn.register')}
+          {t(
+            section === 'reservations'
+              ? 'reservationCreate.title'
+              : 'checkIn.register',
+          )}
         </Fab>
       )}
       {selection && profile && (

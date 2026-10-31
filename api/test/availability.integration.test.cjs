@@ -184,14 +184,14 @@ before(async () => {
   )
   await dataSource.query(
     `INSERT INTO camping_private.accommodation_units
-      (id, camping_id, accommodation_type_id, name, enabled)
+      (id, camping_id, accommodation_type_id, name, enabled, max_occupancy)
      VALUES
-       ($1, $2, $3, 'A', true),
-       ($4, $2, $3, 'B', true),
-       ($5, $2, $3, 'Disabled unit', false),
-       ($6, $2, $7, 'Disabled type unit', true),
-       ($8, $2, $9, 'Alternating A', true),
-       ($10, $2, $9, 'Alternating B', true)`,
+       ($1, $2, $3, 'A', true, 4),
+       ($4, $2, $3, 'B', true, 4),
+       ($5, $2, $3, 'Disabled unit', false, 4),
+       ($6, $2, $7, 'Disabled type unit', true, 4),
+       ($8, $2, $9, 'Alternating A', true, 4),
+       ($10, $2, $9, 'Alternating B', true, 4)`,
     [
       ids.individualUnitA,
       ids.camping,

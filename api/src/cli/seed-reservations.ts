@@ -331,6 +331,7 @@ async function ensureAccommodation(
             id: unitIdFor(camping.id, name),
             campingId: camping.id,
             typeId: room.id,
+            maxOccupancy: room.maxOccupancy ?? 1,
             name,
             enabled: true,
           }),

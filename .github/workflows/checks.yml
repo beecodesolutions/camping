@@ -1,0 +1,66 @@
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Types, lint and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.11-bookworm
+        env:
+          POSTGRES_USER: camping
+          POSTGRES_PASSWORD: camping-test-only
+          POSTGRES_DB: camping_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U camping -d camping_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_USER: camping
+      DB_PASSWORD: camping-test-only
+      DB_NAME: camping_test
+      DB_SCHEMA: camping_private
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check types
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Initialize isolated test schema
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: >-
+          docker exec "$POSTGRES_CONTAINER"
+          psql -U camping -d camping_test -v ON_ERROR_STOP=1
+          -c 'CREATE SCHEMA camping_private'
+      - name: Test contracts, API and UI
+        run: pnpm test
+      - name: Test deployment safeguards offline
+        run: node --test scripts/test-production-delivery.cjs

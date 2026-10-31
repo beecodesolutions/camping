@@ -85,7 +85,7 @@ test('offline OpenAPI document describes implemented pilot and inventory routes'
     )
     assert.deepEqual(
       stayList.parameters.map((parameter) => parameter.name).sort(),
-      ['page', 'pageSize', 'status'],
+      ['accommodation', 'page', 'pageSize', 'status'],
     )
     assert.equal(
       stayList.parameters.find((parameter) => parameter.name === 'pageSize')
@@ -114,6 +114,17 @@ test('offline OpenAPI document describes implemented pilot and inventory routes'
     assert.equal(
       document.components.securitySchemes.camping_session.in,
       'cookie',
+    )
+    const unitSchema = document.components.schemas.AccommodationUnit
+    assert.ok(unitSchema.required.includes('maxOccupancy'))
+    assert.equal(unitSchema.properties.maxOccupancy.minimum, 1)
+    assert.ok(
+      document.components.schemas.AccommodationUnitCreate.required.includes(
+        'maxOccupancy',
+      ),
+    )
+    assert.ok(
+      document.components.schemas.ReservationQuote.properties.occupancyWarning,
     )
     assert.ok(document.components.schemas.Reservation)
     assert.ok(document.components.schemas.ReservationPayment)

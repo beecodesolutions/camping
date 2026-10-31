@@ -442,3 +442,28 @@ test('payments support manual methods and void metadata', () => {
     false,
   )
 })
+
+test('unit maximum is mandatory and positive independently of type capacity', () => {
+  const unit = {
+    typeId: '00000000-0000-4000-8000-000000000001',
+    name: 'A-1',
+    enabled: true,
+  }
+  for (const value of [undefined, null, 0, -1, 1.5])
+    assert.equal(
+      c.accommodationUnitCreateSchema.safeParse({
+        ...unit,
+        maxOccupancy: value,
+      }).success,
+      false,
+    )
+  assert.equal(
+    c.accommodationUnitCreateSchema.safeParse({ ...unit, maxOccupancy: 2 })
+      .success,
+    true,
+  )
+  assert.equal(
+    c.accommodationUnitPatchSchema.safeParse({ name: 'A-2' }).success,
+    true,
+  )
+})

@@ -231,9 +231,13 @@ test('reservation and linked stay retain the accepted rounding policy across con
     baseNightlyPriceMinor: 120050,
     enabled: true,
   })
-  const unit = await db
-    .getRepository(AccommodationUnitEntity)
-    .save({ campingId: id, typeId: type.id, name: 'Unit', enabled: true })
+  const unit = await db.getRepository(AccommodationUnitEntity).save({
+    campingId: id,
+    typeId: type.id,
+    maxOccupancy: 2,
+    name: 'Unit',
+    enabled: true,
+  })
   const input = {
     accommodationTypeId: type.id,
     unitId: unit.id,

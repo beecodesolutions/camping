@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 const dialogSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('check-in') }),
+  z.object({ kind: z.literal('reservation-create') }),
   z.object({
     kind: z.literal('stay'),
     id: z.string(),

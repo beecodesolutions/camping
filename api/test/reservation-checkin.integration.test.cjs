@@ -187,8 +187,8 @@ before(async () => {
   )
   await dataSource.query(
     `INSERT INTO camping_private.accommodation_units
-      (id, camping_id, accommodation_type_id, name)
-     SELECT value, $1, $2, 'Check-in unit ' || row_number() OVER ()
+      (id, camping_id, accommodation_type_id, name, max_occupancy)
+     SELECT value, $1, $2, 'Check-in unit ' || row_number() OVER (), 4
      FROM unnest($3::uuid[]) AS value`,
     [ids.camping, ids.type, ids.units],
   )
