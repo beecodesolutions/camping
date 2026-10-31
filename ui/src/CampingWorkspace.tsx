@@ -67,6 +67,7 @@ import {
 } from './services/api'
 import CheckInDialog from './CheckInDialog'
 import ReservationCreateDialog from './ReservationCreateDialog'
+import ReservationDetailDialog from './ReservationDetailDialog'
 import { todayInTimezone } from './checkIn/schema'
 import HomeHeader from './HomeHeader'
 import WorkspaceLayout from './WorkspaceLayout'
@@ -88,6 +89,7 @@ import { createUuid } from './services/uuid'
 import {
   useWorkspaceDialog,
   openWorkspaceDialog,
+  replaceWorkspaceDialog,
   closeWorkspaceDialog,
 } from './app/workspaceDialog'
 
@@ -173,14 +175,21 @@ export default function CampingWorkspace({
           open={dialog?.kind === 'reservation-create'}
           profile={profile}
           onClose={closeWorkspaceDialog}
-          onSuccess={(name) => {
-            if (
-              window.history.state?.campingDialog?.kind === 'reservation-create'
-            )
-              closeWorkspaceDialog()
-            setReservedName(name)
+          onSuccess={(reservation) => {
+            replaceWorkspaceDialog({
+              kind: 'reservation-detail',
+              id: reservation.id,
+            })
+            setReservedName(reservation.responsibleName)
             setTodayRefreshKey((value) => value + 1)
           }}
+        />
+      )}
+      {dialog?.kind === 'reservation-detail' && profile && (
+        <ReservationDetailDialog
+          id={dialog.id}
+          profile={profile}
+          onClose={closeWorkspaceDialog}
         />
       )}
       <WorkspaceNavigation

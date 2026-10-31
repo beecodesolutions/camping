@@ -2,6 +2,9 @@ import { createHash } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { DataSource, In, type EntityManager } from 'typeorm'
 import {
+  reservationSearchSchema,
+  reservationSearchResponseSchema,
+  type ReservationSearchResponse,
   reservationCreateSchema,
   reservationListQuerySchema,
   reservationPageSchema,
@@ -34,6 +37,7 @@ import {
   type ReservationStatus,
 } from '../database/entities/reservation.entity'
 import { withInventoryTransaction } from '../accommodations/inventory-transaction'
+import { AvailabilityService } from '../accommodations/availability.service'
 import { assertUnitAvailable } from '../accommodations/accommodations.service'
 import {
   baseFromSnapshot,
@@ -150,7 +154,84 @@ function nextStayVersion(value: number): number {
 
 @Injectable()
 export class ReservationService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly availabilityService: AvailabilityService,
+  ) {}
+
+  async search(
+    context: AuthContext,
+    raw: unknown,
+  ): Promise<ReservationSearchResponse> {
+    const parsed = reservationSearchSchema.safeParse(raw)
+    if (!parsed.success) throw zodBadRequest(parsed.error)
+    const input = parsed.data
+    const campingId = context.camping.id
+    // One consistent snapshot, with a fixed number of reads regardless of unit count.
+    return this.dataSource.transaction('REPEATABLE READ', async (manager) => {
+      const availability = await this.availabilityService.readSnapshot(
+        manager,
+        context,
+        input,
+      )
+      const camping = await manager.findOneOrFail(CampingEntity, {
+        where: { id: campingId },
+      })
+      const types = await manager.find(AccommodationTypeEntity, {
+        where: { campingId, enabled: true },
+      })
+      const units = await manager.find(AccommodationUnitEntity, {
+        where: { campingId, enabled: true },
+      })
+      const typesById = new Map(types.map((type) => [type.id, type]))
+      const unitsById = new Map(units.map((unit) => [unit.id, unit]))
+      const people = input.adults + input.children + input.infants
+      const offers = availability.types.flatMap((available) => {
+        const type = typesById.get(available.typeId)
+        if (!type) return []
+        const snapshot = snapshotWithoutInternalBase(
+          this.calculateSnapshot(
+            { ...input, accommodationTypeId: type.id },
+            type,
+            camping,
+            undefined,
+          ),
+        )
+        if (available.inventoryMode === 'unlimited')
+          return [
+            {
+              input: { ...input, accommodationTypeId: type.id },
+              accommodationName: type.name,
+              priceSnapshot: snapshot,
+            },
+          ]
+        return available.availableUnitIds.flatMap((id) => {
+          const unit = unitsById.get(id)
+          if (!unit || unit.typeId !== type.id) return []
+          return [
+            {
+              input: {
+                ...input,
+                accommodationTypeId: type.id,
+                unitId: unit.id,
+              },
+              accommodationName: `${type.name} · ${unit.name}`,
+              priceSnapshot: snapshot,
+              ...(people > unit.maxOccupancy
+                ? {
+                    occupancyWarning: {
+                      maxOccupancy: unit.maxOccupancy,
+                      people,
+                    },
+                  }
+                : {}),
+            },
+          ]
+        })
+      })
+      return reservationSearchResponseSchema.parse({ offers })
+    })
+  }
 
   async quote(context: AuthContext, raw: unknown): Promise<ReservationQuote> {
     const input = parseQuote(raw)

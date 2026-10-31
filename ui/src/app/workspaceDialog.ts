@@ -10,6 +10,7 @@ const dialogSchema = z.discriminatedUnion('kind', [
     action: z.enum(['detail', 'payment', 'close', 'extras']),
   }),
   z.object({ kind: z.literal('reservation-check-in'), id: z.string() }),
+  z.object({ kind: z.literal('reservation-detail'), id: z.string() }),
 ])
 type WorkspaceDialog = z.infer<typeof dialogSchema>
 const changeEvent = 'camping-dialog-change'
@@ -31,6 +32,14 @@ function snapshot() {
 
 export function openWorkspaceDialog(dialog: WorkspaceDialog) {
   window.history.pushState(
+    { ...window.history.state, campingDialog: dialog },
+    '',
+  )
+  window.dispatchEvent(new Event(changeEvent))
+}
+
+export function replaceWorkspaceDialog(dialog: WorkspaceDialog) {
+  window.history.replaceState(
     { ...window.history.state, campingDialog: dialog },
     '',
   )

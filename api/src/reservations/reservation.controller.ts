@@ -28,6 +28,20 @@ export class ReservationController {
     private readonly reservationCheckInService: ReservationCheckInService,
   ) {}
 
+  @Post('search')
+  @ApiEndpoint({
+    operationId: 'reservationSearch',
+    summary: 'Buscar alojamientos disponibles con sus precios',
+    status: 201,
+    body: openApiRef('ReservationSearch'),
+    response: openApiRef('ReservationSearchResponse'),
+    errors: [400, 401, 403, 413, 500],
+  })
+  search(@Req() request: AuthenticatedRequest) {
+    assertAllowedOrigin(request)
+    return this.reservationService.search(request.auth!, request.body)
+  }
+
   @Post('quote')
   @ApiEndpoint({
     operationId: 'reservationQuoteCreate',

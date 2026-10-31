@@ -1,3 +1,4 @@
+import { dateRangeCalendar } from './calendar'
 import { alpha, type Theme } from '@mui/material/styles'
 import type { SxProps } from '@mui/material'
 import type { CSSProperties } from 'react'
@@ -57,6 +58,7 @@ export const checkoutActionStyles = (theme: Theme) => {
 }
 
 export const uiStyles = {
+  dateRangeCalendar,
   strongWrappedText: {
     fontWeight: 700,
     overflowWrap: 'anywhere',

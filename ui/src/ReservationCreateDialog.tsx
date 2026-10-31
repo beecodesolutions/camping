@@ -12,6 +12,11 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  Checkbox,
+  FormControlLabel,
+  MobileStepper,
+  Radio,
+  RadioGroup,
   MenuItem,
   Stack,
   TextField,
@@ -20,15 +25,19 @@ import {
   useTheme,
 } from '@mui/material'
 import {
+  reservationSearchSchema,
   reservationCreateSchema,
+  type ReservationResponse,
   type CampingProfile,
   type ReservationCreate,
   todayInTimezone,
 } from '@camping/contracts'
+import DateRangeCalendar from './components/DateRangeCalendar'
 import CountrySelect from './checkIn/CountrySelect'
 import ReservationReview from './ReservationReview'
 import { departureForNights, reservationNights } from './reservations/dates'
 import {
+  useReservationSearchMutation,
   useAccommodationTypesQuery,
   useAccommodationUnitsQuery,
   useReservationCreateMutation,
@@ -40,6 +49,7 @@ import {
   creationReducer,
   initialCreationState,
   reservationFailure,
+  type CreationQuote,
 } from './reservations/creationState'
 import {
   reservationContact,
@@ -54,7 +64,7 @@ type Props = {
   open: boolean
   profile: CampingProfile
   onClose: () => void
-  onSuccess: (name: string) => void
+  onSuccess: (reservation: ReservationResponse) => void
 }
 
 // Kept mounted by the workspace so Back/reopening preserves uncertain attempts.
@@ -80,6 +90,17 @@ export default function ReservationCreateDialog({
   const [state, dispatch] = useReducer(creationReducer, initialCreationState)
   const [requestQuote, quoteRequest] = useReservationQuoteCreateMutation()
   const [createReservation] = useReservationCreateMutation()
+  const [step, setStep] = useState(0)
+  const [offers, setOffers] = useState<CreationQuote[] | null>(null)
+  const [selected, setSelected] = useState<CreationQuote | null>(null)
+  const [typeFilter, setTypeFilter] = useState('')
+  const [unitFilter, setUnitFilter] = useState('')
+  const [accepted, setAccepted] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState(false)
+  const [searchOffers] = useReservationSearchMutation()
+  const searchRevision = useRef(0)
+  const searchingRef = useRef(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const sending = useRef(false)
   const {
@@ -88,6 +109,7 @@ export default function ReservationCreateDialog({
     handleSubmit,
     setValue,
     getFieldState,
+    getValues,
     setError,
     reset,
     formState: { errors, isSubmitting },
@@ -104,29 +126,74 @@ export default function ReservationCreateDialog({
     nightsDraft !== null &&
     departureForNights(checkInDate, nightsDraft) === null
   const selectedType = types.find((type) => type.id === typeId)
-  const availableUnits = units.filter(
-    (unit) => unit.typeId === typeId && unit.enabled,
-  )
   const locked = state.attempt !== null
   const saving = state.phase === 'saving'
   const loading = typesQuery.isLoading || unitsQuery.isLoading
   const inventoryError = typesQuery.isError || unitsQuery.isError
   const noInventory = !loading && !inventoryError && usableTypes.length === 0
   const quote = state.quote
-  const reviewing = quote !== null
+  const reviewing = step === 3
   useEffect(() => {
     if (open) {
       contentRef.current?.scrollTo({ top: 0 })
       if (reviewing) contentRef.current?.focus({ preventScroll: true })
     }
-  }, [open, reviewing])
-  const changed = () => dispatch({ type: 'change' })
-  const datesChanged = () => {
-    setNightsDraft(null)
+  }, [open, reviewing, step])
+  const changed = () => {
+    dispatch({ type: 'change' })
+    setAccepted(false)
+  }
+  const searchChanged = () => {
+    searchRevision.current += 1
+    setOffers(null)
+    setSelected(null)
+    setValue('accommodationTypeId', '')
+    setValue('unitId', '')
+    setSearchError(false)
     changed()
   }
+  const search = async () => {
+    if (searchingRef.current) return
+    if (offers?.length) {
+      setStep(1)
+      return
+    }
+    const values = getValues()
+    const searchInput = reservationSearchSchema.safeParse({
+      checkInDate: values.checkInDate,
+      checkOutDate: values.checkOutDate,
+      adults: values.adults,
+      children: values.children,
+      infants: values.infants,
+    })
+    if (!searchInput.success) {
+      setSearchError(true)
+      return
+    }
+    const revision = searchRevision.current
+    searchingRef.current = true
+    setSearching(true)
+    setSearchError(false)
+    try {
+      const { offers: results } = await searchOffers(searchInput.data).unwrap()
+      if (revision !== searchRevision.current) return
+      setOffers(results.map((offer) => ({ ...offer, responsibleName: '' })))
+      if (results.length) setStep(1)
+    } catch {
+      if (revision === searchRevision.current) setSearchError(true)
+    } finally {
+      searchingRef.current = false
+      setSearching(false)
+    }
+  }
+  const datesChanged = (arrival: string, departure: string) => {
+    setNightsDraft(null)
+    setValue('checkInDate', arrival, { shouldDirty: true })
+    setValue('checkOutDate', departure, { shouldDirty: true })
+    searchChanged()
+  }
   const nightsChanged = (value: string) => {
-    changed()
+    searchChanged()
     const departure = departureForNights(checkInDate, value)
     setNightsDraft(departure ? null : value)
     if (departure)
@@ -143,6 +210,8 @@ export default function ReservationCreateDialog({
     const revision = state.revision
     const input = reservationQuoteInput(values, selectedType)
     const unit = units.find((item) => item.id === input.unitId)
+    setAccepted(false)
+    setStep(3)
     dispatch({ type: 'quote-start' })
     try {
       const result = await requestQuote(input).unwrap()
@@ -180,7 +249,13 @@ export default function ReservationCreateDialog({
       const result = await createReservation(attempt).unwrap()
       dispatch({ type: 'reset' })
       reset(reservationDefaults(profile.timezone))
-      onSuccess(result.responsibleName)
+      setStep(0)
+      setOffers(null)
+      setSelected(null)
+      setTypeFilter('')
+      setUnitFilter('')
+      setAccepted(false)
+      onSuccess(result)
     } catch (error) {
       for (const name of reservationValidationFields(error))
         setError(name, { type: 'server', message: 'validation.invalid' })
@@ -198,7 +273,7 @@ export default function ReservationCreateDialog({
   const saveValues = () =>
     handleSubmit(
       async (values) => {
-        if (!quote) return
+        if (!quote || !accepted || sending.current) return
         const attempt = reservationCreateSchema.parse({
           ...quote.input,
           ...reservationContact(values),
@@ -231,19 +306,29 @@ export default function ReservationCreateDialog({
       aria-labelledby="reservation-create-title"
     >
       <DialogTitle id="reservation-create-title">
-        {t(reviewing ? 'reservationCreate.summary' : 'reservationCreate.title')}
+        {t('reservationCreate.title')}
       </DialogTitle>
       <Box
         component="form"
         noValidate
         onSubmit={(event) => {
           event.preventDefault()
-          if (!saving && !quoteRequest.isLoading && !invalidNights)
-            void (state.attempt
-              ? saveAttempt(state.attempt)
-              : quote
-                ? saveValues()
-                : quoteValues(event))
+          if (
+            saving ||
+            searching ||
+            quoteRequest.isLoading ||
+            isSubmitting ||
+            invalidNights
+          )
+            return
+          if (step === 0) void search()
+          else if (step === 1 && selected) setStep(2)
+          else if (step === 2) void quoteValues(event)
+          else if (step === 3) {
+            if (state.attempt) void saveAttempt(state.attempt)
+            else if (quote && accepted) void saveValues()
+            else if (!quote) void quoteValues(event)
+          }
         }}
         sx={uiStyles.formColumn}
       >
@@ -254,6 +339,115 @@ export default function ReservationCreateDialog({
           sx={uiStyles.reservationCreateDialogDialogContent}
         >
           <Stack {...uiProps.stackForm}>
+            <MobileStepper
+              variant="dots"
+              steps={4}
+              activeStep={step}
+              position="static"
+              backButton={<span>{step + 1}/4</span>}
+              nextButton={<span />}
+            />
+            <Typography component="h2" variant="subtitle1" aria-live="polite">
+              {t(
+                (
+                  [
+                    'reservationCreate.step1',
+                    'reservationCreate.step2',
+                    'reservationCreate.step3',
+                    'reservationCreate.step4',
+                  ] as const
+                )[step],
+              )}
+            </Typography>
+            {searchError && (
+              <Alert severity="error">
+                {t('reservationCreate.searchError')}
+              </Alert>
+            )}
+            {offers?.length === 0 && (
+              <Alert severity="info">{t('reservationCreate.noOffers')}</Alert>
+            )}
+            {step === 1 && offers && (
+              <Stack {...uiProps.stackForm}>
+                <TextField
+                  select
+                  fullWidth
+                  label={t('reservationCreate.type')}
+                  value={typeFilter}
+                  onChange={(event) => {
+                    setTypeFilter(event.target.value)
+                    setUnitFilter('')
+                  }}
+                >
+                  <MenuItem value="">{t('reservationCreate.all')}</MenuItem>
+                  {usableTypes.map((type) => (
+                    <MenuItem key={type.id} value={type.id}>
+                      {type.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  label={t('reservationCreate.unit')}
+                  value={unitFilter}
+                  onChange={(event) => setUnitFilter(event.target.value)}
+                >
+                  <MenuItem value="">{t('reservationCreate.all')}</MenuItem>
+                  {units
+                    .filter(
+                      (unit) =>
+                        unit.enabled &&
+                        (!typeFilter || unit.typeId === typeFilter),
+                    )
+                    .map((unit) => (
+                      <MenuItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </MenuItem>
+                    ))}
+                </TextField>
+                <RadioGroup
+                  aria-label={t('reservationCreate.step2')}
+                  value={
+                    selected
+                      ? `${selected.input.accommodationTypeId}:${selected.input.unitId ?? ''}`
+                      : ''
+                  }
+                >
+                  {offers
+                    .filter(
+                      (offer) =>
+                        (!typeFilter ||
+                          offer.input.accommodationTypeId === typeFilter) &&
+                        (!unitFilter || offer.input.unitId === unitFilter),
+                    )
+                    .map((offer) => {
+                      const key = `${offer.input.accommodationTypeId}:${offer.input.unitId ?? ''}`
+                      return (
+                        <FormControlLabel
+                          key={key}
+                          value={key}
+                          control={<Radio />}
+                          label={`${offer.accommodationName} · ${formatMoney(offer.priceSnapshot.totalMinor, offer.priceSnapshot.currency, i18n.language)}`}
+                          onChange={() => {
+                            setSelected(offer)
+                            setValue(
+                              'accommodationTypeId',
+                              offer.input.accommodationTypeId,
+                            )
+                            setValue('unitId', offer.input.unitId ?? '')
+                            changed()
+                          }}
+                        />
+                      )
+                    })}
+                </RadioGroup>
+              </Stack>
+            )}
+
+            {step === 3 && quoteRequest.isLoading && (
+              <Typography role="status">{t('checkIn.quoting')}</Typography>
+            )}
             {state.error && (
               <Alert severity="error">{errorText(state.error)}</Alert>
             )}
@@ -277,280 +471,262 @@ export default function ReservationCreateDialog({
             )}
             <Box
               component="fieldset"
-              hidden={reviewing}
+              hidden={step !== 0 && step !== 2}
               disabled={locked || loading || inventoryError || noInventory}
               sx={uiStyles.fieldsetReset}
             >
               <Stack {...uiProps.stackForm}>
-                <Typography
-                  component="h2"
-                  variant="subtitle1"
-                  sx={uiStyles.reservationCreateDialogTypography}
-                >
-                  {t('reservationCreate.accommodationSection')}
-                </Typography>
-                <Controller
-                  name="accommodationTypeId"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
+                <Box hidden={step !== 0}>
+                  <Stack {...uiProps.stackForm}>
+                    <DateRangeCalendar
+                      startDate={checkInDate}
+                      endDate={checkOutDate}
+                      today={todayInTimezone(profile.timezone)}
                       disabled={
-                        locked || loading || inventoryError || noInventory
+                        locked ||
+                        loading ||
+                        inventoryError ||
+                        noInventory ||
+                        searching
                       }
+                      onChange={datesChanged}
+                    />
+                    <TextField
+                      name="nights"
+                      label={t('reservationCreate.nightsField')}
+                      type="number"
+                      required
+                      fullWidth
+                      value={nightsDraft ?? nights}
+                      onChange={(event) => nightsChanged(event.target.value)}
+                      disabled={locked || !checkInDate}
+                      error={invalidNights}
+                      helperText={
+                        invalidNights
+                          ? t('reservationCreate.invalidNights')
+                          : undefined
+                      }
+                      slotProps={{
+                        htmlInput: {
+                          min: 1,
+                          max: 366,
+                          step: 1,
+                          inputMode: 'numeric',
+                        },
+                      }}
+                    />
+                    <Box sx={uiStyles.reservationCreateDialogBox4}>
+                      {(['adults', 'children', 'infants'] as const).map(
+                        (name) => {
+                          const range = profile.ageRanges[name]
+                          return (
+                            <TextField
+                              key={name}
+                              label={`${t(`checkIn.${name}`)} (${range.max === null ? `${range.min}+` : `${range.min}–${range.max}`})`}
+                              onChange={searchChanged}
+                              type="number"
+                              required
+                              fullWidth
+                              error={!!errors[name]}
+                              helperText={errorText(errors[name]?.message)}
+                              slotProps={{
+                                htmlInput: {
+                                  ...register(name, {
+                                    valueAsNumber: true,
+                                  }),
+                                  min: 0,
+                                  step: 1,
+                                  inputMode: 'numeric',
+                                },
+                              }}
+                            />
+                          )
+                        },
+                      )}
+                    </Box>
+                  </Stack>
+                </Box>
+                <Box hidden={step !== 2}>
+                  <Stack {...uiProps.stackForm}>
+                    <Typography>
+                      {selected?.accommodationName} · {checkInDate} →{' '}
+                      {checkOutDate}
+                    </Typography>
+                    <Divider />
+                    <Typography
+                      component="h2"
+                      variant="subtitle1"
+                      sx={uiStyles.reservationCreateDialogTypography}
+                    >
+                      {t('checkIn.responsibleSection')}
+                    </Typography>
+                    <TextField
+                      label={t('checkIn.responsibleName')}
+                      required
+                      fullWidth
+                      autoComplete="name"
+                      error={!!errors.responsibleName}
+                      helperText={errorText(errors.responsibleName?.message)}
+                      slotProps={{ htmlInput: register('responsibleName') }}
+                    />
+                    <Stack {...uiProps.responsiveRow}>
+                      <Controller
+                        name="nationality"
+                        control={control}
+                        render={({ field }) => (
+                          <CountrySelect
+                            label={t('checkIn.nationality')}
+                            value={field.value}
+                            inputRef={field.ref}
+                            onBlur={field.onBlur}
+                            disabled={
+                              locked || loading || inventoryError || noInventory
+                            }
+                            error={errorText(errors.nationality?.message)}
+                            onChange={(country) => {
+                              field.onChange(country)
+                              if (!getFieldState('phoneCountry').isDirty)
+                                setValue('phoneCountry', country)
+                            }}
+                          />
+                        )}
+                      />
+                      <TextField
+                        label={t('checkIn.document')}
+                        fullWidth
+                        error={!!errors.document}
+                        helperText={errorText(errors.document?.message)}
+                        slotProps={{ htmlInput: register('document') }}
+                      />
+                    </Stack>
+                    <Box sx={uiStyles.contactFields}>
+                      <Controller
+                        name="phoneCountry"
+                        control={control}
+                        render={({ field }) => (
+                          <CountrySelect
+                            label={t('checkIn.phoneCountryCode')}
+                            value={field.value}
+                            inputRef={field.ref}
+                            onBlur={field.onBlur}
+                            onChange={field.onChange}
+                            disabled={
+                              locked || loading || inventoryError || noInventory
+                            }
+                            error={errorText(errors.phoneCountry?.message)}
+                            callingCode
+                          />
+                        )}
+                      />
+                      <TextField
+                        label={t('checkIn.phone')}
+                        type="tel"
+                        fullWidth
+                        autoComplete="tel-national"
+                        error={!!errors.phone}
+                        helperText={errorText(errors.phone?.message)}
+                        slotProps={{ htmlInput: register('phone') }}
+                      />
+                    </Box>
+                    <TextField
+                      label={t('reservationCreate.email')}
+                      type="email"
+                      fullWidth
+                      autoComplete="email"
+                      error={!!errors.email}
+                      helperText={errorText(errors.email?.message)}
+                      slotProps={{ htmlInput: register('email') }}
+                    />
+                    <TextField
+                      label={t('reservationCreate.source')}
                       fullWidth
                       required
-                      label={t('reservationCreate.type')}
-                      error={!!errors.accommodationTypeId}
-                      helperText={errorText(
-                        errors.accommodationTypeId?.message,
-                      )}
-                      onChange={(event) => {
-                        field.onChange(event)
-                        setValue('unitId', '', { shouldDirty: true })
-                        changed()
-                      }}
-                    >
-                      {usableTypes.map((type) => (
-                        <MenuItem key={type.id} value={type.id}>
-                          {type.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  )}
-                />
-                {selectedType?.inventoryMode === 'individual' && (
-                  <Controller
-                    name="unitId"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        select
-                        disabled={
-                          locked || loading || inventoryError || noInventory
-                        }
-                        fullWidth
-                        required
-                        label={t('reservationCreate.unit')}
-                        error={!!errors.unitId}
-                        helperText={errorText(errors.unitId?.message)}
-                        onChange={(event) => {
-                          field.onChange(event)
-                          changed()
-                        }}
-                      >
-                        {availableUnits.map((unit) => (
-                          <MenuItem key={unit.id} value={unit.id}>
-                            {unit.name} ·{' '}
-                            {t('reservationCreate.capacity', {
-                              count: unit.maxOccupancy,
-                            })}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    )}
-                  />
-                )}
-                <Box sx={uiStyles.reservationCreateDialogBox3}>
-                  <TextField
-                    label={t('reservationCreate.checkIn')}
-                    type="date"
-                    fullWidth
-                    required
-                    error={!!errors.checkInDate}
-                    helperText={errorText(errors.checkInDate?.message)}
-                    slotProps={{
-                      inputLabel: { shrink: true },
-                      htmlInput: register('checkInDate', {
-                        onChange: datesChanged,
-                      }),
-                    }}
-                  />
-                  <TextField
-                    label={t('reservationCreate.checkOut')}
-                    type="date"
-                    fullWidth
-                    required
-                    error={!!errors.checkOutDate}
-                    helperText={errorText(errors.checkOutDate?.message)}
-                    slotProps={{
-                      inputLabel: { shrink: true },
-                      htmlInput: {
-                        ...register('checkOutDate', { onChange: datesChanged }),
-                        min: checkInDate,
-                      },
-                    }}
-                  />
-                  <TextField
-                    name="nights"
-                    label={t('reservationCreate.nightsField')}
-                    type="number"
-                    required
-                    fullWidth
-                    value={nightsDraft ?? nights}
-                    onChange={(event) => nightsChanged(event.target.value)}
-                    disabled={locked || !checkInDate}
-                    error={invalidNights}
-                    helperText={
-                      invalidNights
-                        ? t('reservationCreate.invalidNights')
-                        : undefined
-                    }
-                    slotProps={{
-                      htmlInput: { min: 1, step: 1, inputMode: 'numeric' },
-                    }}
-                  />
+                      error={!!errors.source}
+                      helperText={errorText(errors.source?.message)}
+                      slotProps={{ htmlInput: register('source') }}
+                    />
+                    <TextField
+                      label={t('reservationCreate.notes')}
+                      multiline
+                      minRows={2}
+                      fullWidth
+                      error={!!errors.notes}
+                      helperText={errorText(errors.notes?.message)}
+                      slotProps={{ htmlInput: register('notes') }}
+                    />
+                  </Stack>
                 </Box>
-                <Box sx={uiStyles.reservationCreateDialogBox4}>
-                  {(['adults', 'children', 'infants'] as const).map((name) => {
-                    const range = profile.ageRanges[name]
-                    return (
-                      <TextField
-                        key={name}
-                        label={`${t(`checkIn.${name}`)} (${range.max === null ? `${range.min}+` : `${range.min}–${range.max}`})`}
-                        type="number"
-                        required
-                        fullWidth
-                        error={!!errors[name]}
-                        helperText={errorText(errors[name]?.message)}
-                        slotProps={{
-                          htmlInput: {
-                            ...register(name, {
-                              valueAsNumber: true,
-                              onChange: changed,
-                            }),
-                            min: 0,
-                            step: 1,
-                            inputMode: 'numeric',
-                          },
-                        }}
-                      />
-                    )
-                  })}
-                </Box>
-                <Divider />
-                <Typography
-                  component="h2"
-                  variant="subtitle1"
-                  sx={uiStyles.reservationCreateDialogTypography}
-                >
-                  {t('checkIn.responsibleSection')}
-                </Typography>
-                <TextField
-                  label={t('checkIn.responsibleName')}
-                  required
-                  fullWidth
-                  autoComplete="name"
-                  error={!!errors.responsibleName}
-                  helperText={errorText(errors.responsibleName?.message)}
-                  slotProps={{ htmlInput: register('responsibleName') }}
-                />
-                <Stack {...uiProps.responsiveRow}>
-                  <Controller
-                    name="nationality"
-                    control={control}
-                    render={({ field }) => (
-                      <CountrySelect
-                        label={t('checkIn.nationality')}
-                        value={field.value}
-                        inputRef={field.ref}
-                        onBlur={field.onBlur}
-                        disabled={
-                          locked || loading || inventoryError || noInventory
-                        }
-                        error={errorText(errors.nationality?.message)}
-                        onChange={(country) => {
-                          field.onChange(country)
-                          if (!getFieldState('phoneCountry').isDirty)
-                            setValue('phoneCountry', country)
-                        }}
-                      />
-                    )}
-                  />
-                  <TextField
-                    label={t('checkIn.document')}
-                    fullWidth
-                    error={!!errors.document}
-                    helperText={errorText(errors.document?.message)}
-                    slotProps={{ htmlInput: register('document') }}
-                  />
-                </Stack>
-                <Box sx={uiStyles.contactFields}>
-                  <Controller
-                    name="phoneCountry"
-                    control={control}
-                    render={({ field }) => (
-                      <CountrySelect
-                        label={t('checkIn.phoneCountryCode')}
-                        value={field.value}
-                        inputRef={field.ref}
-                        onBlur={field.onBlur}
-                        onChange={field.onChange}
-                        disabled={
-                          locked || loading || inventoryError || noInventory
-                        }
-                        error={errorText(errors.phoneCountry?.message)}
-                        callingCode
-                      />
-                    )}
-                  />
-                  <TextField
-                    label={t('checkIn.phone')}
-                    type="tel"
-                    fullWidth
-                    autoComplete="tel-national"
-                    error={!!errors.phone}
-                    helperText={errorText(errors.phone?.message)}
-                    slotProps={{ htmlInput: register('phone') }}
-                  />
-                </Box>
-                <TextField
-                  label={t('reservationCreate.email')}
-                  type="email"
-                  fullWidth
-                  autoComplete="email"
-                  error={!!errors.email}
-                  helperText={errorText(errors.email?.message)}
-                  slotProps={{ htmlInput: register('email') }}
-                />
-                <TextField
-                  label={t('reservationCreate.notes')}
-                  multiline
-                  minRows={2}
-                  fullWidth
-                  error={!!errors.notes}
-                  helperText={errorText(errors.notes?.message)}
-                  slotProps={{ htmlInput: register('notes') }}
-                />
               </Stack>
             </Box>
-            {quote && (
-              <ReservationReview
-                quote={quote}
-                today={todayInTimezone(profile.timezone)}
-              />
+            {step === 3 && quote && (
+              <>
+                <ReservationReview
+                  quote={quote}
+                  today={todayInTimezone(profile.timezone)}
+                />
+                {(
+                  [
+                    'nationality',
+                    'document',
+                    'phone',
+                    'email',
+                    'source',
+                    'notes',
+                  ] as const
+                ).map((name) => (
+                  <Box key={name}>
+                    <Typography variant="body2" color="text.secondary">
+                      {t(
+                        name === 'source' ||
+                          name === 'email' ||
+                          name === 'notes'
+                          ? `reservationCreate.${name}`
+                          : `checkIn.${name}`,
+                      )}
+                    </Typography>
+                    <Typography>
+                      {name === 'phone'
+                        ? reservationContact(getValues()).phone || '—'
+                        : getValues(name) || '—'}
+                    </Typography>
+                  </Box>
+                ))}
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={accepted}
+                      disabled={locked}
+                      onChange={(event) => setAccepted(event.target.checked)}
+                    />
+                  }
+                  label={t('reservationCreate.acceptAmount', {
+                    amount: money(quote.priceSnapshot.totalMinor),
+                  })}
+                />
+              </>
             )}
           </Stack>
         </DialogContent>
         <DialogActions sx={uiStyles.reservationCreateDialogDialogActions}>
           <Button
-            onClick={reviewing && !locked ? changed : onClose}
-            disabled={saving}
+            onClick={() => {
+              if (step > 0 && !locked) {
+                changed()
+                setStep(step - 1)
+              } else onClose()
+            }}
+            disabled={saving || searching || quoteRequest.isLoading}
           >
-            {t(
-              reviewing && !locked
-                ? 'reservationCreate.back'
-                : locked
-                  ? 'common.close'
-                  : 'common.cancel',
-            )}
+            {t(step > 0 && !locked ? 'reservationCreate.back' : 'common.close')}
           </Button>
           <Button
             type="submit"
             variant="contained"
             disabled={
+              searching ||
+              (step === 0 && !nights) ||
+              (step === 1 && !selected) ||
+              (step === 3 && !!quote && !accepted && !locked) ||
               saving ||
               invalidNights ||
               isSubmitting ||
@@ -562,13 +738,19 @@ export default function ReservationCreateDialog({
               ? t('checkIn.saving')
               : state.phase === 'uncertain'
                 ? t('reservationCreate.retrySave')
-                : quote
+                : step === 3 && quote
                   ? t('reservationCreate.createFor', {
                       amount: money(quote.priceSnapshot.totalMinor),
                     })
                   : quoteRequest.isLoading
                     ? t('checkIn.quoting')
-                    : t('reservationCreate.quote')}
+                    : t(
+                        step === 0
+                          ? 'reservationCreate.search'
+                          : step === 3
+                            ? 'reservationCreate.quote'
+                            : 'reservationCreate.continue',
+                      )}
           </Button>
         </DialogActions>
       </Box>
