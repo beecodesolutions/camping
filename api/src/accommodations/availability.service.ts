@@ -116,7 +116,7 @@ export class AvailabilityService {
     }
   }
 
-  private async readSnapshot(
+  async readSnapshot(
     manager: EntityManager,
     context: AuthContext,
     query: AvailabilityQuery,

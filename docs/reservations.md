@@ -9,6 +9,24 @@ Backend y contratos; la UI se diseña por separado. Una reserva corresponde a un
 - Un camping mantiene su moneda y zona horaria; la sesión determina el camping autorizado.
 - No agregar roles, organizaciones, procesadores de pago ni conectividad OTA.
 
+## Búsqueda de ofertas
+
+`POST /api/reservations/search` recibe `checkInDate`, `checkOutDate`, `adults`,
+`children` e `infants` y devuelve `{ offers }`. Cada oferta incluye el `input`
+para cotizar, `accommodationName`, `priceSnapshot` y, si corresponde,
+`occupancyWarning`. El rango admite hasta 366 noches y requiere al menos un huésped.
+
+La búsqueda usa una transacción de lectura `REPEATABLE READ`, comparte las reglas
+de disponibilidad y precios existentes y lee inventario y tarifas en lotes.
+El número de consultas no crece con la cantidad de unidades. Excluye tipos y
+unidades deshabilitados, unidades reservadas y bloqueos del rango, y limita todos
+los datos al camping de la sesión. No crea reservas ni retiene inventario.
+
+El asistente realiza una sola petición de búsqueda y filtra las ofertas localmente.
+Al confirmar vuelve a cotizar únicamente la opción elegida con
+`POST /api/reservations/quote`; la creación conserva la validación de importe,
+disponibilidad e idempotencia existentes.
+
 ## Relaciones
 
 ```mermaid

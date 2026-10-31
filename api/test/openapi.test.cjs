@@ -38,6 +38,7 @@ const expectedRoutes = [
   'DELETE /api/accommodations/blocks/{id}',
   'GET /api/availability',
   'POST /api/reservations/quote',
+  'POST /api/reservations/search',
   'POST /api/reservations',
   'GET /api/reservations',
   'GET /api/reservations/{id}',
@@ -161,6 +162,7 @@ test('offline OpenAPI document describes implemented pilot and inventory routes'
     assert.deepEqual(
       [
         'reservationQuoteCreate',
+        'reservationSearch',
         'reservationCreate',
         'reservationList',
         'reservationRead',

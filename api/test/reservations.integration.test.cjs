@@ -216,6 +216,74 @@ after(async () => {
   await dataSource.destroy()
 })
 
+test('search returns all priced offers, advisory warnings and tenant isolation without persisting', async () => {
+  const body = {
+    checkInDate: '2030-01-01',
+    checkOutDate: '2030-01-04',
+    adults: 5,
+    children: 1,
+    infants: 0,
+  }
+  const search = (extra = {}, auth = cookie) =>
+    request('/api/reservations/search', {
+      method: 'POST',
+      origin: ORIGIN,
+      cookie: auth,
+      body: { ...body, ...extra },
+    })
+  assert.equal((await search({}, null)).response.status, 401)
+  assert.equal((await search({ adults: 0, children: 0 })).response.status, 400)
+  assert.equal(
+    (await search({ checkOutDate: body.checkInDate })).response.status,
+    400,
+  )
+  const result = await search()
+  assert.equal(result.response.status, 201)
+  assert.equal(result.value.offers.length, 2)
+  const cabin = result.value.offers.find(
+    (offer) => offer.input.unitId === ids.unit,
+  )
+  const field = result.value.offers.find(
+    (offer) => offer.input.accommodationTypeId === ids.unlimitedType,
+  )
+  assert.equal(cabin.priceSnapshot.totalMinor, 3000)
+  assert.equal(field.priceSnapshot.totalMinor, 16500)
+  assert.deepEqual(cabin.occupancyWarning, { maxOccupancy: 4, people: 6 })
+  for (const offer of result.value.offers) {
+    assert.notEqual(offer.input.accommodationTypeId, ids.foreignType)
+    const quoted = await request('/api/reservations/quote', {
+      method: 'POST',
+      origin: ORIGIN,
+      cookie,
+      body: offer.input,
+    })
+    assert.equal(quoted.response.status, 201)
+    assert.deepEqual(quoted.value.priceSnapshot, offer.priceSnapshot)
+  }
+  const rows = await dataSource.query(
+    'SELECT id FROM camping_private.reservations WHERE camping_id = $1',
+    [ids.camping],
+  )
+  assert.equal(rows.length, 0)
+  await dataSource.query(
+    'UPDATE camping_private.accommodation_units SET enabled = false WHERE id = $1',
+    [ids.unit],
+  )
+  try {
+    assert.equal(
+      (await search()).value.offers.some(
+        (offer) => offer.input.unitId === ids.unit,
+      ),
+      false,
+    )
+  } finally {
+    await dataSource.query(
+      'UPDATE camping_private.accommodation_units SET enabled = true WHERE id = $1',
+      [ids.unit],
+    )
+  }
+})
+
 test('quotes and creates a pending reservation with a frozen price', async () => {
   const quote = await request('/api/reservations/quote', {
     method: 'POST',
@@ -237,6 +305,24 @@ test('quotes and creates a pending reservation with a frozen price', async () =>
   assert.equal(created.value.status, 'pending')
   assert.equal(created.value.priceSnapshot.totalMinor, 3000)
   assert.equal(created.value.account.totalMinor, 3000)
+  const offers = await request('/api/reservations/search', {
+    method: 'POST',
+    origin: ORIGIN,
+    cookie,
+    body: {
+      checkInDate: '2026-11-01',
+      checkOutDate: '2026-11-04',
+      adults: 2,
+      children: 0,
+      infants: 0,
+    },
+  })
+  assert.equal(offers.response.status, 201)
+  assert.equal(
+    offers.value.offers.some((offer) => offer.input.unitId === ids.unit),
+    false,
+  )
+
   const audit = await dataSource.query(
     `SELECT after_state FROM camping_private.audit_logs
      WHERE camping_id = $1 AND entity_id = $2 AND action = 'reservation.created'
@@ -426,6 +512,24 @@ test('inventory block competes with reservation creation', async () => {
     },
   })
   assert.equal(block.response.status, 201)
+  const search = await request('/api/reservations/search', {
+    method: 'POST',
+    origin: ORIGIN,
+    cookie,
+    body: {
+      checkInDate: '2034-01-01',
+      checkOutDate: '2034-01-03',
+      adults: 1,
+      children: 0,
+      infants: 0,
+    },
+  })
+  assert.equal(search.response.status, 201)
+  assert.equal(
+    search.value.offers.some((offer) => offer.input.unitId === ids.unit),
+    false,
+  )
+
   const reservation = await request('/api/reservations', {
     method: 'POST',
     origin: ORIGIN,
