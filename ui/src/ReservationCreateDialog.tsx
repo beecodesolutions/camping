@@ -536,7 +536,6 @@ export default function ReservationCreateDialog({
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
                   {t('reservationCreate.total', {
                     amount: money(quote.priceSnapshot.totalMinor),
-                    currency: quote.priceSnapshot.currency,
                   })}
                 </Typography>
                 {quote.occupancyWarning && (

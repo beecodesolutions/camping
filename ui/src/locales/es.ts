@@ -117,7 +117,7 @@ const es = {
     nights_other: '{{count}} noches',
     unitRate: '{{amount}} por unidad y noche',
     rounding: 'Redondeo: {{amount}}',
-    total: 'Total: {{amount}} {{currency}}',
+    total: 'Total: {{amount}}',
     createFor: 'Crear reserva por {{amount}}',
     notHeld:
       'La cotización no retiene disponibilidad. Se verificará nuevamente al guardar.',
