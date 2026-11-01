@@ -8,8 +8,10 @@ export const dateRangeCalendar = (theme: Theme) => ({
     '--rdp-accent-color': theme.palette.primary.main,
     '--rdp-accent-background-color': theme.palette.action.selected,
     '--rdp-range_middle-color': theme.palette.text.primary,
-    '--rdp-range_start-color': theme.palette.primary.contrastText,
-    '--rdp-range_end-color': theme.palette.primary.contrastText,
+    '--rdp-range_start-color': theme.palette.text.primary,
+    '--rdp-range_start-date-background-color': 'transparent',
+    '--rdp-range_end-color': theme.palette.text.primary,
+    '--rdp-range_end-date-background-color': 'transparent',
     '--rdp-today-color': theme.palette.text.primary,
     '--rdp-day-width': '100%',
     '--rdp-day-height': '44px',
@@ -26,14 +28,26 @@ export const dateRangeCalendar = (theme: Theme) => ({
   '& .rdp-months, & .rdp-month': { width: '100%', maxWidth: 'none' },
   '& .rdp-month_grid': { width: '100%', tableLayout: 'fixed' },
   '& .rdp-day_button, & .rdp-button_previous, & .rdp-button_next': {
+    position: 'relative',
     font: 'inherit',
     color: 'inherit',
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: `${theme.shape.borderRadius}px`,
     '&:hover:not(:disabled)': { backgroundColor: theme.palette.action.hover },
     '&:focus-visible': {
       outline: `2px solid ${theme.palette.primary.main}`,
       outlineOffset: -2,
     },
+  },
+  '& .rdp-today .rdp-day_button::after': {
+    content: '""',
+    position: 'absolute',
+    top: 3,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 4,
+    height: 4,
+    borderRadius: '50%',
+    backgroundColor: theme.palette.selection.main,
   },
   '& .rdp-caption_label': { ...theme.typography.subtitle1 },
   '& .rdp-weekday': {
@@ -41,13 +55,20 @@ export const dateRangeCalendar = (theme: Theme) => ({
     color: theme.palette.text.secondary,
   },
   '& .rdp-selected': { fontWeight: theme.typography.fontWeightBold },
-  '& .rdp-range_start .rdp-day_button, & .rdp-range_end .rdp-day_button': {
-    color: theme.palette.primary.contrastText,
-    '&:hover:not(:disabled)': { backgroundColor: theme.palette.primary.dark },
+  '& .rdp-selected:not(.rdp-range_middle) .rdp-day_button': {
+    border: `3px solid ${theme.palette.selection.main}`,
+    color: 'inherit',
+    '&:hover:not(:disabled)': {
+      backgroundColor: theme.palette.action.selected,
+    },
   },
-  '& .rdp-range_middle .rdp-day_button:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.2),
+  '& .rdp-range_middle .rdp-day_button': {
+    boxShadow: `inset 0 -3px 0 ${theme.palette.selection.main}`,
+    '&:hover:not(:disabled)': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.2),
+    },
   },
   '& .rdp-disabled': { color: theme.palette.text.disabled },
+  '& .rdp-disabled .rdp-day_button': { opacity: 0.55 },
   '& .rdp-outside:not(.rdp-selected)': { color: theme.palette.text.secondary },
 })

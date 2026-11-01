@@ -58,7 +58,40 @@ export const checkoutActionStyles = (theme: Theme) => {
 }
 
 export const uiStyles = {
+  availabilityWorkspace: {
+    display: 'grid',
+    gridTemplateColumns: {
+      xs: 'minmax(0, 1fr)',
+      md: 'minmax(0, 1.3fr) minmax(0, 1fr)',
+    },
+    gap: 2,
+    alignItems: 'start',
+    '& > *': { minWidth: 0 },
+  } satisfies SxProps<Theme>,
   dateRangeCalendar,
+  availabilityToolbar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 1,
+    flexWrap: 'wrap',
+  } satisfies SxProps<Theme>,
+  availabilityDateCalendar: (theme: Theme) => ({
+    ...dateRangeCalendar(theme),
+    ...Object.fromEntries(
+      (['free', 'partial', 'none', 'unlimited'] as const).map((tone) => [
+        `& .calendar-${tone} .rdp-day_button`,
+        {
+          ...availabilityTone(tone, theme),
+          '&:hover:not(:disabled)': {
+            ...availabilityTone(tone, theme),
+            filter: 'brightness(0.97)',
+          },
+        },
+      ]),
+    ),
+    '& .rdp-day': { padding: theme.spacing(0.25) },
+  }),
   strongWrappedText: {
     fontWeight: 700,
     overflowWrap: 'anywhere',

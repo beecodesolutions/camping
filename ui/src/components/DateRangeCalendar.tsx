@@ -1,15 +1,17 @@
 import { Box, Stack, Typography } from '@mui/material'
-import { DayPicker } from '@daypicker/react'
-import { es } from '@daypicker/react/locale/es'
+import Calendar, { type CalendarDayStatus } from './Calendar'
 import { useTranslation } from 'react-i18next'
 import { uiProps, uiStyles } from '../app/theme'
-import { dateFromIso, isoDate } from '../services/calendar'
+import { dateFromIso } from '../services/calendar'
 
 type Props = {
   startDate: string
   endDate: string
   today: string
   minDate?: string
+  month?: string
+  onMonthChange?: (month: string) => void
+  days?: Record<string, CalendarDayStatus>
   disabled?: boolean
   onChange: (startDate: string, endDate: string) => void
 }
@@ -19,6 +21,9 @@ export default function DateRangeCalendar({
   endDate,
   today,
   minDate,
+  month,
+  onMonthChange,
+  days,
   disabled = false,
   onChange,
 }: Props) {
@@ -39,40 +44,18 @@ export default function DateRangeCalendar({
       <Typography variant="body2" color="text.secondary">
         {t('dateRange.help')}
       </Typography>
-      <Box sx={uiStyles.dateRangeCalendar}>
-        <DayPicker
-          mode="range"
-          locale={es}
-          timeZone="UTC"
-          today={dateFromIso(today)}
-          defaultMonth={dateFromIso(startDate || today)}
-          selected={
-            startDate
-              ? {
-                  from: dateFromIso(startDate),
-                  to: endDate ? dateFromIso(endDate) : undefined,
-                }
-              : undefined
-          }
-          onSelect={(range) =>
-            onChange(
-              range?.from ? isoDate(range.from) : '',
-              range?.to ? isoDate(range.to) : '',
-            )
-          }
-          min={1}
-          max={366}
-          resetOnSelect
-          required
-          disabled={
-            disabled ? true : minDate ? { before: dateFromIso(minDate) } : false
-          }
-          showOutsideDays
-          fixedWeeks
-          navLayout="around"
-          aria-label={t('dateRange.label')}
-        />
-      </Box>
+      <Calendar
+        mode="range"
+        startDate={startDate}
+        endDate={endDate}
+        today={today}
+        minDate={minDate}
+        month={month}
+        onMonthChange={onMonthChange}
+        days={days}
+        disabled={disabled}
+        onChange={onChange}
+      />
       <Box sx={uiStyles.reservationReviewBox} aria-live="polite">
         <Box>
           <Typography variant="body2" color="text.secondary">

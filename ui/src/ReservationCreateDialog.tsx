@@ -32,7 +32,7 @@ import {
   type ReservationCreate,
   todayInTimezone,
 } from '@camping/contracts'
-import DateRangeCalendar from './components/DateRangeCalendar'
+import ReservationAvailabilityCalendar from './reservations/ReservationAvailabilityCalendar'
 import CountrySelect from './checkIn/CountrySelect'
 import ReservationReview from './ReservationReview'
 import { departureForNights, reservationNights } from './reservations/dates'
@@ -481,11 +481,12 @@ export default function ReservationCreateDialog({
               <Stack {...uiProps.stackForm}>
                 <Box hidden={step !== 0}>
                   <Stack {...uiProps.stackForm}>
-                    <DateRangeCalendar
+                    <ReservationAvailabilityCalendar
                       startDate={checkInDate}
                       endDate={checkOutDate}
                       today={todayInTimezone(profile.timezone)}
-                      minDate={todayInTimezone(profile.timezone)}
+                      open={open}
+                      types={types}
                       disabled={
                         locked ||
                         loading ||
