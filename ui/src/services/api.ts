@@ -11,6 +11,7 @@ import {
   campingProfileSchema,
   extraTemplateSchema,
   reservationPageSchema,
+  reservationSearchResponseSchema,
   reservationQuoteSchema,
   reservationResponseSchema,
   sessionUserSchema,
@@ -28,6 +29,8 @@ import type {
   ExtraTemplate,
   PaymentInput,
   ReservationCreate,
+  ReservationSearch,
+  ReservationSearchResponse,
   ReservationQuoteCreate,
   ReservationListQuery,
   ReservationPage,
@@ -180,6 +183,14 @@ export const apiSlice = createApi({
       transformResponse: (response) =>
         parse(reservationResponseSchema, response),
       providesTags: (_result, _error, id) => [{ type: 'Reservation', id }],
+    }),
+    reservationSearch: builder.mutation<
+      ReservationSearchResponse,
+      ReservationSearch
+    >({
+      query: (body) => ({ url: '/reservations/search', method: 'POST', body }),
+      transformResponse: (response) =>
+        parse(reservationSearchResponseSchema, response),
     }),
     reservationQuoteCreate: builder.mutation<
       ReservationQuote,
@@ -433,10 +444,12 @@ export const {
   useAccommodationTypesQuery,
   useAccommodationUnitsQuery,
   useAvailabilityQuery,
+  useLazyAvailabilityQuery,
   useLazyReservationsQuery,
   useReservationsQuery,
   useReservationQuery,
   useLazyReservationQuery,
+  useReservationSearchMutation,
   useReservationQuoteCreateMutation,
   useReservationCreateMutation,
   useReservationCheckInQuoteMutation,

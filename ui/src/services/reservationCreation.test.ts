@@ -127,3 +127,45 @@ it('exposes conflicts and retries the exact request after an ambiguous server fa
     store.dispatch(api.endpoints.reservationCreate.initiate(body)).unwrap(),
   ).rejects.toMatchObject({ status: 409, data: { code: 'PRICE_CHANGED' } })
 })
+
+it('searches all priced offers in one request without per-unit quotation calls', async () => {
+  let searches = 0
+  server.use(
+    http.post('*/api/reservations/search', async ({ request }) => {
+      searches++
+      expect(await request.json()).toEqual({
+        checkInDate: input.checkInDate,
+        checkOutDate: input.checkOutDate,
+        adults: input.adults,
+        children: input.children,
+        infants: input.infants,
+      })
+      return HttpResponse.json({
+        offers: [
+          { ...quote, input, accommodationName: 'Cabin A' },
+          {
+            ...quote,
+            input: { ...input, unitId: '00000000-0000-4000-8000-000000000099' },
+            accommodationName: 'Cabin B',
+          },
+        ],
+      })
+    }),
+  )
+  const { checkInDate, checkOutDate, adults, children, infants } = input
+  const result = await store
+    .dispatch(
+      api.endpoints.reservationSearch.initiate({
+        checkInDate,
+        checkOutDate,
+        adults,
+        children,
+        infants,
+      }),
+    )
+    .unwrap()
+  expect(searches).toBe(1)
+  expect(result.offers).toHaveLength(2)
+  expect(result.offers[0].priceSnapshot.totalMinor).toBe(1000)
+  expect(result.offers[0].occupancyWarning).toEqual(quote.occupancyWarning)
+})

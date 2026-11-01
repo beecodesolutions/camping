@@ -8,9 +8,13 @@ import {
 } from './reservations/review'
 import { formatMoney } from './services/money'
 
-type Props = { quote: CreationQuote; today: string }
+type Props = { quote: CreationQuote; today: string; held?: boolean }
 
-export default function ReservationReview({ quote, today }: Props) {
+export default function ReservationReview({
+  quote,
+  today,
+  held = false,
+}: Props) {
   const { t, i18n } = useTranslation()
   const price = quote.priceSnapshot
   const guests = reservationGuestGroups(quote.input)
@@ -119,9 +123,11 @@ export default function ReservationReview({ quote, today }: Props) {
           })}
         </Alert>
       )}
-      <Typography variant="body2" color="text.secondary">
-        {t('reservationCreate.notHeld')}
-      </Typography>
+      {!held && (
+        <Typography variant="body2" color="text.secondary">
+          {t('reservationCreate.notHeld')}
+        </Typography>
+      )}
     </Stack>
   )
 }

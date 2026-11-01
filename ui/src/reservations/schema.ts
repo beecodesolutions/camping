@@ -36,6 +36,11 @@ const fields = z.object({
     z.literal(''),
     z.email({ error: 'reservationCreate.invalidEmail' }).max(254),
   ]),
+  source: z
+    .string()
+    .trim()
+    .min(1, 'validation.required')
+    .max(100, 'validation.invalid'),
   notes: z.string().trim().max(500, 'validation.invalid'),
 })
 export type ReservationFormValues = z.infer<typeof fields>
@@ -119,6 +124,7 @@ export function reservationDefaults(timezone: string): ReservationFormValues {
     phone: '',
     email: '',
     notes: '',
+    source: 'manual',
   }
 }
 
@@ -150,7 +156,7 @@ export function reservationContact(value: ReservationFormValues) {
         }
       : {}),
     notes: value.notes,
-    source: 'manual',
+    source: value.source,
   }
 }
 

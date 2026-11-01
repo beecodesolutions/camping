@@ -467,3 +467,27 @@ test('unit maximum is mandatory and positive independently of type capacity', ()
     true,
   )
 })
+
+test('reservation search validates dates and occupancy without guest or accommodation details', () => {
+  const input = {
+    checkInDate: '2026-11-01',
+    checkOutDate: '2026-11-03',
+    adults: 2,
+    children: 0,
+    infants: 0,
+  }
+  assert.equal(c.reservationSearchSchema.safeParse(input).success, true)
+  for (const patch of [
+    { adults: 0 },
+    { adults: -1 },
+    { infants: 0.5 },
+    { checkOutDate: input.checkInDate },
+    { checkOutDate: '2028-11-01' },
+    { accommodationTypeId: typeId },
+  ]) {
+    assert.equal(
+      c.reservationSearchSchema.safeParse({ ...input, ...patch }).success,
+      false,
+    )
+  }
+})

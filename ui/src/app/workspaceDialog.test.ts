@@ -1,5 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { closeWorkspaceDialog, openWorkspaceDialog } from './workspaceDialog'
+import {
+  closeWorkspaceDialog,
+  openWorkspaceDialog,
+  replaceWorkspaceDialog,
+} from './workspaceDialog'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -35,4 +39,25 @@ it('does not leave the page when no dialog is open', () => {
   vi.stubGlobal('window', { history: { state: null, back } })
   closeWorkspaceDialog()
   expect(back).not.toHaveBeenCalled()
+})
+
+it('replaces creation with the created reservation so Back cannot reopen its submission', () => {
+  const replaceState = vi.fn()
+  const dispatchEvent = vi.fn()
+  vi.stubGlobal('window', {
+    history: {
+      state: { position: 200, campingDialog: { kind: 'reservation-create' } },
+      replaceState,
+    },
+    dispatchEvent,
+  })
+  replaceWorkspaceDialog({ kind: 'reservation-detail', id: 'reservation-1' })
+  expect(replaceState).toHaveBeenCalledWith(
+    {
+      position: 200,
+      campingDialog: { kind: 'reservation-detail', id: 'reservation-1' },
+    },
+    '',
+  )
+  expect(dispatchEvent.mock.calls[0]?.[0].type).toBe('camping-dialog-change')
 })

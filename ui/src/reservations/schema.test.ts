@@ -120,3 +120,17 @@ it('maps recognized server validation paths to fields without exposing raw messa
   ).toEqual(['phone'])
   expect(reservationValidationFields({ status: 503 })).toEqual([])
 })
+
+it('requires a booking source and preserves it with the guest details', () => {
+  expect(schema.safeParse({ ...values, source: ' ' }).success).toBe(false)
+  const parsed = schema.parse({
+    ...values,
+    source: ' website ',
+    notes: 'Late arrival',
+  })
+  expect(reservationContact(parsed)).toMatchObject({
+    source: 'website',
+    responsibleName: 'Ana',
+    notes: 'Late arrival',
+  })
+})

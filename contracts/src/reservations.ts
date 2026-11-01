@@ -302,6 +302,33 @@ export type ReservationQuoteCreate = z.infer<
   typeof reservationQuoteCreateSchema
 >
 
+/** Read-only search across all enabled accommodation offers, capped at 366 nights. */
+export const reservationSearchSchema = z
+  .strictObject({
+    ...dateRange,
+    adults: reservationCount,
+    children: reservationCount,
+    infants: reservationCount,
+  })
+  .refine((value) => value.checkOutDate > value.checkInDate, {
+    path: ['checkOutDate'],
+    message: dateRangeMessage,
+  })
+  .refine(
+    (value) =>
+      Date.parse(value.checkOutDate) - Date.parse(value.checkInDate) <=
+      366 * 86400000,
+    {
+      path: ['checkOutDate'],
+      message: 'date range cannot exceed 366 nights',
+    },
+  )
+  .refine(reservationGuestCountIsPositive, {
+    path: ['adults'],
+    message: 'at least one guest is required',
+  })
+export type ReservationSearch = z.infer<typeof reservationSearchSchema>
+
 const reservationPatchFields = {
   accommodationTypeId: idSchema.optional(),
   unitId: idSchema.nullable().optional(),
@@ -430,6 +457,16 @@ export const reservationQuoteSchema = z.strictObject({
   priceSnapshot: reservationPriceSnapshotSchema,
 })
 export type ReservationQuote = z.infer<typeof reservationQuoteSchema>
+export const reservationOfferSchema = reservationQuoteSchema.extend({
+  input: reservationQuoteCreateSchema,
+  accommodationName: nonBlankText(403),
+})
+export const reservationSearchResponseSchema = z.strictObject({
+  offers: z.array(reservationOfferSchema),
+})
+export type ReservationSearchResponse = z.infer<
+  typeof reservationSearchResponseSchema
+>
 
 /** Price returned by an edit preview, with the current reservation version. */
 export const reservationUpdateQuoteSchema = z.strictObject({
@@ -596,6 +633,8 @@ export type ReservationPayment = z.infer<typeof reservationPaymentSchema>
  * documentation/validation because JSON Schema cannot express them here.
  */
 export const reservationOpenApiSchemas = {
+  reservationSearch: reservationSearchSchema,
+  reservationSearchResponse: reservationSearchResponseSchema,
   accommodationType: accommodationTypeSchema,
   accommodationTypeCreate: accommodationTypeCreateSchema,
   accommodationTypePatch: accommodationTypePatchSchema,

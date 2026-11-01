@@ -581,7 +581,10 @@ async function main(): Promise<void> {
     const anchor = first
       ? dateFrom(first.checkInDate, -RESERVATIONS[0].startOffset)
       : todayInTimezone(context.camping.timezone)
-    const reservationService = new ReservationService(dataSource)
+    const reservationService = new ReservationService(
+      dataSource,
+      new AvailabilityService(dataSource),
+    )
     const paymentService = new ReservationPaymentsService(dataSource)
     const checkInService = new ReservationCheckInService(dataSource)
     let added = 0
