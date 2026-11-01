@@ -232,6 +232,12 @@ test('search returns all priced offers, advisory warnings and tenant isolation w
       body: { ...body, ...extra },
     })
   assert.equal((await search({}, null)).response.status, 401)
+  const past = await search({
+    checkInDate: '2000-01-01',
+    checkOutDate: '2000-01-02',
+  })
+  assert.equal(past.response.status, 409)
+  assert.equal(past.value.code, 'RESERVATION_DATE_PAST')
   assert.equal((await search({ adults: 0, children: 0 })).response.status, 400)
   assert.equal(
     (await search({ checkOutDate: body.checkInDate })).response.status,
@@ -630,9 +636,11 @@ test('confirm, cancel and no-show use versions and cancellation releases invento
   })
   assert.equal(early.response.status, 409)
   const noShow = await createReservation({
+    accommodationTypeId: ids.unlimitedType,
+    unitId: undefined,
     checkInDate: today,
     checkOutDate: tomorrow,
-    acceptedTotalMinor: 1000,
+    acceptedTotalMinor: 2000,
     idempotencyKey: randomUUID(),
   })
   assert.equal(noShow.response.status, 201)

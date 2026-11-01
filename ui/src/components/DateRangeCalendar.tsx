@@ -9,6 +9,7 @@ type Props = {
   startDate: string
   endDate: string
   today: string
+  minDate?: string
   disabled?: boolean
   onChange: (startDate: string, endDate: string) => void
 }
@@ -17,6 +18,7 @@ export default function DateRangeCalendar({
   startDate,
   endDate,
   today,
+  minDate,
   disabled = false,
   onChange,
 }: Props) {
@@ -62,7 +64,9 @@ export default function DateRangeCalendar({
           max={366}
           resetOnSelect
           required
-          disabled={disabled}
+          disabled={
+            disabled ? true : minDate ? { before: dateFromIso(minDate) } : false
+          }
           showOutsideDays
           fixedWeeks
           navLayout="around"

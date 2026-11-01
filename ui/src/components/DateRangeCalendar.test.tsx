@@ -44,3 +44,29 @@ it('keeps an incomplete range visible while asking for its end', () => {
   expect(markup).toContain('Elegí una fecha')
   expect(markup).not.toContain('Invalid Date')
 })
+
+it('disables days before the supplied camping date while allowing today', () => {
+  const markup = renderToStaticMarkup(
+    <ThemeProvider theme={lightTheme}>
+      <DateRangeCalendar
+        startDate="2026-10-31"
+        endDate="2026-11-02"
+        today="2026-10-31"
+        minDate="2026-10-31"
+        onChange={() => {}}
+      />
+    </ThemeProvider>,
+  )
+  const buttons = [
+    ...markup.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/g),
+  ].map((match) => match[0])
+  const yesterday = buttons.find((button) =>
+    button.includes('30 de octubre de 2026'),
+  )
+  const today = buttons.find((button) =>
+    button.includes('31 de octubre de 2026'),
+  )
+  expect(yesterday).toContain('disabled')
+  expect(today).toBeDefined()
+  expect(today).not.toContain('disabled')
+})

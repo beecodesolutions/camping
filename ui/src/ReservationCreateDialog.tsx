@@ -166,7 +166,10 @@ export default function ReservationCreateDialog({
       children: values.children,
       infants: values.infants,
     })
-    if (!searchInput.success) {
+    if (
+      !searchInput.success ||
+      searchInput.data.checkInDate < todayInTimezone(profile.timezone)
+    ) {
       setSearchError(true)
       return
     }
@@ -482,6 +485,7 @@ export default function ReservationCreateDialog({
                       startDate={checkInDate}
                       endDate={checkOutDate}
                       today={todayInTimezone(profile.timezone)}
+                      minDate={todayInTimezone(profile.timezone)}
                       disabled={
                         locked ||
                         loading ||
