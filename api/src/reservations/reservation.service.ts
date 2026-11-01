@@ -166,6 +166,11 @@ export class ReservationService {
     const parsed = reservationSearchSchema.safeParse(raw)
     if (!parsed.success) throw zodBadRequest(parsed.error)
     const input = parsed.data
+    if (input.checkInDate < todayInTimezone(context.camping.timezone))
+      throw conflict(
+        'La entrada no puede ser anterior a hoy',
+        'RESERVATION_DATE_PAST',
+      )
     const campingId = context.camping.id
     // One consistent snapshot, with a fixed number of reads regardless of unit count.
     return this.dataSource.transaction('REPEATABLE READ', async (manager) => {

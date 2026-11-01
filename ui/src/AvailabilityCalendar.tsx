@@ -6,17 +6,14 @@ import {
   Box,
   Button,
   Chip,
-  IconButton,
   Paper,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
-  useTheme,
 } from '@mui/material'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { availabilityTone } from './app/theme'
-import LucideIcon from './components/LucideIcon'
+import Calendar, { type CalendarDayStatus } from './components/Calendar'
+import CalendarLegend from './components/CalendarLegend'
 import AccommodationIdentity from './AccommodationIdentity'
 import { buildAccommodationIdentity } from './services/accommodationIdentity'
 import type {
@@ -34,24 +31,14 @@ import {
 import {
   addDays,
   availabilityForDate,
-  dateFromIso,
   monthKey,
   monthRange,
-  shiftMonth,
   typeNameById,
   type AvailabilitySummary,
 } from './services/calendar'
 
 type Props = { profile: CampingProfile; refreshKey?: number }
 type SelectedDay = { date: string; typeId: string } | null
-
-function monthLabel(value: string, language: string) {
-  return new Intl.DateTimeFormat(language, {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(dateFromIso(`${value}-01`))
-}
 
 type Translate = ReturnType<typeof useTranslation>['t']
 
@@ -61,92 +48,6 @@ function statusLabel(summary: AvailabilitySummary | null, t: Translate) {
   if (summary.tone === 'partial') return t('calendar.partial')
   if (summary.tone === 'none') return t('calendar.none')
   return t('calendar.unlimited')
-}
-
-function AvailabilityGrid({
-  type,
-  nights,
-  cells,
-  today,
-  selectedDate,
-  language,
-  onDay,
-}: {
-  type: AccommodationType
-  nights: Parameters<typeof availabilityForDate>[0]
-  cells: ReturnType<typeof monthRange>['days']
-  today: string
-  selectedDate?: string
-  language: string
-  onDay: (date: string, typeId: string) => void
-}) {
-  const { t } = useTranslation()
-  const theme = useTheme()
-  const weekdays = Array.from({ length: 7 }, (_, index) =>
-    new Intl.DateTimeFormat(language, { weekday: 'short' }).format(
-      new Date(Date.UTC(2024, 0, 7 + index, 12)),
-    ),
-  )
-  return (
-    <Paper component="section" variant="outlined" sx={uiStyles.compactPanel}>
-      <Box sx={uiStyles.availabilityGridBox}>
-        {weekdays.map((weekday) => (
-          <Typography
-            key={weekday}
-            variant="caption"
-            color="text.secondary"
-            sx={uiStyles.availabilityCalendarTypography}
-          >
-            {weekday}
-          </Typography>
-        ))}
-        {cells.map((cell) => {
-          const summary = availabilityForDate(nights, cell.date)
-          const colors = summary
-            ? availabilityTone(summary.tone, theme)
-            : undefined
-          const isToday = cell.date === today
-          const isSelected = cell.date === selectedDate
-          return (
-            <Button
-              key={cell.date}
-              variant="text"
-              aria-label={`${cell.date}${isToday ? `, ${t('calendar.today')}` : ''}: ${statusLabel(summary, t)}`}
-              aria-current={isToday ? 'date' : undefined}
-              aria-pressed={isSelected}
-              onClick={() => cell.inMonth && onDay(cell.date, type.id)}
-              disabled={!cell.inMonth || !summary}
-              sx={uiStyles.availabilityCalendarButton(
-                cell.inMonth,
-                colors?.color,
-                colors?.backgroundColor,
-                isSelected,
-                theme,
-              )}
-            >
-              <Typography
-                variant="body2"
-                component="span"
-                sx={uiStyles.availabilityCalendarTypography2(
-                  isToday,
-                  isSelected,
-                )}
-              >
-                {cell.day}
-              </Typography>
-              {isToday && (
-                <Box
-                  component="span"
-                  aria-hidden="true"
-                  sx={uiStyles.availabilityCalendarBox}
-                />
-              )}
-            </Button>
-          )
-        })}
-      </Box>
-    </Paper>
-  )
 }
 
 function DayDetail({
@@ -323,7 +224,7 @@ export default function AvailabilityCalendar({
   profile,
   refreshKey = 0,
 }: Props) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const today = todayInTimezone(profile.timezone)
   const [month, setMonth] = useState(monthKey(today))
   const [selectedType, setSelectedType] = useState<string>('')
@@ -393,48 +294,37 @@ export default function AvailabilityCalendar({
 
   return (
     <Stack {...uiProps.stackMedium}>
-      <Stack
-        {...uiProps.rowCompact}
-
-        sx={uiStyles.availabilityCalendarStack2}
-      >
-        <IconButton
-          aria-label={t('common.previous')}
-          onClick={() => setMonth(shiftMonth(month, -1))}
+      <Box sx={uiStyles.availabilityToolbar}>
+        {enabledTypes.length > 0 && (
+          <ToggleButtonGroup
+            value={activeTypeId}
+            exclusive
+            onChange={(_, value: string | null) =>
+              value && setSelectedType(value)
+            }
+            aria-label={t('calendar.typeFilter')}
+            size="small"
+            sx={uiStyles.availabilityCalendarToggleButtonGroup}
+          >
+            {enabledTypes.map((type) => (
+              <ToggleButton key={type.id} value={type.id}>
+                {type.name}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        )}
+        <Button
+          size="small"
+          disabled={!activeTypeId}
+          onClick={() => {
+            setMonth(monthKey(today))
+            if (activeTypeId)
+              setSelectedDay({ date: today, typeId: activeTypeId })
+          }}
         >
-          <LucideIcon icon={ChevronLeft} />
-        </IconButton>
-        <Typography sx={uiStyles.availabilityCalendarTypography4}>
-          {monthLabel(month, i18n.language)}
-        </Typography>
-        <IconButton
-          aria-label={t('common.next')}
-          onClick={() => setMonth(shiftMonth(month, 1))}
-        >
-          <LucideIcon icon={ChevronRight} />
-        </IconButton>
-        <Button size="small" onClick={() => setMonth(monthKey(today))}>
           {t('calendar.today')}
         </Button>
-      </Stack>
-      {enabledTypes.length > 0 && (
-        <ToggleButtonGroup
-          value={activeTypeId}
-          exclusive
-          onChange={(_, value: string | null) =>
-            value && setSelectedType(value)
-          }
-          aria-label={t('calendar.typeFilter')}
-          size="small"
-          sx={uiStyles.availabilityCalendarToggleButtonGroup}
-        >
-          {enabledTypes.map((type) => (
-            <ToggleButton key={type.id} value={type.id}>
-              {type.name}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-      )}
+      </Box>
       {types.isLoading || availability.isLoading ? (
         <Typography color="text.secondary">{t('common.loading')}</Typography>
       ) : null}
@@ -458,61 +348,59 @@ export default function AvailabilityCalendar({
       {!types.isLoading && enabledTypes.length === 0 && (
         <Alert severity="info">{t('calendar.empty')}</Alert>
       )}
-      {availability.currentData &&
-        availability.currentData.checkInDate === range.start &&
-        availability.currentData.checkOutDate === range.end &&
-        displayedType && (
-          <AvailabilityGrid
-            type={displayedType}
-            nights={selectedTypeData.find(
-              (item) => item.typeId === displayedType.id,
-            )}
-            cells={range.days}
-            today={today}
-            selectedDate={
-              visibleSelectedDay?.typeId === displayedType.id
-                ? visibleSelectedDay.date
-                : undefined
-            }
-            language={i18n.language}
-            onDay={(date, typeId) => setSelectedDay({ date, typeId })}
+      <Box sx={uiStyles.availabilityWorkspace}>
+        <Stack {...uiProps.stackMedium}>
+          {displayedType && (
+            <Box component="section">
+              <Calendar
+                mode="single"
+                today={today}
+                month={month}
+                selectedDate={visibleSelectedDay?.date}
+                onMonthChange={setMonth}
+                onChange={(date) =>
+                  setSelectedDay({ date, typeId: displayedType.id })
+                }
+                days={Object.fromEntries(
+                  range.days
+                    .filter((day) => day.inMonth)
+                    .flatMap((day) => {
+                      const summary = availabilityForDate(
+                        selectedTypeData.find(
+                          (item) => item.typeId === displayedType.id,
+                        ),
+                        day.date,
+                      )
+                      return summary
+                        ? [
+                            [
+                              day.date,
+                              {
+                                tone: summary.tone,
+                                label: statusLabel(summary, t),
+                              } satisfies CalendarDayStatus,
+                            ],
+                          ]
+                        : []
+                    }),
+                )}
+              />
+            </Box>
+          )}
+          <CalendarLegend />
+        </Stack>
+        {visibleSelectedDay && (
+          <DayDetail
+            key={`${visibleSelectedDay.date}:${visibleSelectedDay.typeId}:${refreshKey}`}
+            selected={visibleSelectedDay}
+            summary={visibleSummary}
+            type={visibleAccommodationType}
+            typeNames={typeNames}
+            typeModes={typeModes}
+            unitNames={unitNames}
           />
         )}
-      <Stack
-        {...uiProps.rowMedium}
-
-        sx={uiStyles.wrapRow}
-      >
-        <Typography
-          variant="caption"
-          sx={uiStyles.availabilityCalendarTypography5}
-        >
-          ● {t('calendar.free')}
-        </Typography>
-        <Typography variant="caption" sx={uiStyles.goldIcon}>
-          ● {t('calendar.partial')}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={uiStyles.availabilityCalendarTypography7}
-        >
-          ● {t('calendar.none')}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          ● {t('calendar.unlimited')}
-        </Typography>
-      </Stack>
-      {visibleSelectedDay && (
-        <DayDetail
-          key={`${visibleSelectedDay.date}:${visibleSelectedDay.typeId}:${refreshKey}`}
-          selected={visibleSelectedDay}
-          summary={visibleSummary}
-          type={visibleAccommodationType}
-          typeNames={typeNames}
-          typeModes={typeModes}
-          unitNames={unitNames}
-        />
-      )}
+      </Box>
     </Stack>
   )
 }

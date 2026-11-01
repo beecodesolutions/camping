@@ -1,5 +1,11 @@
 // Declarative MUI layout props, shared without redefining values in screens.
 export const uiProps = {
+  calendarStatusClasses: {
+    free: 'calendar-free',
+    partial: 'calendar-partial',
+    none: 'calendar-none',
+    unlimited: 'calendar-unlimited',
+  },
   compactWidget: { contentSpacing: 1 },
   rowCompact: { direction: 'row', spacing: 0.5 },
   rowTight: { direction: 'row', spacing: 0.25 },

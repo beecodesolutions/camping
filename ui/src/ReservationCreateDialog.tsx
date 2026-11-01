@@ -32,7 +32,7 @@ import {
   type ReservationCreate,
   todayInTimezone,
 } from '@camping/contracts'
-import DateRangeCalendar from './components/DateRangeCalendar'
+import ReservationAvailabilityCalendar from './reservations/ReservationAvailabilityCalendar'
 import CountrySelect from './checkIn/CountrySelect'
 import ReservationReview from './ReservationReview'
 import { departureForNights, reservationNights } from './reservations/dates'
@@ -166,7 +166,10 @@ export default function ReservationCreateDialog({
       children: values.children,
       infants: values.infants,
     })
-    if (!searchInput.success) {
+    if (
+      !searchInput.success ||
+      searchInput.data.checkInDate < todayInTimezone(profile.timezone)
+    ) {
       setSearchError(true)
       return
     }
@@ -478,10 +481,12 @@ export default function ReservationCreateDialog({
               <Stack {...uiProps.stackForm}>
                 <Box hidden={step !== 0}>
                   <Stack {...uiProps.stackForm}>
-                    <DateRangeCalendar
+                    <ReservationAvailabilityCalendar
                       startDate={checkInDate}
                       endDate={checkOutDate}
                       today={todayInTimezone(profile.timezone)}
+                      open={open}
+                      types={types}
                       disabled={
                         locked ||
                         loading ||
