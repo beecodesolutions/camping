@@ -99,9 +99,6 @@ const es = {
     end: 'Salida',
   },
   reservationCreate: {
-    occupancyType: 'Ver ocupación de',
-    occupancyHelp:
-      'Los colores muestran la ocupación del alojamiento elegido. La búsqueda incluirá todos los alojamientos; la disponibilidad se verifica para el rango completo.',
     createdDetail: 'Reserva creada',
     reference: 'Referencia: {{id}}',
     step1: 'Búsqueda',

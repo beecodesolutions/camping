@@ -80,7 +80,7 @@ export const uiStyles = {
     ...dateRangeCalendar(theme),
     ...Object.fromEntries(
       (['free', 'partial', 'none', 'unlimited'] as const).map((tone) => [
-        `& .calendar-${tone} .rdp-day_button`,
+        `& .calendar-${tone}:not(.rdp-range_middle):not(.rdp-range_start):not(.rdp-range_end) .rdp-day_button`,
         {
           ...availabilityTone(tone, theme),
           '&:hover:not(:disabled)': {
@@ -90,7 +90,8 @@ export const uiStyles = {
         },
       ]),
     ),
-    '& .rdp-day': { padding: theme.spacing(0.25) },
+    '& .rdp-day:not(.rdp-range_start):not(.rdp-range_end):not(.rdp-range_middle)':
+      { padding: theme.spacing(0.25) },
   }),
   strongWrappedText: {
     fontWeight: 700,
