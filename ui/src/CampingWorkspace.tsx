@@ -1,3 +1,4 @@
+import PricingSettings from './PricingSettings'
 import { uiProps, uiStyles } from './app/theme'
 import AccommodationFilter from './AccommodationFilter'
 import { useAppDispatch, useAppSelector } from './app/hooks'
@@ -1445,6 +1446,7 @@ function SettingsPanel({ profile }: { profile: CampingProfile }) {
   )
   return (
     <Stack {...uiProps.stackSection} sx={uiStyles.settingsPanelStack}>
+      <PricingSettings profile={profile} />
       <Paper variant="outlined" sx={uiStyles.panelPadding}>
         <Typography variant="h6">{t('settings.money')}</Typography>
         <Typography color="text.secondary">

@@ -88,6 +88,9 @@ export class StayEntity {
   @Column({ type: 'bigint', transformer: bigintNumberTransformer })
   infants!: number
 
+  @Column({ type: 'integer', default: 0 })
+  pets!: number
+
   @Column({ name: 'has_vehicle', type: 'boolean', default: false })
   hasVehicle!: boolean
 

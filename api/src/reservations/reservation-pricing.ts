@@ -1,3 +1,5 @@
+import { nightlyPrice } from './nightly-pricing'
+import { humanOccupancy, type AccommodationPricing } from '@camping/contracts'
 import {
   reservationPriceSnapshotSchema,
   roundMoneyMinor,
@@ -10,8 +12,23 @@ import {
 import { daysBetween } from '../common/date'
 import { conflict } from '../common/errors'
 
+function calculateNightlyPrice(
+  ...args: Parameters<typeof nightlyPrice>
+): ReturnType<typeof nightlyPrice> {
+  try {
+    return nightlyPrice(...args)
+  } catch (error) {
+    if (error instanceof RangeError)
+      throw conflict('Importe fuera de rango', 'MONEY_OVERFLOW')
+    throw error
+  }
+}
+
 export type PricingInput = {
-  inventoryMode: 'individual' | 'unlimited'
+  inventoryMode: 'individual' | 'unlimited' | 'shared'
+  pricing?: AccommodationPricing | null
+  infantsConsumeCapacity?: boolean
+  pets?: number
   currency: string
   moneyDecimals?: MoneyDecimals
   baseNightlyPriceMinor?: number
@@ -52,33 +69,52 @@ function multiplyMoney(left: number, right: number): number {
   return safeInteger(left * right, 'total')
 }
 
-function perPersonBase(input: PricingInput, nights: number): number {
-  if (!input.rates || !input.ageRanges)
-    throw conflict('Faltan tarifas del camping', 'PRICE_CONFIGURATION_INVALID')
-  let nightly = 0
-  nightly = addMoney(nightly, multiplyMoney(input.adults, input.rates.adults))
-  nightly = addMoney(
-    nightly,
-    multiplyMoney(input.children, input.rates.children),
-  )
-  nightly = addMoney(nightly, multiplyMoney(input.infants, input.rates.infants))
-  return multiplyMoney(nightly, nights)
-}
-
 export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
   const nights = daysBetween(input.checkInDate, input.checkOutDate)
   if (!Number.isSafeInteger(nights) || nights < 1)
     throw conflict('Rango de fechas inválido', 'VALIDATION_ERROR')
-  const baseTotalMinor =
-    input.inventoryMode === 'individual'
-      ? multiplyMoney(
-          safeInteger(
-            input.baseNightlyPriceMinor ?? -1,
-            'baseNightlyPriceMinor',
-          ),
-          nights,
-        )
-      : perPersonBase(input, nights)
+  if (
+    !input.pricing &&
+    input.inventoryMode !== 'unlimited' &&
+    input.baseNightlyPriceMinor === undefined
+  )
+    throw conflict('Falta la tarifa base', 'PRICE_CONFIGURATION_INVALID')
+  const pricing =
+    input.pricing ??
+    ({
+      basis:
+        input.inventoryMode === 'shared'
+          ? 'per_bed'
+          : input.inventoryMode === 'individual'
+            ? 'per_unit'
+            : 'per_person',
+      baseNightlyPriceMinor: input.baseNightlyPriceMinor ?? 0,
+      rates: input.rates ?? { adults: 0, children: 0, infants: 0 },
+      extraPersonRates: { adults: 0, children: 0, infants: 0 },
+      includedOccupancy: { adults: 0, children: 0, infants: 0 },
+      petNightlyPriceMinor: 0,
+      weekdays: [],
+      discounts: [],
+    } satisfies AccommodationPricing)
+  const calculated = calculateNightlyPrice(
+    pricing,
+    {
+      adults: input.adults,
+      children: input.children,
+      infants: input.infants,
+      pets: input.pets ?? 0,
+    },
+    input.checkInDate,
+    input.checkOutDate,
+    humanOccupancy(input, input.infantsConsumeCapacity ?? false),
+  )
+  const { totalMinor: baseTotalMinor, ...breakdown } = calculated
+  if (
+    !input.pricing &&
+    input.inventoryMode === 'unlimited' &&
+    (!input.rates || !input.ageRanges)
+  )
+    throw conflict('Faltan tarifas del camping', 'PRICE_CONFIGURATION_INVALID')
 
   let totalMinor = baseTotalMinor
   let adjustmentMinor: number | undefined
@@ -123,13 +159,13 @@ export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
     ...(roundingMinor === 0 ? {} : { roundingMinor }),
   }
   const snapshot =
-    input.inventoryMode === 'individual'
+    pricing.basis !== 'per_person'
       ? {
-          basis: 'per_unit' as const,
+          basis: pricing.basis,
           currency: input.currency,
           ...precision,
           baseNightlyPriceMinor: safeInteger(
-            input.baseNightlyPriceMinor ?? -1,
+            pricing.baseNightlyPriceMinor,
             'baseNightlyPriceMinor',
           ),
           nights,
@@ -142,7 +178,7 @@ export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
           basis: 'per_person' as const,
           currency: input.currency,
           ...precision,
-          rates: input.rates!,
+          rates: pricing.rates,
           ageRanges: input.ageRanges!,
           nights,
           totalMinor,
@@ -150,7 +186,13 @@ export function priceSnapshotFor(input: PricingInput): PriceSnapshot {
             ? {}
             : { adjustmentMinor, adjustmentReason }),
         }
-  const validated = reservationPriceSnapshotSchema.parse(snapshot)
+  const validated = reservationPriceSnapshotSchema.parse({
+    ...snapshot,
+    pricing,
+    breakdown,
+    pets: input.pets ?? 0,
+    infantsConsumeCapacity: input.infantsConsumeCapacity ?? false,
+  })
   return { ...validated, baseTotalMinor } as PriceSnapshot
 }
 
@@ -172,6 +214,8 @@ export function priceAffectsReservation(
     'adults',
     'children',
     'infants',
+    'pets',
+    'capacityOverrideReason',
     'agreedTotalMinor',
     'priceAdjustmentReason',
   ].some((key) => key in value)
@@ -184,10 +228,50 @@ export function baseFromSnapshot(
   adults: number,
   children: number,
   infants: number,
+  pets = snapshot.pets ?? 0,
 ): PriceSnapshot {
+  if (snapshot.pricing)
+    return priceSnapshotFor({
+      inventoryMode:
+        snapshot.basis === 'per_bed'
+          ? 'shared'
+          : snapshot.basis === 'per_unit'
+            ? 'individual'
+            : 'unlimited',
+      pricing: snapshot.pricing,
+      infantsConsumeCapacity: snapshot.infantsConsumeCapacity,
+      currency: snapshot.currency,
+      moneyDecimals: snapshot.moneyDecimals,
+      ageRanges:
+        snapshot.basis === 'per_person' ? snapshot.ageRanges : undefined,
+      checkInDate,
+      checkOutDate,
+      adults,
+      children,
+      infants,
+      pets,
+      ...(snapshot.adjustmentMinor === undefined
+        ? {}
+        : {
+            agreedTotalMinor: Math.max(
+              0,
+              calculateNightlyPrice(
+                snapshot.pricing,
+                { adults, children, infants, pets },
+                checkInDate,
+                checkOutDate,
+                humanOccupancy(
+                  { adults, children, infants },
+                  snapshot.infantsConsumeCapacity ?? false,
+                ),
+              ).totalMinor + snapshot.adjustmentMinor,
+            ),
+            priceAdjustmentReason: snapshot.adjustmentReason,
+          }),
+    })
   const nights = daysBetween(checkInDate, checkOutDate)
   const baseTotalMinor =
-    snapshot.basis === 'per_unit'
+    snapshot.basis !== 'per_person'
       ? multiplyMoney(snapshot.baseNightlyPriceMinor, nights)
       : (() => {
           let nightly = 0

@@ -1,3 +1,4 @@
+import type { AccommodationPricingSettings } from '@camping/contracts'
 import {
   Column,
   Entity,
@@ -13,7 +14,7 @@ import { AccommodationBlockEntity } from './accommodation-block.entity'
 import { ReservationEntity } from './reservation.entity'
 import { bigintNumberTransformer } from '../bigint.transformer'
 
-export type InventoryMode = 'individual' | 'unlimited'
+export type InventoryMode = 'individual' | 'unlimited' | 'shared'
 export type AccommodationMode = InventoryMode
 
 @Entity({ name: 'accommodation_types' })
@@ -50,6 +51,9 @@ export class AccommodationTypeEntity {
 
   @Column({ type: 'boolean', default: true })
   enabled!: boolean
+
+  @Column({ type: 'jsonb', nullable: true })
+  pricing!: AccommodationPricingSettings | null
 
   @Column({
     name: 'created_at',

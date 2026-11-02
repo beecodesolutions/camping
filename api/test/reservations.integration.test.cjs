@@ -61,8 +61,8 @@ function quoteBody(extra = {}) {
   return {
     accommodationTypeId: ids.type,
     unitId: ids.unit,
-    checkInDate: '2026-11-01',
-    checkOutDate: '2026-11-04',
+    checkInDate: '2030-11-01',
+    checkOutDate: '2030-11-04',
     adults: 2,
     children: 0,
     infants: 0,
@@ -220,8 +220,8 @@ test('search returns all priced offers, advisory warnings and tenant isolation w
   const body = {
     checkInDate: '2030-01-01',
     checkOutDate: '2030-01-04',
-    adults: 5,
-    children: 1,
+    adults: 4,
+    children: 2,
     infants: 0,
   }
   const search = (extra = {}, auth = cookie) =>
@@ -253,7 +253,7 @@ test('search returns all priced offers, advisory warnings and tenant isolation w
     (offer) => offer.input.accommodationTypeId === ids.unlimitedType,
   )
   assert.equal(cabin.priceSnapshot.totalMinor, 3000)
-  assert.equal(field.priceSnapshot.totalMinor, 16500)
+  assert.equal(field.priceSnapshot.totalMinor, 15000)
   assert.deepEqual(cabin.occupancyWarning, { maxOccupancy: 4, people: 6 })
   for (const offer of result.value.offers) {
     assert.notEqual(offer.input.accommodationTypeId, ids.foreignType)
@@ -316,8 +316,8 @@ test('quotes and creates a pending reservation with a frozen price', async () =>
     origin: ORIGIN,
     cookie,
     body: {
-      checkInDate: '2026-11-01',
-      checkOutDate: '2026-11-04',
+      checkInDate: '2030-11-01',
+      checkOutDate: '2030-11-04',
       adults: 2,
       children: 0,
       infants: 0,
@@ -464,6 +464,7 @@ test('self modification excludes its own reservation and permits exceeding capac
     body: {
       version: created.value.version,
       adults: 5,
+      capacityOverrideReason: 'Reserva administrativa autorizada',
       acceptedTotalMinor: 2000,
     },
   })
@@ -745,7 +746,7 @@ test('outbox failure rolls back reservation and audit atomically', async () => {
   )
 })
 
-test('capacity warning uses the unit limit including infants and does not block creation', async () => {
+test('children overflow is advisory and infants do not consume capacity by default', async () => {
   await dataSource.query(
     'UPDATE camping_private.accommodation_units SET max_occupancy = 2 WHERE id = $1',
     [ids.unit],
@@ -753,7 +754,7 @@ test('capacity warning uses the unit limit including infants and does not block 
   const input = quoteBody({
     checkInDate: '2098-07-01',
     checkOutDate: '2098-07-03',
-    adults: 3,
+    adults: 2,
     children: 1,
     infants: 1,
   })
@@ -764,7 +765,7 @@ test('capacity warning uses the unit limit including infants and does not block 
     body: input,
   })
   assert.equal(quote.response.status, 201)
-  assert.deepEqual(quote.value.occupancyWarning, { maxOccupancy: 2, people: 5 })
+  assert.deepEqual(quote.value.occupancyWarning, { maxOccupancy: 2, people: 3 })
   const created = await createReservation({
     ...input,
     acceptedTotalMinor: quote.value.priceSnapshot.totalMinor,

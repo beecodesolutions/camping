@@ -1,3 +1,5 @@
+import { availableBeds, assignBeds } from '../accommodations/bed-inventory'
+import { humanOccupancy } from '@camping/contracts'
 import { Injectable } from '@nestjs/common'
 import { DataSource, type EntityManager } from 'typeorm'
 import {
@@ -249,6 +251,7 @@ export class ReservationCheckInService {
           adults: reservation.adults,
           children: reservation.children,
           infants: reservation.infants,
+          pets: reservation.pets,
           hasVehicle: input.hasVehicle,
           vehicleDescription: input.vehicleDescription,
           licensePlate: input.licensePlate,
@@ -295,6 +298,14 @@ export class ReservationCheckInService {
         reservation.version = nextReservationVersion(reservation.version)
         reservation.updatedAt = new Date()
         const saved = await manager.save(reservation)
+        await assignBeds(
+          manager,
+          saved,
+          humanOccupancy(
+            saved,
+            saved.priceSnapshot.infantsConsumeCapacity ?? false,
+          ),
+        )
         await appendReservationMutation(
           manager,
           context,
@@ -331,7 +342,7 @@ export class ReservationCheckInService {
         'INVALID_RESERVATION_STATE',
       )
     await this.validateTypeAndUnit(manager, context.camping.id, reservation)
-    if (reservation.unitId)
+    if (reservation.unitId && reservation.priceSnapshot.basis !== 'per_bed')
       await assertUnitAvailable(
         manager,
         context.camping.id,
@@ -346,6 +357,24 @@ export class ReservationCheckInService {
       context.camping.id,
       reservation.unitId,
     )
+    if (reservation.unitId && reservation.priceSnapshot.basis === 'per_bed') {
+      const beds = await availableBeds(
+        manager,
+        context.camping.id,
+        reservation.unitId,
+        arrivalDate,
+        reservation.checkOutDate,
+        reservation.id,
+      )
+      if (
+        beds.length <
+        humanOccupancy(
+          reservation,
+          reservation.priceSnapshot.infantsConsumeCapacity ?? false,
+        )
+      )
+        throw conflict('No hay suficientes camas', 'INVENTORY_UNAVAILABLE')
+    }
     const snapshot = baseFromSnapshot(
       reservationPriceSnapshotSchema.parse(reservation.priceSnapshot),
       arrivalDate,
@@ -398,6 +427,11 @@ export class ReservationCheckInService {
     excludeStayId?: string,
   ): Promise<void> {
     if (!unitId) return
+    const shared = await manager.query(
+      `SELECT 1 FROM camping_private.accommodation_units u JOIN camping_private.accommodation_types t ON t.id=u.accommodation_type_id AND t.camping_id=u.camping_id WHERE u.camping_id=$1 AND u.id=$2 AND t.inventory_mode='shared'`,
+      [campingId, unitId],
+    )
+    if (shared.length) return
     const unit = await manager.findOne(AccommodationUnitEntity, {
       where: { id: unitId, campingId },
       select: { id: true, name: true },

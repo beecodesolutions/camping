@@ -46,6 +46,9 @@ export class CampingEntity {
   @Column({ name: 'age_ranges', type: 'jsonb' })
   ageRanges!: AgeRanges
 
+  @Column({ name: 'infants_consume_capacity', type: 'boolean', default: false })
+  infantsConsumeCapacity!: boolean
+
   @Column({ type: 'jsonb' })
   rates!: Rates
 

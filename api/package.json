@@ -23,7 +23,8 @@
     "seed:demo": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-demo.js",
     "seed:test": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-test.js",
     "seed:reservations": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/seed-reservations.js",
-    "openapi:export": "tsc -p tsconfig.json && node dist/cli/export-openapi.js"
+    "openapi:export": "tsc -p tsconfig.json && node dist/cli/export-openapi.js",
+    "config:ekko": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/cli/configure-ekko-priceboard.js"
   },
   "dependencies": {
     "@camping/contracts": "workspace:*",

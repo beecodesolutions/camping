@@ -1,3 +1,4 @@
+import { baseFromSnapshot } from '../reservations/reservation-pricing'
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { DataSource, type EntityManager } from 'typeorm'
 import {
@@ -438,6 +439,7 @@ export class StayService {
       adults: stay.adults,
       children: stay.children,
       infants: stay.infants,
+      pets: stay.pets,
       hasVehicle: stay.hasVehicle,
       vehicleDescription: stay.vehicleDescription,
       licensePlate: stay.licensePlate,
@@ -719,8 +721,21 @@ export class StayService {
     const snapshot = reservationPriceSnapshotSchema.parse(
       stay.accommodationPriceSnapshot,
     )
+    if (snapshot.pricing) {
+      const end = new Date(`${stay.arrivalDate}T00:00:00Z`)
+      end.setUTCDate(end.getUTCDate() + nights)
+      return baseFromSnapshot(
+        snapshot,
+        stay.arrivalDate,
+        end.toISOString().slice(0, 10),
+        stay.adults,
+        stay.children,
+        stay.infants,
+        stay.pets,
+      ).totalMinor
+    }
     let baseMinor: number
-    if (snapshot.basis === 'per_unit') {
+    if (snapshot.basis !== 'per_person') {
       baseMinor = this.safeMultiplyMoney(snapshot.baseNightlyPriceMinor, nights)
     } else {
       const nightly = this.safeAddMoney(

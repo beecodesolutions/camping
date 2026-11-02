@@ -145,23 +145,38 @@ function DayDetail({
         ) : (
           <Stack {...uiProps.rowSmall} sx={uiStyles.dayDetailStack2}>
             <Chip
-              label={t('calendar.freeCount', {
-                count: summary?.available ?? 0,
-              })}
+              label={t(
+                type?.inventoryMode === 'shared'
+                  ? 'pricing.freeBeds'
+                  : 'calendar.freeCount',
+                {
+                  count: summary?.available ?? 0,
+                },
+              )}
               color="success"
               size="small"
             />
             <Chip
-              label={t('calendar.occupiedCount', {
-                count: summary?.reserved ?? 0,
-              })}
+              label={t(
+                type?.inventoryMode === 'shared'
+                  ? 'pricing.occupiedBeds'
+                  : 'calendar.occupiedCount',
+                {
+                  count: summary?.reserved ?? 0,
+                },
+              )}
               color="warning"
               size="small"
             />
             <Chip
-              label={t('calendar.blockedCount', {
-                count: summary?.blocked ?? 0,
-              })}
+              label={t(
+                type?.inventoryMode === 'shared'
+                  ? 'pricing.blockedBeds'
+                  : 'calendar.blockedCount',
+                {
+                  count: summary?.blocked ?? 0,
+                },
+              )}
               color="error"
               size="small"
             />

@@ -209,7 +209,7 @@ export const uiStyles = {
     display: 'grid',
     gridTemplateColumns: {
       xs: '1fr',
-      sm: 'repeat(3, 1fr)',
+      sm: 'repeat(2, minmax(0, 1fr))',
     },
     gap: 2,
   } satisfies SxProps<Theme>,
@@ -228,6 +228,17 @@ export const uiStyles = {
   reservationReviewStack: {
     flexWrap: 'wrap',
     alignItems: 'center',
+  } satisfies SxProps<Theme>,
+  tariffBreakdownRow: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    alignItems: 'baseline',
+    gap: 2,
+  } satisfies SxProps<Theme>,
+  tariffBreakdownAmount: {
+    textAlign: 'right',
+    whiteSpace: 'nowrap',
+    fontVariantNumeric: 'tabular-nums',
   } satisfies SxProps<Theme>,
   reservationReviewStack2: {
     justifyContent: 'space-between',
@@ -259,7 +270,7 @@ export const uiStyles = {
   } satisfies SxProps<Theme>,
   reservationCreateDialogBox4: {
     display: 'grid',
-    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
     gap: 2,
   } satisfies SxProps<Theme>,
   reservationCreateDialogDialogActions: {

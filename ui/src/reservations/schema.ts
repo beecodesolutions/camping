@@ -23,6 +23,8 @@ const fields = z.object({
   adults: count,
   children: count,
   infants: count,
+  pets: count.optional(),
+  capacityOverrideReason: z.string().max(500).optional(),
   responsibleName: z
     .string()
     .trim()
@@ -60,7 +62,8 @@ export function reservationFormSchema(
         message: 'reservationCreate.selectType',
       })
     if (
-      type?.inventoryMode === 'individual' &&
+      type &&
+      type.inventoryMode !== 'unlimited' &&
       !units.some(
         (unit) =>
           unit.id === value.unitId && unit.typeId === type.id && unit.enabled,
@@ -117,6 +120,7 @@ export function reservationDefaults(timezone: string): ReservationFormValues {
     adults: 1,
     children: 0,
     infants: 0,
+    pets: 0,
     responsibleName: '',
     document: '',
     nationality: '',
@@ -134,12 +138,16 @@ export function reservationQuoteInput(
 ): ReservationQuoteCreate {
   return reservationQuoteCreateSchema.parse({
     accommodationTypeId: value.accommodationTypeId,
-    ...(type.inventoryMode === 'individual' ? { unitId: value.unitId } : {}),
+    ...(type.inventoryMode !== 'unlimited' ? { unitId: value.unitId } : {}),
     checkInDate: value.checkInDate,
     checkOutDate: value.checkOutDate,
     adults: value.adults,
     children: value.children,
     infants: value.infants,
+    pets: value.pets ?? 0,
+    ...(value.capacityOverrideReason?.trim()
+      ? { capacityOverrideReason: value.capacityOverrideReason.trim() }
+      : {}),
   })
 }
 

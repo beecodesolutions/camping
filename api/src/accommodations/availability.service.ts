@@ -13,7 +13,7 @@ type AvailabilityQuery = ReturnType<typeof availabilityQuerySchema.parse>
 type TypeRow = {
   id: string
   name: string
-  inventory_mode: 'individual' | 'unlimited'
+  inventory_mode: 'individual' | 'unlimited' | 'shared'
   enabled: boolean
 }
 
@@ -203,10 +203,66 @@ export class AvailabilityService {
       blocksByType.set(block.accommodation_type_id, typeBlocks)
     }
 
+    const hasShared = selectedTypes.some((t) => t.inventory_mode === 'shared')
+    const bedRows = hasShared
+      ? ((await manager.query(
+          `SELECT b.id,b.unit_id FROM camping_private.accommodation_beds b JOIN camping_private.accommodation_units u ON u.id=b.unit_id AND u.camping_id=b.camping_id WHERE b.camping_id=$1 AND u.accommodation_type_id=ANY($2::uuid[]) AND b.enabled`,
+          [campingId, typeIds],
+        )) as { id: string; unit_id: string }[])
+      : []
+    const occupiedBeds = hasShared
+      ? ((await manager.query(
+          `SELECT bed_id,night::text AS night FROM camping_private.bed_occupancy WHERE camping_id=$1 AND night >= $2::date AND night < $3::date`,
+          [campingId, query.checkInDate, query.checkOutDate],
+        )) as { bed_id: string; night: string }[])
+      : []
+    const occupiedByDate = new Map<string, Set<string>>()
+    for (const row of occupiedBeds) {
+      const set = occupiedByDate.get(row.night) ?? new Set<string>()
+      set.add(row.bed_id)
+      occupiedByDate.set(row.night, set)
+    }
+    const occupiedForStay = new Set(occupiedBeds.map((b) => b.bed_id))
     const response = {
       checkInDate: query.checkInDate,
       checkOutDate: query.checkOutDate,
       types: selectedTypes.map((type) => {
+        if (type.inventory_mode === 'shared') {
+          const sharedUnits = type.enabled
+            ? (unitsByType.get(type.id) ?? []).filter((u) => u.enabled)
+            : []
+          return {
+            typeId: type.id,
+            inventoryMode: 'shared' as const,
+            units: sharedUnits.map((unit) => {
+              const beds = bedRows.filter((b) => b.unit_id === unit.id)
+              const unitBlocks = (blocksByType.get(type.id) ?? []).filter(
+                (b) => b.unit_id === unit.id,
+              )
+              return {
+                unitId: unit.id,
+                availableBeds: unitBlocks.length
+                  ? 0
+                  : beds.filter((b) => !occupiedForStay.has(b.id)).length,
+                nights: dates.map((date) => {
+                  const blocked = unitBlocks.some((b) =>
+                    overlapsDate(date, b.check_in_date, b.check_out_date),
+                  )
+                  const reservedBeds = beds.filter((b) =>
+                    occupiedByDate.get(date)?.has(b.id),
+                  ).length
+                  return {
+                    date,
+                    totalBeds: beds.length,
+                    reservedBeds,
+                    blockedBeds: blocked ? beds.length : 0,
+                    availableBeds: blocked ? 0 : beds.length - reservedBeds,
+                  }
+                }),
+              }
+            }),
+          }
+        }
         if (type.inventory_mode === 'unlimited') {
           return {
             typeId: type.id,

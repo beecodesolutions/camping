@@ -386,6 +386,7 @@ export default function DashboardToday({
           adults: reservation.adults,
           children: reservation.children,
           infants: reservation.infants,
+          pets: reservation.pets ?? 0,
           estimatedDeparture: reservation.checkOutDate,
           reservation,
           canCheckOut: Boolean(reservation.stayId),

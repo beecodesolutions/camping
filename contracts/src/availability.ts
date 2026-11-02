@@ -145,6 +145,25 @@ export const unlimitedAvailabilitySchema = z.strictObject({
 export const availabilityTypeSchema = z.discriminatedUnion('inventoryMode', [
   individualAvailabilitySchema,
   unlimitedAvailabilitySchema,
+  z.strictObject({
+    typeId: z.uuid(),
+    inventoryMode: z.literal('shared'),
+    units: z.array(
+      z.strictObject({
+        unitId: z.uuid(),
+        availableBeds: safeCount,
+        nights: z.array(
+          z.strictObject({
+            date: z.iso.date(),
+            availableBeds: safeCount,
+            totalBeds: safeCount,
+            reservedBeds: safeCount,
+            blockedBeds: safeCount,
+          }),
+        ),
+      }),
+    ),
+  }),
 ])
 
 export const availabilityResponseSchema = z.strictObject({

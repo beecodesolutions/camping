@@ -1,3 +1,4 @@
+import { accommodationPricingSettingsSchema } from './accommodation-pricing'
 import { z } from 'zod'
 import {
   countries,
@@ -73,6 +74,7 @@ const reservationPhoneSchema = z
 const reservationNationalitySchema = z.union([z.literal(''), z.enum(countries)])
 
 const reservationPriceOverrideFields = {
+  capacityOverrideReason: nonBlankText(500).optional(),
   /** A negotiated total in the camping currency, in minor units. */
   agreedTotalMinor: moneySchema.optional(),
   priceAdjustmentReason: nonBlankText(500).optional(),
@@ -98,7 +100,7 @@ const reservationGuestCountIsPositive = (value: {
   Number.isSafeInteger(value.adults + value.children + value.infants) &&
   value.adults + value.children + value.infants > 0
 
-export const inventoryModeSchema = z.enum(['individual', 'unlimited'])
+export const inventoryModeSchema = z.enum(['individual', 'unlimited', 'shared'])
 export type InventoryMode = z.infer<typeof inventoryModeSchema>
 
 export const reservationStatusSchema = z.enum([
@@ -123,16 +125,21 @@ const accommodationTypeValuesSchema = z.strictObject({
   maxOccupancy: reservationCount.nullable(),
   baseNightlyPriceMinor: moneySchema,
   enabled: z.boolean(),
+  pricing: accommodationPricingSettingsSchema.nullable().optional(),
 })
 
 const accommodationTypeInvariant = (value: {
   inventoryMode: InventoryMode
   maxOccupancy: number | null
+  pricing?: { basis: string } | null
 }) =>
-  (value.inventoryMode === 'unlimited' && value.maxOccupancy === null) ||
-  (value.inventoryMode === 'individual' &&
-    value.maxOccupancy !== null &&
-    value.maxOccupancy >= 1)
+  (value.inventoryMode === 'shared'
+    ? value.pricing?.basis === 'per_bed'
+    : value.pricing?.basis !== 'per_bed') &&
+  ((value.inventoryMode === 'unlimited' && value.maxOccupancy === null) ||
+    (value.inventoryMode !== 'unlimited' &&
+      value.maxOccupancy !== null &&
+      value.maxOccupancy >= 1))
 
 const accommodationTypeInvariantMessage =
   'individual inventory requires maxOccupancy >= 1; unlimited inventory requires null'
@@ -250,6 +257,7 @@ const reservationValuesSchema = z
     adults: reservationCount,
     children: reservationCount,
     infants: reservationCount,
+    pets: reservationCount.optional(),
     source: reservationSourceSchema.optional(),
     notes: optionalText(500).optional(),
     idempotencyKey: idSchema,
@@ -284,6 +292,7 @@ export const reservationQuoteCreateSchema = z
     adults: reservationCount,
     children: reservationCount,
     infants: reservationCount,
+    pets: reservationCount.optional(),
     ...reservationPriceOverrideFields,
   })
   .refine((value) => value.checkOutDate > value.checkInDate, {
@@ -305,10 +314,12 @@ export type ReservationQuoteCreate = z.infer<
 /** Read-only search across all enabled accommodation offers, capped at 366 nights. */
 export const reservationSearchSchema = z
   .strictObject({
+    includeInsufficientCapacity: z.boolean().optional(),
     ...dateRange,
     adults: reservationCount,
     children: reservationCount,
     infants: reservationCount,
+    pets: reservationCount.optional(),
   })
   .refine((value) => value.checkOutDate > value.checkInDate, {
     path: ['checkOutDate'],
@@ -341,6 +352,7 @@ const reservationPatchFields = {
   adults: reservationCount.optional(),
   children: reservationCount.optional(),
   infants: reservationCount.optional(),
+  pets: reservationCount.optional(),
   source: reservationSourceSchema.optional(),
   notes: optionalText(500).nullable().optional(),
   version: reservationVersion,
@@ -423,6 +435,10 @@ export const reservationResponseSchema = z.strictObject({
   stayId: idSchema.nullable(),
   accommodationTypeId: idSchema,
   unitId: idSchema.nullable(),
+  allocatedBeds: z
+    .array(z.strictObject({ id: idSchema, name: z.string() }))
+    .optional(),
+  capacityOverrideReason: z.string().nullable().optional(),
   checkInDate: dateRange.checkInDate,
   checkOutDate: dateRange.checkOutDate,
   responsibleName: nonBlankText(200),
@@ -433,6 +449,7 @@ export const reservationResponseSchema = z.strictObject({
   adults: reservationCount,
   children: reservationCount,
   infants: reservationCount,
+  pets: reservationCount.optional(),
   status: reservationStatusSchema,
   source: reservationSourceSchema,
   notes: optionalText(500),
@@ -448,6 +465,10 @@ export type Reservation = ReservationResponse
 
 /** Price returned by either creation or edit previews. */
 export const reservationQuoteSchema = z.strictObject({
+  capacityMatch: z.enum(['EXACT', 'OVERSIZED', 'INSUFFICIENT']).optional(),
+  sparePlaces: safeCount.optional(),
+  availableBeds: safeCount.optional(),
+  requestedBeds: safeCount.optional(),
   occupancyWarning: z
     .strictObject({
       maxOccupancy: reservationCount.min(1),

@@ -1,3 +1,4 @@
+import { occupancySettingsSchema } from '@camping/contracts'
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { DataSource } from 'typeorm'
 import {
@@ -66,6 +67,7 @@ export class CampingService {
       currency: camping.currency,
       timezone: camping.timezone,
       moneyDecimals: camping.moneyDecimals,
+      infantsConsumeCapacity: camping.infantsConsumeCapacity,
       ageRanges: ageRangesSchema.parse(camping.ageRanges),
       rates: ratesSchema.parse(camping.rates),
       activeGroups: Number(row?.groups ?? 0),
@@ -73,6 +75,42 @@ export class CampingService {
       activeVehicles: Number(row?.vehicles ?? 0),
       pendingAmountMinor,
     })
+  }
+
+  async updateOccupancySettings(
+    context: AuthContext,
+    raw: unknown,
+  ): Promise<CampingProfile> {
+    const parsed = occupancySettingsSchema.safeParse(raw)
+    if (!parsed.success) throw zodBadRequest(parsed.error)
+    await withInventoryTransaction(
+      this.dataSource,
+      context,
+      async (manager) => {
+        const camping = await manager.findOneByOrFail(CampingEntity, {
+          id: context.camping.id,
+        })
+        await manager.update(CampingEntity, camping.id, {
+          ...parsed.data,
+          updatedAt: new Date(),
+        })
+        await manager.save(
+          AuditLogEntity,
+          manager.create(AuditLogEntity, {
+            campingId: camping.id,
+            actorId: context.user.id,
+            action: 'camping.occupancy_settings_updated',
+            entityType: 'Camping',
+            entityId: camping.id,
+            beforeState: {
+              infantsConsumeCapacity: camping.infantsConsumeCapacity,
+            },
+            afterState: parsed.data,
+          }),
+        )
+      },
+    )
+    return this.profile(context)
   }
 
   async updateMoneySettings(

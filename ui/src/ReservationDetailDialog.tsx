@@ -72,6 +72,12 @@ export default function ReservationDetailDialog({
             <Typography>
               {t('reservationCreate.reference', { id: reservation.id })}
             </Typography>
+            {!!reservation.allocatedBeds?.length && (
+              <Typography>
+                {t('pricing.allocatedBeds')}:{' '}
+                {reservation.allocatedBeds.map((b) => b.name).join(' · ')}
+              </Typography>
+            )}
             <Typography>
               {t(`calendar.status.${reservation.status}`)}
             </Typography>
@@ -94,6 +100,7 @@ export default function ReservationDetailDialog({
                   adults: reservation.adults,
                   children: reservation.children,
                   infants: reservation.infants,
+                  pets: reservation.pets ?? 0,
                 },
               }}
               held
