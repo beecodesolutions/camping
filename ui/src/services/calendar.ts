@@ -86,6 +86,23 @@ export function availabilityForDate(
   date: string,
 ): AvailabilitySummary | null {
   if (!value) return null
+  if (value.inventoryMode === 'shared') {
+    const nights = value.units.flatMap((u) =>
+      u.nights.filter((n) => n.date === date),
+    )
+    if (!nights.length) return null
+    const available = nights.reduce((sum, n) => sum + n.availableBeds, 0)
+    const total = nights.reduce((sum, n) => sum + n.totalBeds, 0)
+    const reserved = nights.reduce((sum, n) => sum + n.reservedBeds, 0)
+    const blocked = nights.reduce((sum, n) => sum + n.blockedBeds, 0)
+    return {
+      tone: available === 0 ? 'none' : available === total ? 'free' : 'partial',
+      available,
+      total,
+      reserved,
+      blocked,
+    }
+  }
   const night = value.nights.find((item) => item.date === date)
   if (!night) return null
   if (value.inventoryMode === 'unlimited') {

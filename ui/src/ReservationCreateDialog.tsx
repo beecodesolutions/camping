@@ -1,3 +1,7 @@
+import ReservationGuestFields, {
+  CapacitySearchOption,
+} from './ReservationGuestFields'
+import ReservationOfferCapacity from './ReservationOfferCapacity'
 import { uiProps, uiStyles } from './app/theme'
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
@@ -93,6 +97,8 @@ export default function ReservationCreateDialog({
   const [step, setStep] = useState(0)
   const [offers, setOffers] = useState<CreationQuote[] | null>(null)
   const [selected, setSelected] = useState<CreationQuote | null>(null)
+  const [includeInsufficientCapacity, setIncludeInsufficientCapacity] =
+    useState(false)
   const [typeFilter, setTypeFilter] = useState('')
   const [unitFilter, setUnitFilter] = useState('')
   const [accepted, setAccepted] = useState(false)
@@ -165,6 +171,8 @@ export default function ReservationCreateDialog({
       adults: values.adults,
       children: values.children,
       infants: values.infants,
+      pets: values.pets ?? 0,
+      includeInsufficientCapacity,
     })
     if (
       !searchInput.success ||
@@ -431,7 +439,19 @@ export default function ReservationCreateDialog({
                           key={key}
                           value={key}
                           control={<Radio />}
-                          label={`${offer.accommodationName} · ${formatMoney(offer.priceSnapshot.totalMinor, offer.priceSnapshot.currency, i18n.language)}`}
+                          label={
+                            <Stack {...uiProps.stackSmall}>
+                              <Typography>
+                                {offer.accommodationName} ·{' '}
+                                {formatMoney(
+                                  offer.priceSnapshot.totalMinor,
+                                  offer.priceSnapshot.currency,
+                                  i18n.language,
+                                )}
+                              </Typography>
+                              <ReservationOfferCapacity offer={offer} />
+                            </Stack>
+                          }
                           onChange={() => {
                             setSelected(offer)
                             setValue(
@@ -481,6 +501,13 @@ export default function ReservationCreateDialog({
               <Stack {...uiProps.stackForm}>
                 <Box hidden={step !== 0}>
                   <Stack {...uiProps.stackForm}>
+                    <CapacitySearchOption
+                      checked={includeInsufficientCapacity}
+                      onChange={(value) => {
+                        setIncludeInsufficientCapacity(value)
+                        searchChanged()
+                      }}
+                    />
                     <DateRangeCalendar
                       startDate={checkInDate}
                       endDate={checkOutDate}
@@ -520,37 +547,23 @@ export default function ReservationCreateDialog({
                       }}
                     />
                     <Box sx={uiStyles.reservationCreateDialogBox4}>
-                      {(['adults', 'children', 'infants'] as const).map(
-                        (name) => {
-                          const range = profile.ageRanges[name]
-                          return (
-                            <TextField
-                              key={name}
-                              label={`${t(`checkIn.${name}`)} (${range.max === null ? `${range.min}+` : `${range.min}–${range.max}`})`}
-                              onChange={searchChanged}
-                              type="number"
-                              required
-                              fullWidth
-                              error={!!errors[name]}
-                              helperText={errorText(errors[name]?.message)}
-                              slotProps={{
-                                htmlInput: {
-                                  ...register(name, {
-                                    valueAsNumber: true,
-                                  }),
-                                  min: 0,
-                                  step: 1,
-                                  inputMode: 'numeric',
-                                },
-                              }}
-                            />
-                          )
-                        },
-                      )}
+                      <ReservationGuestFields
+                        ageRanges={profile.ageRanges}
+                        register={register}
+                        errors={errors}
+                        onChange={searchChanged}
+                      />
                     </Box>
                   </Stack>
                 </Box>
                 <Box hidden={step !== 2}>
+                  {selected?.capacityMatch === 'INSUFFICIENT' && (
+                    <TextField
+                      fullWidth
+                      label={t('pricing.capacityOverride')}
+                      {...register('capacityOverrideReason')}
+                    />
+                  )}
                   <Stack {...uiProps.stackForm}>
                     <Typography>
                       {selected?.accommodationName} · {checkInDate} →{' '}

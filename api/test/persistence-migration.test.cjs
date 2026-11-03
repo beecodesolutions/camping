@@ -526,3 +526,25 @@ test('unit capacity migrates from its type and stays required and positive', asy
     )
   }
 })
+
+test('unused flexible pricing migration can downgrade and reapply without changing existing records', async () => {
+  const {
+    FlexiblePricingAndBeds1760000007000,
+  } = require('../dist/database/migrations/1760000007000-FlexiblePricingAndBeds')
+  const runner = dataSource.createQueryRunner()
+  await runner.connect()
+  await runner.startTransaction()
+  try {
+    const migration = new FlexiblePricingAndBeds1760000007000()
+    await migration.down(runner)
+    await migration.up(runner)
+    const [row] = await runner.query(
+      'SELECT max_occupancy FROM camping_private.accommodation_units WHERE id=$1',
+      [ids.unitA],
+    )
+    assert.equal(row.max_occupancy, 4)
+  } finally {
+    await runner.rollbackTransaction()
+    await runner.release()
+  }
+})

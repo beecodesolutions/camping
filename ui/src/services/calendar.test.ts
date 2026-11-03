@@ -80,3 +80,32 @@ describe('availability calendar helpers', () => {
     ])
   })
 })
+
+it('shared calendar counts beds independently of room counts', () => {
+  const shared = {
+    typeId: 'shared',
+    inventoryMode: 'shared',
+    units: [
+      {
+        unitId: 'room',
+        availableBeds: 2,
+        nights: [
+          {
+            date: '2030-01-01',
+            availableBeds: 2,
+            totalBeds: 6,
+            reservedBeds: 4,
+            blockedBeds: 0,
+          },
+        ],
+      },
+    ],
+  } satisfies AvailabilityResponse['types'][number]
+  expect(availabilityForDate(shared, '2030-01-01')).toEqual({
+    tone: 'partial',
+    available: 2,
+    total: 6,
+    reserved: 4,
+    blocked: 0,
+  })
+})

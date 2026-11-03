@@ -88,7 +88,12 @@ export async function reservationView(
     ],
     order: { createdAt: 'ASC', id: 'ASC' },
   })
-  return reservationViewFromAssociation(context, row, stay, payments)
+  const view = reservationViewFromAssociation(context, row, stay, payments)
+  view.allocatedBeds = await manager.query(
+    `SELECT b.id,b.name FROM camping_private.reservation_beds a JOIN camping_private.accommodation_beds b ON b.camping_id=a.camping_id AND b.id=a.bed_id WHERE a.camping_id=$1 AND a.reservation_id=$2 ORDER BY b.position,b.name,b.id`,
+    [row.campingId, row.id],
+  )
+  return view
 }
 
 function safeMultiply(left: number, right: number): number {
@@ -146,6 +151,8 @@ function reservationViewFromAssociation(
     adults: row.adults,
     children: row.children,
     infants: row.infants,
+    pets: row.pets,
+    capacityOverrideReason: row.capacityOverrideReason,
     status: row.status,
     source: row.source,
     notes: row.notes,
@@ -256,6 +263,8 @@ function auditState(
     'adults',
     'children',
     'infants',
+    'pets',
+    'capacityOverrideReason',
     'responsibleName',
     'email',
     'phone',

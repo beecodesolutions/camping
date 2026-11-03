@@ -1,3 +1,9 @@
+import { AccommodationBedEntity } from '../database/entities/accommodation-bed.entity'
+import {
+  accommodationBedInputSchema,
+  accommodationBedSchema,
+  type AccommodationPricingSettings,
+} from '@camping/contracts'
 import { CampingEntity } from '../database/entities/camping.entity'
 import { assertMoneyPrecision } from '../common/money'
 import { Injectable } from '@nestjs/common'
@@ -38,6 +44,32 @@ import {
   withInventoryTransaction,
   type InventoryTransactionContext,
 } from './inventory-transaction'
+
+function assertPricingPrecision(
+  pricing: AccommodationPricingSettings | null | undefined,
+  camping: CampingEntity,
+) {
+  if (!pricing) return
+  const check = (amount: number) =>
+    assertMoneyPrecision(amount, camping.currency, camping.moneyDecimals)
+  check(pricing.petNightlyPriceMinor)
+  for (const rates of [pricing.rates, pricing.extraPersonRates])
+    for (const amount of Object.values(rates)) check(amount)
+  for (const override of pricing.weekdays) {
+    if (override.rates.baseNightlyPriceMinor !== undefined)
+      check(override.rates.baseNightlyPriceMinor)
+    if (override.rates.petNightlyPriceMinor !== undefined)
+      check(override.rates.petNightlyPriceMinor)
+    for (const rates of [override.rates.rates, override.rates.extraPersonRates])
+      if (rates) for (const amount of Object.values(rates)) check(amount)
+  }
+  for (const rule of pricing.discounts)
+    if (
+      rule.benefit.type === 'FIXED_AMOUNT' ||
+      rule.benefit.type === 'FIXED_PRICE'
+    )
+      check(rule.benefit.value)
+}
 
 const activeReservationStatuses = [
   'pending',
@@ -80,7 +112,7 @@ export async function assertUnitAvailable(
     where: { id: unit.typeId, campingId },
   })
   if (!type) throw notFound('Tipo de alojamiento')
-  if (!unit.enabled || !type.enabled || type.inventoryMode !== 'individual')
+  if (!unit.enabled || !type.enabled || type.inventoryMode === 'unlimited')
     errorForAvailability('La unidad')
 
   const reservations = await manager.find(ReservationEntity, {
@@ -112,6 +144,106 @@ export async function assertUnitAvailable(
 @Injectable()
 export class AccommodationsService {
   constructor(private readonly dataSource: DataSource) {}
+
+  async listBeds(context: AuthContext, unitId: string) {
+    await this.readUnit(context, unitId)
+    const beds = await this.dataSource
+      .getRepository(AccommodationBedEntity)
+      .find({
+        where: { campingId: context.camping.id, unitId },
+        order: { position: 'ASC', name: 'ASC', id: 'ASC' },
+      })
+    return beds.map(({ id, unitId, name, position, enabled }) =>
+      accommodationBedSchema.parse({ id, unitId, name, position, enabled }),
+    )
+  }
+  async saveBed(
+    context: AuthContext,
+    unitId: string,
+    raw: unknown,
+    id?: string,
+  ) {
+    const parsed = accommodationBedInputSchema.safeParse(raw)
+    if (!parsed.success) throw zodBadRequest(parsed.error)
+    try {
+      return await withInventoryTransaction(
+        this.dataSource,
+        context,
+        async (manager) => {
+          const unit = await manager.findOneBy(AccommodationUnitEntity, {
+            id: unitId,
+            campingId: context.camping.id,
+          })
+          if (!unit) throw notFound('Unidad')
+          const type = await manager.findOneByOrFail(AccommodationTypeEntity, {
+            id: unit.typeId,
+            campingId: context.camping.id,
+          })
+          if (type.inventoryMode !== 'shared')
+            throw conflict('La unidad no es un dormitorio', 'VALIDATION_ERROR')
+          const [before] = id
+            ? await manager.query(
+                `SELECT id,unit_id AS "unitId",name,position,enabled FROM camping_private.accommodation_beds WHERE camping_id=$1 AND unit_id=$2 AND id=$3`,
+                [context.camping.id, unitId, id],
+              )
+            : []
+          if (id && !before) throw notFound('Cama')
+          if (id && !parsed.data.enabled) {
+            const occupied = await manager.query(
+              `SELECT 1 FROM camping_private.bed_occupancy WHERE camping_id=$1 AND bed_id=$2 LIMIT 1`,
+              [context.camping.id, id],
+            )
+            if (occupied.length)
+              throw conflict(
+                'La cama tiene reservas activas',
+                'INVENTORY_UNAVAILABLE',
+              )
+          }
+          const enabled = await manager.query(
+            `SELECT count(*)::int AS count FROM camping_private.accommodation_beds WHERE camping_id=$1 AND unit_id=$2 AND enabled AND ($3::uuid IS NULL OR id<>$3)`,
+            [context.camping.id, unitId, id ?? null],
+          )
+          if (parsed.data.enabled && enabled[0].count >= unit.maxOccupancy)
+            throw conflict(
+              'Las camas exceden la capacidad del dormitorio',
+              'VALIDATION_ERROR',
+            )
+          const values = [
+            context.camping.id,
+            unitId,
+            parsed.data.name,
+            parsed.data.position,
+            parsed.data.enabled,
+          ]
+          const rows = id
+            ? await manager.query(
+                `UPDATE camping_private.accommodation_beds SET name=$3,position=$4,enabled=$5 WHERE camping_id=$1 AND unit_id=$2 AND id=$6 RETURNING id,unit_id AS "unitId",name,position,enabled`,
+                [...values, id],
+              )
+            : await manager.query(
+                `INSERT INTO camping_private.accommodation_beds(camping_id,unit_id,name,position,enabled) VALUES($1,$2,$3,$4,$5) RETURNING id,unit_id AS "unitId",name,position,enabled`,
+                values,
+              )
+          const result = accommodationBedSchema.parse(rows[0])
+          await this.recordMutation(
+            manager,
+            context,
+            'accommodation_bed.updated',
+            'AccommodationBed',
+            result.id,
+            before ?? null,
+            result,
+            'InventoryChanged',
+            result,
+          )
+          return result
+        },
+      )
+    } catch (error) {
+      this.rethrowUnique(error, 'Ya existe una cama con ese nombre')
+      throw error
+    }
+  }
 
   async listTypes(
     context: AuthContext,
@@ -155,6 +287,7 @@ export class AccommodationsService {
             camping.currency,
             camping.moneyDecimals,
           )
+          assertPricingPrecision(parsed.data.pricing, camping)
           const row = manager.create(AccommodationTypeEntity, {
             ...parsed.data,
             campingId: context.camping.id,
@@ -215,6 +348,10 @@ export class AccommodationsService {
             )
           }
           const merged = accommodationTypeCreateSchema.safeParse({
+            pricing:
+              parsed.data.pricing !== undefined
+                ? parsed.data.pricing
+                : row.pricing,
             name: parsed.data.name ?? row.name,
             inventoryMode: parsed.data.inventoryMode ?? row.inventoryMode,
             maxOccupancy:
@@ -226,6 +363,13 @@ export class AccommodationsService {
             enabled: parsed.data.enabled ?? row.enabled,
           })
           if (!merged.success) throw zodBadRequest(merged.error)
+          if (parsed.data.pricing)
+            assertPricingPrecision(
+              parsed.data.pricing,
+              await manager.findOneByOrFail(CampingEntity, {
+                id: context.camping.id,
+              }),
+            )
 
           if (merged.data.inventoryMode !== row.inventoryMode) {
             const [units, reservations] = await Promise.all([
@@ -263,7 +407,10 @@ export class AccommodationsService {
             'InventoryChanged',
             result,
           )
-          if (before.baseNightlyPriceMinor !== result.baseNightlyPriceMinor)
+          if (
+            before.baseNightlyPriceMinor !== result.baseNightlyPriceMinor ||
+            JSON.stringify(before.pricing) !== JSON.stringify(result.pricing)
+          )
             await this.recordEvent(
               manager,
               context.camping.id,
@@ -271,8 +418,14 @@ export class AccommodationsService {
               saved.id,
               'RateChanged',
               {
-                before: { baseNightlyPriceMinor: before.baseNightlyPriceMinor },
-                after: { baseNightlyPriceMinor: result.baseNightlyPriceMinor },
+                before: {
+                  baseNightlyPriceMinor: before.baseNightlyPriceMinor,
+                  pricing: before.pricing,
+                },
+                after: {
+                  baseNightlyPriceMinor: result.baseNightlyPriceMinor,
+                  pricing: result.pricing,
+                },
               },
             )
           return result
@@ -412,6 +565,20 @@ export class AccommodationsService {
           if (row.enabled && parsed.data.enabled === false)
             await this.assertCanDisableUnit(manager, context, row.id)
 
+          if (
+            targetType.inventoryMode === 'shared' &&
+            parsed.data.maxOccupancy !== undefined
+          ) {
+            const [beds] = await manager.query(
+              `SELECT count(*)::int AS count FROM camping_private.accommodation_beds WHERE camping_id=$1 AND unit_id=$2 AND enabled`,
+              [context.camping.id, row.id],
+            )
+            if (beds.count > parsed.data.maxOccupancy)
+              throw conflict(
+                'La capacidad no puede ser menor al inventario de camas habilitadas',
+                'VALIDATION_ERROR',
+              )
+          }
           const before = this.toUnit(row)
           Object.assign(row, parsed.data, { updatedAt: new Date() })
           const saved = await manager.save(row)
@@ -637,7 +804,7 @@ export class AccommodationsService {
       where: { id: typeId, campingId },
     })
     if (!type) throw notFound('Tipo de alojamiento')
-    if (type.inventoryMode !== 'individual')
+    if (type.inventoryMode === 'unlimited')
       throw conflict(
         'Las unidades requieren inventario individual',
         'INVENTORY_MODE_INVALID',
@@ -655,7 +822,7 @@ export class AccommodationsService {
       where: { id: typeId, campingId },
     })
     if (!type) throw notFound('Tipo de alojamiento')
-    if (type.inventoryMode !== 'individual' || !type.enabled)
+    if (type.inventoryMode === 'unlimited' || !type.enabled)
       errorForAvailability('El tipo de alojamiento')
     const unit = await manager.findOne(AccommodationUnitEntity, {
       where: { id: unitId, campingId },
@@ -787,6 +954,7 @@ export class AccommodationsService {
       campingId: row.campingId,
       name: row.name,
       inventoryMode: row.inventoryMode,
+      pricing: row.pricing,
       maxOccupancy: row.maxOccupancy,
       baseNightlyPriceMinor: row.baseNightlyPriceMinor,
       enabled: row.enabled,

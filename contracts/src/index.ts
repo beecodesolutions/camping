@@ -50,6 +50,7 @@ export const checkInRequestSchema = z
     adults: safeCount,
     children: safeCount,
     infants: safeCount,
+    pets: safeCount.optional(),
     hasVehicle: z.boolean(),
     vehicleDescription: z.string().trim(),
     licensePlate: z.string().trim(),
@@ -87,6 +88,7 @@ export const campingProfileSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/),
   timezone: z.string(),
   moneyDecimals: moneyDecimalsSchema.default(0),
+  infantsConsumeCapacity: z.boolean().optional(),
   ageRanges: ageRangesSchema,
   rates: ratesSchema,
   activeGroups: safeCount,
@@ -216,6 +218,7 @@ export const staySchema = z.object({
   adults: safeCount,
   children: safeCount,
   infants: safeCount,
+  pets: safeCount.optional(),
   hasVehicle: z.boolean(),
   vehicleDescription: z.string(),
   licensePlate: z.string(),
@@ -242,3 +245,5 @@ export type StayPage = z.infer<typeof stayPageSchema>
 export { pilotCamping, pilotExtras } from './pilot'
 export * from './availability'
 export * from './reservations'
+
+export * from './accommodation-pricing'

@@ -223,11 +223,11 @@ export default function CheckInDialog({
                   </Stack>
                   <Box>
                     <Box sx={uiStyles.checkInDialogBox4}>
-                      {(['adults', 'children', 'infants'] as const).map(
+                      {(['adults', 'children', 'infants', 'pets'] as const).map(
                         (name) => (
                           <TextField
                             key={name}
-                            label={`${t(`checkIn.${name}`)}${ageRanges ? ` (${ageRanges[name].max === null ? `${ageRanges[name].min}+` : `${ageRanges[name].min}–${ageRanges[name].max}`})` : ''}`}
+                            label={`${t(`checkIn.${name}`)}${ageRanges && name !== 'pets' ? ` (${ageRanges[name].max === null ? `${ageRanges[name].min}+` : `${ageRanges[name].min}–${ageRanges[name].max}`})` : ''}`}
                             type="number"
                             required
                             fullWidth

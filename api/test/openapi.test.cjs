@@ -5,6 +5,10 @@ const { createOfflineOpenApiDocument } = require('../dist/openapi/document')
 const { openApiEnabled } = require('../dist/main')
 
 const expectedRoutes = [
+  'GET /api/accommodations/units/{id}/beds',
+  'POST /api/accommodations/units/{id}/beds',
+  'PATCH /api/accommodations/units/{id}/beds/{bedId}',
+  'PATCH /api/camping/occupancy-settings',
   'POST /api/auth/login',
   'GET /api/auth/session',
   'POST /api/auth/logout',

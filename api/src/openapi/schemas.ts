@@ -1,3 +1,8 @@
+import {
+  accommodationBedSchema,
+  accommodationBedInputSchema,
+  occupancySettingsSchema,
+} from '@camping/contracts'
 import { z } from 'zod'
 import {
   addExtraSchema,
@@ -67,6 +72,9 @@ const errorFieldSchema: SchemaObject = {
 }
 
 export const openApiSchemas: Record<string, SchemaObject> = {
+  AccommodationBed: zodOpenApiSchema(accommodationBedSchema),
+  AccommodationBedInput: zodOpenApiSchema(accommodationBedInputSchema),
+  OccupancySettings: zodOpenApiSchema(occupancySettingsSchema),
   Error: {
     type: 'object',
     properties: {

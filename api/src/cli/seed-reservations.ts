@@ -533,7 +533,7 @@ async function printReadSummary(
         availabilityTypes: availability.types.map((type) => ({
           typeId: type.typeId,
           inventoryMode: type.inventoryMode,
-          nights: type.nights,
+          nights: type.inventoryMode === 'shared' ? type.units : type.nights,
         })),
       },
       null,

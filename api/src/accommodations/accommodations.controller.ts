@@ -25,6 +25,59 @@ import { AccommodationsService } from './accommodations.service'
 export class AccommodationsController {
   constructor(private readonly accommodationsService: AccommodationsService) {}
 
+  @Get('units/:id/beds')
+  @ApiEndpoint({
+    operationId: 'accommodationsBedList',
+    summary: 'Listar camas de una unidad',
+    status: 200,
+    response: { type: 'array', items: openApiRef('AccommodationBed') },
+    errors: [400, 401, 404, 500],
+  })
+  listBeds(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    return this.accommodationsService.listBeds(request.auth!, id)
+  }
+  @Post('units/:id/beds')
+  @ApiEndpoint({
+    operationId: 'accommodationsBedCreate',
+    summary: 'Crear cama',
+    status: 201,
+    body: openApiRef('AccommodationBedInput'),
+    response: openApiRef('AccommodationBed'),
+    errors: [400, 401, 403, 404, 409, 413, 500],
+  })
+  createBed(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
+    assertAllowedOrigin(request)
+    return this.accommodationsService.saveBed(request.auth!, id, request.body)
+  }
+  @Patch('units/:id/beds/:bedId')
+  @ApiEndpoint({
+    operationId: 'accommodationsBedUpdate',
+    summary: 'Actualizar cama',
+    status: 200,
+    body: openApiRef('AccommodationBedInput'),
+    response: openApiRef('AccommodationBed'),
+    errors: [400, 401, 403, 404, 409, 413, 500],
+  })
+  updateBed(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('bedId', new ParseUUIDPipe()) bedId: string,
+  ) {
+    assertAllowedOrigin(request)
+    return this.accommodationsService.saveBed(
+      request.auth!,
+      id,
+      request.body,
+      bedId,
+    )
+  }
+
   @Get('types')
   @ApiEndpoint({
     operationId: 'accommodationsTypeList',

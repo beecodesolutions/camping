@@ -1,3 +1,4 @@
+import ReservationTariffBreakdown from './ReservationTariffBreakdown'
 import { uiProps, uiStyles } from './app/theme'
 import { Alert, Box, Divider, Stack, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -74,9 +75,23 @@ export default function ReservationReview({
             .join(' · ')}
         </Typography>
       </Stack>
+      {!!quote.input.pets && (
+        <Typography>
+          {t('pricing.pets')}: {quote.input.pets}
+        </Typography>
+      )}
       <Divider />
       <Stack {...uiProps.stackSmall}>
-        {price.basis === 'per_unit' ? (
+        <Typography component="h4" variant="h6">
+          {t('pricing.tariffBreakdown')}
+        </Typography>
+        {price.breakdown ? (
+          <ReservationTariffBreakdown
+            quote={quote}
+            breakdown={price.breakdown}
+            today={today}
+          />
+        ) : price.basis !== 'per_person' ? (
           <Typography color="text.secondary">
             {t('reservationCreate.unitRate', {
               amount: money(price.baseNightlyPriceMinor),
@@ -99,6 +114,12 @@ export default function ReservationReview({
             </Stack>
           ))
         )}
+        {!price.breakdown && !!price.adjustmentMinor && (
+          <Typography variant="body2" color="text.secondary">
+            {t('pricing.adjustment')}: {money(price.adjustmentMinor)} ·{' '}
+            {price.adjustmentReason}
+          </Typography>
+        )}
         {!!price.roundingMinor && (
           <Typography variant="body2" color="text.secondary">
             {t('reservationCreate.rounding', {
@@ -111,7 +132,10 @@ export default function ReservationReview({
         <Typography color="text.secondary">
           {t('reservationCreate.totalLabel')}
         </Typography>
-        <Typography variant="h4" sx={uiStyles.reservationReviewTypography7}>
+        <Typography
+          variant="metricLarge"
+          sx={uiStyles.reservationReviewTypography7}
+        >
           {money(price.totalMinor)}
         </Typography>
       </Box>

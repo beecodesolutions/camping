@@ -1,3 +1,5 @@
+import { capacitySuitability, humanOccupancy } from '@camping/contracts'
+import { availableBeds, assignBeds } from '../accommodations/bed-inventory'
 import { createHash } from 'node:crypto'
 import { Injectable } from '@nestjs/common'
 import { DataSource, In, type EntityManager } from 'typeorm'
@@ -71,6 +73,8 @@ function state(row: ReservationEntity): Record<string, unknown> {
     adults: row.adults,
     children: row.children,
     infants: row.infants,
+    pets: row.pets,
+    capacityOverrideReason: row.capacityOverrideReason,
     priceSnapshot: reservationPriceSnapshotSchema.parse(row.priceSnapshot),
     source: row.source,
   }
@@ -190,50 +194,89 @@ export class ReservationService {
       })
       const typesById = new Map(types.map((type) => [type.id, type]))
       const unitsById = new Map(units.map((unit) => [unit.id, unit]))
-      const people = input.adults + input.children + input.infants
-      const offers = availability.types.flatMap((available) => {
+      const offers: ReservationSearchResponse['offers'] = []
+      for (const available of availability.types) {
         const type = typesById.get(available.typeId)
-        if (!type) return []
-        const snapshot = snapshotWithoutInternalBase(
-          this.calculateSnapshot(
-            { ...input, accommodationTypeId: type.id },
-            type,
-            camping,
-            undefined,
-          ),
-        )
-        if (available.inventoryMode === 'unlimited')
-          return [
-            {
-              input: { ...input, accommodationTypeId: type.id },
-              accommodationName: type.name,
-              priceSnapshot: snapshot,
-            },
-          ]
-        return available.availableUnitIds.flatMap((id) => {
+        if (!type) continue
+        const { includeInsufficientCapacity: _filter, ...composition } = input
+        const quoteInput = { ...composition, accommodationTypeId: type.id }
+        if (type.inventoryMode === 'unlimited') {
+          offers.push({
+            input: quoteInput,
+            accommodationName: type.name,
+            capacityMatch: 'EXACT',
+            sparePlaces: 0,
+            priceSnapshot: snapshotWithoutInternalBase(
+              this.calculateSnapshot(quoteInput, type, camping, undefined),
+            ),
+          })
+          continue
+        }
+        const candidateIds =
+          available.inventoryMode === 'individual'
+            ? available.availableUnitIds
+            : available.inventoryMode === 'shared'
+              ? available.units.map((u) => u.unitId)
+              : []
+        for (const id of candidateIds) {
           const unit = unitsById.get(id)
-          if (!unit || unit.typeId !== type.id) return []
-          return [
-            {
-              input: {
-                ...input,
-                accommodationTypeId: type.id,
-                unitId: unit.id,
-              },
-              accommodationName: `${type.name} · ${unit.name}`,
-              priceSnapshot: snapshot,
-              ...(people > unit.maxOccupancy
-                ? {
-                    occupancyWarning: {
-                      maxOccupancy: unit.maxOccupancy,
-                      people,
-                    },
-                  }
-                : {}),
-            },
-          ]
-        })
-      })
+          if (!unit || unit.typeId !== type.id) continue
+          const fit = capacitySuitability(
+            input,
+            unit.maxOccupancy,
+            camping.infantsConsumeCapacity,
+          )
+          let bedInfo = {}
+          if (type.inventoryMode === 'shared') {
+            const beds =
+              available.inventoryMode === 'shared'
+                ? (available.units.find((u) => u.unitId === id)
+                    ?.availableBeds ?? 0)
+                : 0
+            const required = humanOccupancy(
+              input,
+              camping.infantsConsumeCapacity,
+            )
+            if (input.adults < 1 || beds < required) continue
+            bedInfo = { availableBeds: beds, requestedBeds: required }
+            fit.capacityMatch = 'EXACT'
+            fit.sparePlaces = 0
+          } else if (
+            fit.capacityMatch === 'INSUFFICIENT' &&
+            !fit.childrenOverflow &&
+            !input.includeInsufficientCapacity
+          )
+            continue
+          const unitInput = { ...quoteInput, unitId: id }
+          offers.push({
+            input: unitInput,
+            accommodationName: `${type.name} · ${unit.name}`,
+            capacityMatch: fit.capacityMatch,
+            sparePlaces: fit.sparePlaces,
+            ...bedInfo,
+            ...(fit.capacityMatch === 'INSUFFICIENT'
+              ? {
+                  occupancyWarning: {
+                    maxOccupancy: unit.maxOccupancy,
+                    people: fit.people,
+                  },
+                }
+              : {}),
+            priceSnapshot: snapshotWithoutInternalBase(
+              this.calculateSnapshot(unitInput, type, camping, undefined),
+            ),
+          })
+        }
+      }
+      const rank = { EXACT: 0, OVERSIZED: 1, INSUFFICIENT: 2 }
+      offers.sort(
+        (a, b) =>
+          rank[a.capacityMatch ?? 'EXACT'] - rank[b.capacityMatch ?? 'EXACT'] ||
+          a.priceSnapshot.totalMinor - b.priceSnapshot.totalMinor ||
+          a.accommodationName.localeCompare(b.accommodationName) ||
+          (a.input.unitId ?? '').localeCompare(b.input.unitId ?? ''),
+      )
+
       return reservationSearchResponseSchema.parse({ offers })
     })
   }
@@ -259,10 +302,42 @@ export class ReservationService {
               where: { id: input.unitId, campingId: context.camping.id },
             })
           : null
-        const people = input.adults + input.children + input.infants
+        const people = humanOccupancy(input, camping.infantsConsumeCapacity)
+        const bedInfo =
+          type.inventoryMode === 'shared' && input.unitId
+            ? {
+                requestedBeds: people,
+                availableBeds: (
+                  await availableBeds(
+                    manager,
+                    context.camping.id,
+                    input.unitId,
+                    input.checkInDate,
+                    input.checkOutDate,
+                  )
+                ).length,
+              }
+            : {}
         return reservationQuoteSchema.parse({
+          ...bedInfo,
           ...(unit && people > unit.maxOccupancy
             ? { occupancyWarning: { maxOccupancy: unit.maxOccupancy, people } }
+            : {}),
+          ...(unit
+            ? {
+                capacityMatch:
+                  type.inventoryMode === 'shared'
+                    ? 'EXACT'
+                    : capacitySuitability(
+                        input,
+                        unit.maxOccupancy,
+                        camping.infantsConsumeCapacity,
+                      ).capacityMatch,
+                sparePlaces:
+                  type.inventoryMode === 'shared'
+                    ? 0
+                    : Math.max(0, unit.maxOccupancy - people),
+              }
             : {}),
           priceSnapshot: snapshotWithoutInternalBase(snapshot),
         })
@@ -323,6 +398,15 @@ export class ReservationService {
           version: 1,
         })
         const saved = await manager.save(row)
+        if (['pending', 'confirmed', 'checked_in'].includes(saved.status))
+          await assignBeds(
+            manager,
+            saved,
+            humanOccupancy(
+              saved,
+              saved.priceSnapshot.infantsConsumeCapacity ?? false,
+            ),
+          )
         await appendReservationMutation(
           manager,
           context,
@@ -527,6 +611,15 @@ export class ReservationService {
           updatedAt: new Date(),
         })
         const saved = await manager.save(row)
+        if (['pending', 'confirmed', 'checked_in'].includes(saved.status))
+          await assignBeds(
+            manager,
+            saved,
+            humanOccupancy(
+              saved,
+              saved.priceSnapshot.infantsConsumeCapacity ?? false,
+            ),
+          )
         await appendReservationMutation(
           manager,
           context,
@@ -588,6 +681,15 @@ export class ReservationService {
         row.version = nextReservationVersion(row.version)
         row.updatedAt = new Date()
         const saved = await manager.save(row)
+        if (['pending', 'confirmed', 'checked_in'].includes(saved.status))
+          await assignBeds(
+            manager,
+            saved,
+            humanOccupancy(
+              saved,
+              saved.priceSnapshot.infantsConsumeCapacity ?? false,
+            ),
+          )
         await appendReservationMutation(
           manager,
           context,
@@ -627,7 +729,10 @@ export class ReservationService {
     checkOutDate: string,
     timezone: string,
   ): void {
-    if (checkOutDate <= row.checkInDate)
+    if (
+      checkOutDate <= row.checkInDate ||
+      Date.parse(checkOutDate) - Date.parse(row.checkInDate) > 366 * 86400000
+    )
       throw conflict(
         'La salida debe ser posterior al ingreso real',
         'VALIDATION_ERROR',
@@ -661,11 +766,19 @@ export class ReservationService {
         row.infants,
       )
     return priceSnapshotFor({
-      inventoryMode: current.basis === 'per_unit' ? 'individual' : 'unlimited',
+      inventoryMode:
+        current.basis === 'per_bed'
+          ? 'shared'
+          : current.basis === 'per_unit'
+            ? 'individual'
+            : 'unlimited',
+      pricing: current.pricing,
+      infantsConsumeCapacity: current.infantsConsumeCapacity,
+      pets: row.pets,
       currency: current.currency,
       moneyDecimals: current.moneyDecimals,
       baseNightlyPriceMinor:
-        current.basis === 'per_unit'
+        current.basis !== 'per_person'
           ? current.baseNightlyPriceMinor
           : undefined,
       rates: current.basis === 'per_person' ? current.rates : undefined,
@@ -696,16 +809,22 @@ export class ReservationService {
     const stay = await lockReservationStay(manager, context.camping.id, row.id)
     if (stay.closure) throw conflict('La estadía ya fue cerrada', 'STAY_CLOSED')
     const snapshot = this.checkedInSnapshot(row, patch)
-    if (row.unitId)
-      await assertUnitAvailable(
-        manager,
-        context.camping.id,
-        row.unitId,
-        row.checkInDate,
-        patch.checkOutDate!,
-        undefined,
-        row.id,
-      )
+    await this.validateInventory(
+      manager,
+      context.camping.id,
+      {
+        accommodationTypeId: row.accommodationTypeId,
+        unitId: row.unitId ?? undefined,
+        checkInDate: row.checkInDate,
+        checkOutDate: patch.checkOutDate!,
+        adults: row.adults,
+        children: row.children,
+        infants: row.infants,
+        pets: row.pets,
+        capacityOverrideReason: row.capacityOverrideReason ?? undefined,
+      },
+      row.id,
+    )
     return reservationUpdateQuoteSchema.parse({
       reservationId: row.id,
       version: row.version,
@@ -729,16 +848,22 @@ export class ReservationService {
     const stay = await lockReservationStay(manager, context.camping.id, row.id)
     if (stay.closure) throw conflict('La estadía ya fue cerrada', 'STAY_CLOSED')
     const snapshot = this.checkedInSnapshot(row, patch)
-    if (row.unitId)
-      await assertUnitAvailable(
-        manager,
-        context.camping.id,
-        row.unitId,
-        row.checkInDate,
-        patch.checkOutDate!,
-        undefined,
-        row.id,
-      )
+    await this.validateInventory(
+      manager,
+      context.camping.id,
+      {
+        accommodationTypeId: row.accommodationTypeId,
+        unitId: row.unitId ?? undefined,
+        checkInDate: row.checkInDate,
+        checkOutDate: patch.checkOutDate!,
+        adults: row.adults,
+        children: row.children,
+        infants: row.infants,
+        pets: row.pets,
+        capacityOverrideReason: row.capacityOverrideReason ?? undefined,
+      },
+      row.id,
+    )
     ensureAccepted(patch, snapshot.totalMinor)
     const before = state(row)
     const stayValue = stay as StayEntity & {
@@ -755,6 +880,15 @@ export class ReservationService {
     row.version = nextReservationVersion(row.version)
     row.updatedAt = new Date()
     const saved = await manager.save(row)
+    if (['pending', 'confirmed', 'checked_in'].includes(saved.status))
+      await assignBeds(
+        manager,
+        saved,
+        humanOccupancy(
+          saved,
+          saved.priceSnapshot.infantsConsumeCapacity ?? false,
+        ),
+      )
     await appendReservationMutation(
       manager,
       context,
@@ -791,6 +925,9 @@ export class ReservationService {
       adults: patch.adults ?? row.adults,
       children: patch.children ?? row.children,
       infants: patch.infants ?? row.infants,
+      pets: patch.pets ?? row.pets,
+      capacityOverrideReason:
+        patch.capacityOverrideReason ?? row.capacityOverrideReason ?? undefined,
       agreedTotalMinor: patch.agreedTotalMinor,
       priceAdjustmentReason: patch.priceAdjustmentReason,
       responsibleName: patch.responsibleName ?? row.responsibleName,
@@ -833,15 +970,18 @@ export class ReservationService {
         input.adults,
         input.children,
         input.infants,
+        input.pets ?? 0,
       )
       if (explicitOverride)
         return priceSnapshotFor({
           ...input,
           inventoryMode: type.inventoryMode,
+          pricing: prior.pricing,
+          infantsConsumeCapacity: prior.infantsConsumeCapacity,
           currency: prior.currency,
           moneyDecimals: prior.moneyDecimals,
           baseNightlyPriceMinor:
-            prior.basis === 'per_unit'
+            prior.basis !== 'per_person'
               ? prior.baseNightlyPriceMinor
               : undefined,
           rates: prior.basis === 'per_person' ? prior.rates : undefined,
@@ -852,6 +992,10 @@ export class ReservationService {
     const result = priceSnapshotFor({
       ...input,
       inventoryMode: type.inventoryMode,
+      pricing: type.pricing
+        ? { ...type.pricing, baseNightlyPriceMinor: type.baseNightlyPriceMinor }
+        : undefined,
+      infantsConsumeCapacity: camping.infantsConsumeCapacity,
       currency: camping.currency,
       moneyDecimals: row
         ? row.priceSnapshot.moneyDecimals
@@ -870,7 +1014,11 @@ export class ReservationService {
     excludeReservationId: string | undefined,
   ): Promise<AccommodationTypeEntity> {
     checkPeople(input)
-    if (input.checkOutDate <= input.checkInDate)
+    if (
+      input.checkOutDate <= input.checkInDate ||
+      Date.parse(input.checkOutDate) - Date.parse(input.checkInDate) >
+        366 * 86400000
+    )
       throw conflict(
         'checkOutDate must be after checkInDate',
         'VALIDATION_ERROR',
@@ -902,6 +1050,52 @@ export class ReservationService {
       )
     if (!unit.enabled)
       throw conflict('La unidad no está habilitada', 'INVENTORY_UNAVAILABLE')
+    const camping = await manager.findOneByOrFail(CampingEntity, {
+      id: campingId,
+    })
+    const previous = excludeReservationId
+      ? await manager.findOneBy(ReservationEntity, {
+          campingId,
+          id: excludeReservationId,
+        })
+      : null
+    const infantsConsumeCapacity =
+      previous?.accommodationTypeId === type.id
+        ? (previous.priceSnapshot.infantsConsumeCapacity ??
+          camping.infantsConsumeCapacity)
+        : camping.infantsConsumeCapacity
+    if (type.inventoryMode === 'shared') {
+      if (input.adults < 1)
+        throw conflict(
+          'Los dormitorios requieren al menos un adulto',
+          'VALIDATION_ERROR',
+        )
+      const beds = await availableBeds(
+        manager,
+        campingId,
+        unit.id,
+        input.checkInDate,
+        input.checkOutDate,
+        excludeReservationId,
+      )
+      if (beds.length < humanOccupancy(input, infantsConsumeCapacity))
+        throw conflict('No hay suficientes camas', 'INVENTORY_UNAVAILABLE')
+      return type
+    }
+    const fit = capacitySuitability(
+      input,
+      unit.maxOccupancy,
+      infantsConsumeCapacity,
+    )
+    if (
+      fit.capacityMatch === 'INSUFFICIENT' &&
+      !fit.childrenOverflow &&
+      !input.capacityOverrideReason?.trim()
+    )
+      throw conflict(
+        'Indicá el motivo para exceder la capacidad',
+        'CAPACITY_OVERRIDE_REQUIRED',
+      )
     await assertUnitAvailable(
       manager,
       campingId,

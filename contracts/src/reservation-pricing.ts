@@ -1,3 +1,4 @@
+import { accommodationPricingSchema } from './accommodation-pricing'
 import { z } from 'zod'
 import { moneyDecimalsSchema } from './money'
 import {
@@ -15,6 +16,28 @@ const postgresIntMax = 2_147_483_647
 const reservationCount = safeCount.max(postgresIntMax)
 
 const priceSnapshotCommon = {
+  pricing: accommodationPricingSchema.optional(),
+  infantsConsumeCapacity: z.boolean().optional(),
+  pets: safeCount.optional(),
+  breakdown: z
+    .strictObject({
+      nights: z.array(
+        z.strictObject({
+          date: z.iso.date(),
+          baseMinor: moneySchema,
+          humanMinor: moneySchema,
+          petMinor: moneySchema,
+          categoryCharges: ratesSchema.optional(),
+        }),
+      ),
+      categoryCharges: ratesSchema.optional(),
+      accommodationMinor: moneySchema,
+      humanMinor: moneySchema,
+      discountMinor: moneySchema,
+      petMinor: moneySchema,
+      discountRuleIndex: safeCount.nullable(),
+    })
+    .optional(),
   moneyDecimals: moneyDecimalsSchema.optional(),
   roundingMinor: safeSignedAmountSchema.optional(),
   currency: currencyCodeSchema,
@@ -37,7 +60,7 @@ const priceAdjustmentIsComplete = (
 
 export const perUnitPriceSnapshotSchema = z
   .strictObject({
-    basis: z.literal('per_unit'),
+    basis: z.enum(['per_unit', 'per_bed']),
     ...priceSnapshotCommon,
     baseNightlyPriceMinor: moneySchema,
     nights: reservationCount.min(1),

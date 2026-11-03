@@ -1,4 +1,12 @@
 import {
+  accommodationBedSchema,
+  type AccommodationTypeCreate,
+  type AccommodationTypePatch,
+  type AccommodationUnitCreate,
+  type AccommodationUnitPatch,
+} from '@camping/contracts'
+import type { z } from 'zod'
+import {
   createApi,
   fetchBaseQuery,
   type BaseQueryApi,
@@ -427,6 +435,85 @@ export const apiSlice = createApi({
       transformResponse: (response) => parse(campingProfileSchema, response),
       invalidatesTags: ['Camping'],
     }),
+    createAccommodationType: builder.mutation<
+      AccommodationType,
+      AccommodationTypeCreate
+    >({
+      query: (body) => ({ url: '/accommodations/types', method: 'POST', body }),
+      transformResponse: (response) => parse(accommodationTypeSchema, response),
+      invalidatesTags: ['Accommodations', 'Availability'],
+    }),
+    updateAccommodationType: builder.mutation<
+      AccommodationType,
+      { id: string; body: AccommodationTypePatch }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accommodations/types/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (response) => parse(accommodationTypeSchema, response),
+      invalidatesTags: ['Accommodations', 'Availability'],
+    }),
+    updateAccommodationUnit: builder.mutation<
+      AccommodationUnit,
+      { id: string; body: AccommodationUnitPatch }
+    >({
+      query: ({ id, body }) => ({
+        url: `/accommodations/units/${id}`,
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (response) => parse(accommodationUnitSchema, response),
+      invalidatesTags: ['Accommodations', 'Availability'],
+    }),
+    createAccommodationUnit: builder.mutation<
+      AccommodationUnit,
+      AccommodationUnitCreate
+    >({
+      query: (body) => ({ url: '/accommodations/units', method: 'POST', body }),
+      transformResponse: (response) => parse(accommodationUnitSchema, response),
+      invalidatesTags: ['Accommodations', 'Availability'],
+    }),
+    accommodationBeds: builder.query<
+      z.infer<typeof accommodationBedSchema>[],
+      string
+    >({
+      query: (id) => `/accommodations/units/${id}/beds`,
+      transformResponse: (response) =>
+        parse(accommodationBedSchema.array(), response),
+      providesTags: ['Accommodations'],
+    }),
+    saveAccommodationBed: builder.mutation<
+      z.infer<typeof accommodationBedSchema>,
+      {
+        unitId: string
+        id?: string
+        name: string
+        position: number
+        enabled: boolean
+      }
+    >({
+      query: ({ unitId, id, ...body }) => ({
+        url: `/accommodations/units/${unitId}/beds${id ? `/${id}` : ''}`,
+        method: id ? 'PATCH' : 'POST',
+        body,
+      }),
+      transformResponse: (response) => parse(accommodationBedSchema, response),
+      invalidatesTags: ['Accommodations', 'Availability'],
+    }),
+    updateOccupancySettings: builder.mutation<
+      CampingProfile,
+      { infantsConsumeCapacity: boolean }
+    >({
+      query: (body) => ({
+        url: '/camping/occupancy-settings',
+        method: 'PATCH',
+        body,
+      }),
+      transformResponse: (response) => parse(campingProfileSchema, response),
+      invalidatesTags: ['Camping', 'Availability'],
+    }),
     updateRates: builder.mutation<CampingProfile, RateInput>({
       query: (body) => ({ url: '/camping/rates', method: 'PATCH', body }),
       transformResponse: (response) => parse(campingProfileSchema, response),
@@ -468,6 +555,13 @@ export const {
   useAddExtraMutation,
   useUpdateExtraMutation,
   useDeleteExtraMutation,
+  useCreateAccommodationTypeMutation,
+  useUpdateAccommodationTypeMutation,
+  useCreateAccommodationUnitMutation,
+  useUpdateAccommodationUnitMutation,
+  useAccommodationBedsQuery,
+  useSaveAccommodationBedMutation,
+  useUpdateOccupancySettingsMutation,
   useUpdateRatesMutation,
   useUpdateMoneySettingsMutation,
 } = apiSlice

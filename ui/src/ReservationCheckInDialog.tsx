@@ -122,6 +122,7 @@ export default function ReservationCheckInDialog({
                 adults: reservation.adults,
                 children: reservation.children,
                 infants: reservation.infants,
+                pets: reservation.pets ?? 0,
               })}
             </Typography>
           </Box>

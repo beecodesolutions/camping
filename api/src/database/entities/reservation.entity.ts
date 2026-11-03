@@ -91,6 +91,12 @@ export class ReservationEntity {
   @Column({ type: 'integer' })
   infants!: number
 
+  @Column({ type: 'integer', default: 0 })
+  pets!: number
+
+  @Column({ name: 'capacity_override_reason', type: 'text', nullable: true })
+  capacityOverrideReason!: string | null
+
   @Column({ type: 'varchar', length: 16, default: 'pending' })
   status!: ReservationStatus
 

@@ -26,6 +26,23 @@ export class CampingController {
     return this.campingService.profile(request.auth!)
   }
 
+  @Patch('occupancy-settings')
+  @ApiEndpoint({
+    operationId: 'campingUpdateOccupancySettings',
+    summary: 'Configurar ocupación de bebés',
+    status: 200,
+    body: openApiRef('OccupancySettings'),
+    response: openApiRef('CampingProfile'),
+    errors: [400, 401, 403, 404, 413, 500],
+  })
+  updateOccupancySettings(@Req() request: AuthenticatedRequest) {
+    assertAllowedOrigin(request)
+    return this.campingService.updateOccupancySettings(
+      request.auth!,
+      request.body,
+    )
+  }
+
   @Patch('money-settings')
   @ApiEndpoint({
     operationId: 'campingUpdateMoneySettings',

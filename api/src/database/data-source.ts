@@ -1,3 +1,5 @@
+import { AccommodationBedEntity } from './entities/accommodation-bed.entity'
+import { FlexiblePricingAndBeds1760000007000 } from './migrations/1760000007000-FlexiblePricingAndBeds'
 import 'reflect-metadata'
 import { MoneyPrecision1760000005000 } from './migrations/1760000005000-MoneyPrecision'
 import { DataSource } from 'typeorm'
@@ -32,6 +34,7 @@ export const entities = [
   PaymentEntity,
   AccommodationTypeEntity,
   AccommodationUnitEntity,
+  AccommodationBedEntity,
   AccommodationBlockEntity,
   ReservationEntity,
   OutboxEventEntity,
@@ -77,6 +80,7 @@ export function createDataSource() {
       ReservationStayPricing1760000004000,
       MoneyPrecision1760000005000,
       UnitCapacity1760000006000,
+      FlexiblePricingAndBeds1760000007000,
     ],
     synchronize: false,
     migrationsRun: false,

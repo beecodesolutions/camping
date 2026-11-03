@@ -283,3 +283,7 @@ Antes de publicar esta versión de la API, aplicar la migración y volver a apro
 el rol de runtime para permitir actualizar `accommodation_units.max_occupancy`.
 La API actualizada debe estar disponible antes de publicar la UI que exige el nuevo
 campo en las respuestas de unidades.
+
+## Flexible prices and shared rooms
+
+See [pricing and shared rooms](pricing-and-shared-rooms.md) for the current pricing, capacity, bed allocation and API contracts.
